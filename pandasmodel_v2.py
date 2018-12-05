@@ -402,9 +402,6 @@ class HierarchicalHeaderView(QHeaderView):
                 self.initializeSections(0, cnt - 1)
 
 
-MultiIndexHeaderView = HierarchicalHeaderView
-
-
 class DataFrameModel(QtCore.QAbstractTableModel):
     # na_values:least|greatest - for sorting
     options = {"striped": True, "stripesColor": "#fafafa", "na_values": "least",
@@ -412,12 +409,11 @@ class DataFrameModel(QtCore.QAbstractTableModel):
 
     def __init__(self, dataframe=None):
         super().__init__()
-        self.setDataFrame(dataframe if dataframe is not None else pd.DataFrame())
 
-    def setDataFrame(self, dataframe):
+        df = dataframe if dataframe is not None else pd.DataFrame()
         self.df = dataframe.copy()
-        #        self.df_full = self.df
         self.layoutChanged.emit()
+
 
     def rowCount(self, parent):
         return len(self.df)
@@ -448,6 +444,22 @@ class DataFrameModel(QtCore.QAbstractTableModel):
             hm = QtGui.QStandardItemModel()
             hm.appendRow(self.readLevel(orient=role))
             return hm
+
+    def sort(self, column, order):
+        # print("sort", column, order)
+        if len(self.df):
+            asc = order == Qt.AscendingOrder
+            na_pos = 'first' if (self.options["na_values"] == "least") == asc else 'last'
+            self.df.sort_values(self.df.columns[column], ascending=asc,
+                                inplace=True, na_position=na_pos)
+            self.layoutChanged.emit()
+
+    def headerData(self, section, orientation, role):
+        if role != Qt.DisplayRole: return
+        label = getattr(self.df, ("columns", "index")[orientation != Qt.Horizontal])[section]
+        #        return label if type(label) is tuple else label
+        return ("\n", " | ")[orientation != Qt.Horizontal].join(str(i) for i in label) if type(label) is tuple else str(
+            label)
 
     def readLevel(self, y=0, xs=0, xe=None, orient=None):
         c = getattr(self.df, ("columns", "index")[orient != HorizontalHeaderDataRole])
@@ -482,36 +494,24 @@ class DataFrameModel(QtCore.QAbstractTableModel):
     #        self.df = self.df_full if filt is None else self.df[filt]
     #        self.layoutChanged.emit()
 
-    def headerData(self, section, orientation, role):
-        if role != Qt.DisplayRole: return
-        label = getattr(self.df, ("columns", "index")[orientation != Qt.Horizontal])[section]
-        #        return label if type(label) is tuple else label
-        return ("\n", " | ")[orientation != Qt.Horizontal].join(str(i) for i in label) if type(label) is tuple else str(
-            label)
-
-    def dataFrame(self):
-        return self.df
-
-    def sort(self, column, order):
-        #        print("sort", column, order) #FIXME: double sort after setSortingEnabled(True)
-        if len(self.df):
-            asc = order == Qt.AscendingOrder
-            na_pos = 'first' if (self.options["na_values"] == "least") == asc else 'last'
-            self.df.sort_values(self.df.columns[column], ascending=asc,
-                                inplace=True, na_position=na_pos)
-            self.layoutChanged.emit()
-
-
 if __name__ == "__main__":
     import sys
 
     app = QtWidgets.QApplication(sys.argv)
 
-    # Prepare sample data
+    # Prepare sample data 1
     tuples = [('A', 'one', 'X'), ('A', 'one', 'Y'), ('A', 'two', 'X'), ('A', 'two', 'Y'),
               ('B', 'one', 'X'), ('B', 'one', 'Y'), ('B', 'two', 'X'), ('B', 'two', 'Y')]
     index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
     df = pd.DataFrame(pd.np.random.randint(0, 10, (8, 8)), index=index[:8], columns=index[:8])
+
+    if 0:
+        # Prepare sample data 2
+        data = pd.np.random.randint(0, 10, (10, 3))
+        print(data)
+        df = pd.DataFrame(data, columns=['col1','col2','col3'])
+
+
     print("DataFrame:\n%s" % df)
 
     window = QtWidgets.QWidget()
@@ -522,8 +522,8 @@ if __name__ == "__main__":
     window.show()
 
     # Prepare view
-    MultiIndexHeaderView(Qt.Horizontal, view)
-    MultiIndexHeaderView(Qt.Vertical, view)
+    HierarchicalHeaderView(Qt.Horizontal, view)
+    HierarchicalHeaderView(Qt.Vertical, view)
     view.horizontalHeader().setSectionsMovable(True)
     view.verticalHeader().setSectionsMovable(True)
 
