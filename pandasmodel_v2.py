@@ -16,6 +16,10 @@ import datetime
 import pyqt_fix
 
 
+# Define role numbers for our custom headers
+HorizontalHeaderDataRole = Qt.UserRole
+VerticalHeaderDataRole = Qt.UserRole + 1
+
 class QList(list):
     push_back = lambda self, v: self.append(v)
 
@@ -29,8 +33,7 @@ class QList(list):
 
 QModelIndexList = QList
 
-HorizontalHeaderDataRole = Qt.UserRole
-VerticalHeaderDataRole = Qt.UserRole + 1
+
 
 
 class HierarchicalHeaderView(QHeaderView):
@@ -414,30 +417,42 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         self.df = dataframe.copy()
         self.layoutChanged.emit()
 
-
     def rowCount(self, parent):
         return len(self.df)
 
     def columnCount(self, parent):
         return len(self.df.columns)
 
-
     def data(self, index, role):
+        """
+        Returns the data stored under the given role for the item referred to by the index.
+        http://pyqt.sourceforge.net/Docs/PyQt4/qabstractitemmodel.html#data
+
+        Args:
+            index ():
+            role ():
+
+        Returns:
+        """
+
         row, col = index.row(), index.column()
+
         if role in (Qt.DisplayRole, Qt.ToolTipRole):
-            ret = self.df.iat[row, col]
-            if ret is not None and ret == ret:  # convert to str except for None, NaN, NaT
-                if isinstance(ret, float):
-                    ret = "{:n}".format(ret)
-                elif isinstance(ret, datetime.date):
+            # Return
+            value = self.df.iat[row, col]
+            if value is not None and value == value:  # Convert to str except for None, NaN, NaT
+                if isinstance(value, float):
+                    value = "{:n}".format(value)
+                elif isinstance(value, datetime.date):
                     # FIXME: show microseconds optionally
-                    ret = ret.strftime(("%x", "%c")[isinstance(ret, datetime.datetime)])
+                    value = value.strftime(("%x", "%c")[isinstance(value, datetime.datetime)])
                 else:
-                    ret = str(ret)
+                    value = str(value)
                 if role == Qt.ToolTipRole:
-                    if len(ret) < self.options["tooltip_min_len"]: ret = ""
-                return ret
+                    if len(value) < self.options["tooltip_min_len"]: value = ""
+                return value
         elif role == Qt.BackgroundRole:
+            # Sets the data cell background shading pattern
             if self.options["striped"] and row % 2:
                 return QBrush(QColor(self.options["stripesColor"]))
         elif role in (HorizontalHeaderDataRole, VerticalHeaderDataRole):
@@ -446,13 +461,29 @@ class DataFrameModel(QtCore.QAbstractTableModel):
             return hm
 
     def sort(self, column, order):
-        # print("sort", column, order)
-        if len(self.df):
-            asc = order == Qt.AscendingOrder
-            na_pos = 'first' if (self.options["na_values"] == "least") == asc else 'last'
-            self.df.sort_values(self.df.columns[column], ascending=asc,
-                                inplace=True, na_position=na_pos)
-            self.layoutChanged.emit()
+        """
+        Sort the DataFrame by column according to order
+
+        Args:
+            column (): Index of the column (far left column = 0)
+            order (): Ascending = 0, Descending = 1
+
+        Returns: None
+        """
+
+        if len(self.df) == 0:
+            return
+
+        # Ascending order flag
+        asc = order == Qt.AscendingOrder
+
+        self.layoutAboutToBeChanged.emit()
+
+        # na_pos = 'first' if (self.options["na_values"] == "least") == asc else 'last'
+        na_pos = 'last'
+        self.df.sort_values(self.df.columns[column], ascending=asc, inplace=True, na_position=na_pos)
+
+        self.layoutChanged.emit()
 
     def headerData(self, section, orientation, role):
         if role != Qt.DisplayRole: return
@@ -462,6 +493,13 @@ class DataFrameModel(QtCore.QAbstractTableModel):
             label)
 
     def readLevel(self, y=0, xs=0, xe=None, orient=None):
+        print("-----------")
+        print("readLevel()")
+        print("y", y)
+        print("xs", xs)
+        print("xe", xe)
+        print("orient", orient)
+
         c = getattr(self.df, ("columns", "index")[orient != HorizontalHeaderDataRole])
         if not hasattr(c, "levels"):  # not MultiIndex
             return [QtGui.QStandardItem(str(i)) for i in c]
@@ -483,16 +521,35 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         return sibl
 
     def reorder(self, oldIndex, newIndex, orientation):
-        "Reorder columns / rows"
+        """
+        Reorder rows / columns in the header. This happens when you drag them in the header.
+
+        Args:
+            oldIndex ():
+            newIndex ():
+            orientation ():
+
+        Returns: True
+
+        """
+        print("-----------")
+        print("reorder()")
+        print("oldIndex", oldIndex)
+        print("newIndex", newIndex)
+        print("orientation", orientation)
+
         horizontal = orientation == Qt.Horizontal
         cols = list(self.df.columns if horizontal else self.df.index)
         cols.insert(newIndex, cols.pop(oldIndex))
         self.df = self.df[cols] if horizontal else self.df.T[cols].T
+
+        print("cols", cols)
         return True
 
     #    def filter(self, filt=None):
     #        self.df = self.df_full if filt is None else self.df[filt]
     #        self.layoutChanged.emit()
+
 
 if __name__ == "__main__":
     import sys
@@ -505,12 +562,12 @@ if __name__ == "__main__":
     index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
     df = pd.DataFrame(pd.np.random.randint(0, 10, (8, 8)), index=index[:8], columns=index[:8])
 
-    if 0:
+    if 1:
         # Prepare sample data 2
-        data = pd.np.random.randint(0, 10, (10, 3))
+        data = pd.np.random.randint(0, 10, (10, 3)).astype(float)
+        data[0][0] = pd.np.nan
         print(data)
-        df = pd.DataFrame(data, columns=['col1','col2','col3'])
-
+        df = pd.DataFrame(data, columns=['col1', 'col2', 'col3'])
 
     print("DataFrame:\n%s" % df)
 
@@ -535,4 +592,4 @@ if __name__ == "__main__":
     view.resizeColumnsToContents()
     view.resizeRowsToContents()
 
-    sys.exit(app.exec())
+    app.exec()
