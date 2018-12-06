@@ -204,18 +204,18 @@ class PandasGUI(QtWidgets.QMainWindow):
 class InterpreterSignal(QtCore.QObject):
     finished = QtCore.pyqtSignal()
 
+if __name__ == "__main__":
+    def show(df):
+        app = QtWidgets.QApplication(sys.argv)
 
-def show(df):
-    app = QtWidgets.QApplication(sys.argv)
+        # Choose GUI appearance
+        print(QtWidgets.QStyleFactory.keys())
+        style = "Fusion"
+        app.setStyle(style)
+        print("PyQt5 Style: " + style)
 
-    # Choose GUI appearance
-    print(QtWidgets.QStyleFactory.keys())
-    style = "Fusion"
-    app.setStyle(style)
-    print("PyQt5 Style: " + style)
+        win = PandasGUI(df)
+        app.exec_()
 
-    win = PandasGUI(df)
-    app.exec_()
-
-df = pd.read_csv('pokemon.csv')
-show(df)
+    df = pd.read_csv('pokemon.csv')
+    show(df)
