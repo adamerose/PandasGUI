@@ -169,10 +169,10 @@ class PandasGUI(QtWidgets.QMainWindow):
     def run_command(self):
         if self.command:
             try:
-                exec(self.command, self.namespace)
+                exec(self.command, globals())
             except:
                 print(traceback.format_exc())
-            self.df = self.namespace['df']
+            self.df = df
             self.clear_layout(self.tab_layout)
             self.generate_tabs()
             self.tab_layout.addWidget(self.tab_view)
@@ -190,6 +190,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
 class InterpreterSignal(QtCore.QObject):
     finished = QtCore.pyqtSignal()
+
 
 def show(df):
     app = QtWidgets.QApplication(sys.argv)
