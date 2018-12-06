@@ -28,8 +28,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         # Create the console
         self.console = QtWidgets.QTextEdit(self)
-        default_text = ('Press run button to run code in textbox.\n'
-                        'Press interpreter button to run code from interpreter')
+        default_text = ('Press run button to run code in textbox.')
         self.console.setPlaceholderText(default_text)
         font = QtGui.QFont()
         font.setPointSize(14)
@@ -38,12 +37,10 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.run_text_button.setSizePolicy(QtWidgets.QSizePolicy.Preferred,
                                            QtWidgets.QSizePolicy.Expanding)
         self.run_text_button.clicked.connect(self.get_textbox_command)
-        self.interpreter_button = QtWidgets.QPushButton('Interpreter', self)
-        self.interpreter_button.setSizePolicy(QtWidgets.QSizePolicy.Preferred,
-                                              QtWidgets.QSizePolicy.Expanding)
-        self.interpreter_button.clicked.connect(self.enable_interpreter)
         self.interpreter_signal = InterpreterSignal()
+        self.enable_interpreter()
         self.interpreter_signal.finished.connect(self.run_command)
+        self.interpreter_signal.finished.connect(self.enable_interpreter)
 
         # Create the QTabWidget and add the tab_view
         self.generate_tabs()
@@ -61,17 +58,10 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.tab_widget.setLayout(self.tab_layout)
         self.console_splitter.addWidget(self.tab_widget)
 
-        self.button_layout = QtWidgets.QVBoxLayout()
-        self.button_layout.addWidget(self.run_text_button)
-        self.button_layout.addWidget(self.interpreter_button)
-        self.button_layout.setContentsMargins(0, 0, 0, 0)
-        self.button_widgets = QtWidgets.QWidget()
-        self.button_widgets.setLayout(self.button_layout)
-
-        # Adds Console and button to main section.
+        # Adds Console and buttons to main section.
         self.console_layout = QtWidgets.QHBoxLayout()
         self.console_layout.addWidget(self.console)
-        self.console_layout.addWidget(self.button_widgets)
+        self.console_layout.addWidget(self.run_text_button)
         self.console_layout.setContentsMargins(0, 0, 0, 0)
         self.console_widget = QtWidgets.QWidget()
         self.console_widget.setLayout(self.console_layout)
@@ -164,12 +154,9 @@ class PandasGUI(QtWidgets.QMainWindow):
         return tab
 
     def enable_interpreter(self):
-        if self.console.isEnabled():
-            self.console.setText('Type command into interpreter')
-            self.console.setDisabled(True)
-            self.thread = threading.Thread(target=self.get_interpreter_command,
-                                           args=(self.interpreter_signal,))
-            self.thread.start()
+        self.thread = threading.Thread(target=self.get_interpreter_command,
+                                       args=(self.interpreter_signal,))
+        self.thread.start()
 
     def get_interpreter_command(self, signal):
         self.command = input('Type command below\n')
@@ -217,5 +204,6 @@ def show(df):
     win = PandasGUI(df)
     app.exec_()
 
-df = pd.read_csv('pokemon.csv')
-show(df)
+if __name__ == '__main__':
+    df = pd.read_csv('pokemon.csv')
+    show(df)
