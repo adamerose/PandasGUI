@@ -191,7 +191,6 @@ class PandasGUI(QtWidgets.QMainWindow):
 class InterpreterSignal(QtCore.QObject):
     finished = QtCore.pyqtSignal()
 
-
 def show(df):
     app = QtWidgets.QApplication(sys.argv)
 
