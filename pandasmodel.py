@@ -21,7 +21,7 @@ QModelIndexList = QList
 
 HorizontalHeaderDataRole=Qt.UserRole
 VerticalHeaderDataRole=Qt.UserRole+1
-        
+
 class HierarchicalHeaderView(QHeaderView):
     """
     This class is a Python port of
@@ -32,19 +32,19 @@ class HierarchicalHeaderView(QHeaderView):
         headerModel = None
         def initFromNewModel(self, orientation: int, model: QAbstractItemModel):
             self.headerModel = model.data(QModelIndex(), HorizontalHeaderDataRole if orientation==Qt.Horizontal else VerticalHeaderDataRole)
-        
+
         def findRootIndex(self, index: QModelIndex)->QModelIndex:
             while index.parent().isValid():
                 index=index.parent()
             return index
-        
+
         def parentIndexes(self, index: QModelIndex)->QModelIndexList:
             indexes = QModelIndexList()
             while index.isValid():
                 indexes.push_front(index)
                 index=index.parent()
             return indexes
-        
+
         def findLeaf(self, currentIndex: QModelIndex, sectionIndex: int, currentLeafIndex: int)->QModelIndex:
             if currentIndex.isValid():
                 childCount=currentIndex.model().columnCount(currentIndex)
@@ -58,7 +58,7 @@ class HierarchicalHeaderView(QHeaderView):
                     if currentLeafIndex==sectionIndex:
                         return currentIndex, currentLeafIndex
             return QModelIndex(), currentLeafIndex
-            
+
         def leafIndex(self, sectionIndex: int)->QModelIndex:
             if self.headerModel:
                 currentLeafIndex=-1
@@ -67,7 +67,7 @@ class HierarchicalHeaderView(QHeaderView):
                     if res.isValid():
                         return res
             return QModelIndex()
-        
+
         def searchLeafs(self, currentIndex: QModelIndex)->QModelIndexList:
             res = QModelIndexList()
             if currentIndex.isValid():
@@ -78,7 +78,7 @@ class HierarchicalHeaderView(QHeaderView):
                 else:
                     res.push_back(currentIndex)
             return res
-        
+
         def leafs(self, searchedIndex: QModelIndex)->QModelIndexList:
             leafs = QModelIndexList()
             if searchedIndex.isValid():
@@ -86,18 +86,18 @@ class HierarchicalHeaderView(QHeaderView):
                 for i in range(childCount):
                     leafs+=self.searchLeafs(searchedIndex.child(0, i))
             return leafs
-        
+
         def setForegroundBrush(self, opt: QStyleOptionHeader, index: QModelIndex):
             foregroundBrush = index.data(Qt.ForegroundRole)
             if foregroundBrush:
                 opt.palette.setBrush(QPalette.ButtonText, QBrush(foregroundBrush))
-        
+
         def setBackgroundBrush(self, opt: QStyleOptionHeader, index: QModelIndex):
             backgroundBrush = index.data(Qt.BackgroundRole)
             if backgroundBrush:
                 opt.palette.setBrush(QPalette.Button, QBrush(backgroundBrush))
                 opt.palette.setBrush(QPalette.Window, QBrush(backgroundBrush))
-        
+
         def cellSize(self, leafIndex: QModelIndex, hv: QHeaderView, styleOptions: QStyleOptionHeader)->QSize:
             res = QSize()
             variant = leafIndex.data(Qt.SizeHintRole)
@@ -115,7 +115,7 @@ class HierarchicalHeaderView(QHeaderView):
             decorationsSize = QSize(hv.style().sizeFromContents(QStyle.CT_HeaderSection, styleOptions, QSize(), hv))
             emptyTextSize = QSize(fm.size(0, ""))
             return res.expandedTo(size+decorationsSize-emptyTextSize)
-        
+
         def currentCellWidth(self, searchedIndex: QModelIndex, leafIndex: QModelIndex, sectionIndex: int, hv: QHeaderView)->int:
             leafsList = QModelIndexList(self.leafs(searchedIndex))
             if leafsList.empty():
@@ -125,7 +125,7 @@ class HierarchicalHeaderView(QHeaderView):
             for i in range(leafsList.size()):
                 width+=hv.sectionSize(firstLeafSectionIndex+i)
             return width
-        
+
         def currentCellLeft(self, searchedIndex: QModelIndex, leafIndex: QModelIndex, sectionIndex: int, left: int, hv: QHeaderView)->int:
             leafsList = QModelIndexList(self.leafs(searchedIndex))
             if not leafsList.empty():
@@ -135,7 +135,7 @@ class HierarchicalHeaderView(QHeaderView):
                 for n in range(n, 0 -1,-1):
                     left-=hv.sectionSize(firstLeafSectionIndex+n)
             return left
-        
+
         def paintHorizontalCell(self, painter: QPainter, hv: QHeaderView, cellIndex: QModelIndex, leafIndex: QModelIndex, logicalLeafIndex: int, styleOptions: QStyleOptionHeader, sectionRect: QRect, top: int):
             uniopt = QStyleOptionHeader(styleOptions)
             self.setForegroundBrush(uniopt, cellIndex)
@@ -162,7 +162,7 @@ class HierarchicalHeaderView(QHeaderView):
                 hv.style().drawControl(QStyle.CE_Header, uniopt, painter, hv)
             painter.restore()
             return top+height
-        
+
         def paintHorizontalSection(self, painter: QPainter, sectionRect: QRect,
                                    logicalLeafIndex: int, hv: QHeaderView,
                                    styleOptions: QStyleOptionHeader, leafIndex: QModelIndex):
@@ -181,7 +181,7 @@ class HierarchicalHeaderView(QHeaderView):
 #                    print(self.leafs(indexes[i]), leafIndex)
                 top=self.paintHorizontalCell(painter, hv, indexes[i], leafIndex, logicalLeafIndex, realStyleOptions, sectionRect, top)
             painter.setBrushOrigin(oldBO)
-        
+
         def paintVerticalCell(self, painter: QPainter, hv: QHeaderView, cellIndex: QModelIndex, leafIndex: QModelIndex, logicalLeafIndex: int, styleOptions: QStyleOptionHeader, sectionRect: QRect, left: int):
             uniopt = QStyleOptionHeader(styleOptions)
             self.setForegroundBrush(uniopt, cellIndex)
@@ -208,7 +208,7 @@ class HierarchicalHeaderView(QHeaderView):
                 hv.style().drawControl(QStyle.CE_Header, uniopt, painter, hv)
             painter.restore()
             return left+width
-        
+
         def paintVerticalSection(self, painter: QPainter, sectionRect: QRect, logicalLeafIndex: int, hv: QHeaderView, styleOptions: QStyleOptionHeader, leafIndex: QModelIndex):
             oldBO = painter.brushOrigin()
             left = sectionRect.x()
@@ -220,7 +220,7 @@ class HierarchicalHeaderView(QHeaderView):
                     realStyleOptions.state = realStyleOptions.state&~t #FIXME: parent items are not highlighted
                 left=self.paintVerticalCell(painter, hv, indexes[i], leafIndex, logicalLeafIndex, realStyleOptions, sectionRect, left)
             painter.setBrushOrigin(oldBO)
-        
+
     def __init__(self, orientation: Qt.Orientation, parent: QWidget):
         super().__init__(orientation, parent)
         self._pd = self.private_data()
@@ -230,7 +230,7 @@ class HierarchicalHeaderView(QHeaderView):
         self.show() #force to be visible
         getattr(parent, "set%sHeader"%("Horizontal", "Vertical")[orientation!=Qt.Horizontal])(self)
         self.sectionMoved.connect(self.on_sectionMoved)
-        
+
     def on_sectionMoved(self, logicalIndex, oldVisualIndex, newVisualIndex):
         view, model = self.parent(), self.parent().model()
         if not hasattr(model, "reorder"):
@@ -256,7 +256,7 @@ class HierarchicalHeaderView(QHeaderView):
                 if sortIndIndex is not None: #sort indicator is among sections being reordered
                     self.setSortIndicator(sortIndIndex+rng[0], self.sortIndicatorOrder()) #FIXME: does unnecessary sorting
             model.layoutChanged.emit() #update view
-        
+
     def styleOptionForCell(self, logicalInd: int)->QStyleOptionHeader:
         opt = QStyleOptionHeader()
         self.initStyleOption(opt)
@@ -311,7 +311,7 @@ class HierarchicalHeaderView(QHeaderView):
                     else:
                         opt.selectedPosition = QStyleOptionHeader.NotAdjacent
         return opt
-        
+
     def sectionSizeFromContents(self, logicalIndex: int)->QSize:
         if self._pd.headerModel:
             curLeafIndex = QModelIndex(self._pd.leafIndex(logicalIndex))
@@ -327,7 +327,7 @@ class HierarchicalHeaderView(QHeaderView):
                     curLeafIndex=curLeafIndex.parent()
                 return s
         return super().sectionSizeFromContents(logicalIndex)
-    
+
     def paintSection(self, painter: QPainter, rect: QRect, logicalIndex: int):
         if rect.isValid():
             leafIndex = QModelIndex(self._pd.leafIndex(logicalIndex))
@@ -338,7 +338,7 @@ class HierarchicalHeaderView(QHeaderView):
                     self._pd.paintVerticalSection(painter, rect, logicalIndex, self, self.styleOptionForCell(logicalIndex), leafIndex)
                 return
         super().paintSection(painter, rect, logicalIndex)
-    
+
     def on_sectionResized(self, logicalIndex: int):
         if self.isSectionHidden(logicalIndex):
             return
@@ -357,12 +357,12 @@ class HierarchicalHeaderView(QHeaderView):
                 else:
                     r.setRect(0, pos, w, h - pos)
                 self.viewport().update(r.normalized())
-    
+
     def setModel(self, model: QAbstractItemModel):
         super().setModel(model)
         model.layoutChanged.connect(self.layoutChanged)
         self.layoutChanged()
-            
+
     def layoutChanged(self):
         if self.model():
             self._pd.initFromNewModel(self.orientation(), self.model())
@@ -371,26 +371,26 @@ class HierarchicalHeaderView(QHeaderView):
             if cnt:
                 self.initializeSections(0, cnt-1)
 MultiIndexHeaderView=HierarchicalHeaderView
-    
+
 class DataFrameModel(QtCore.QAbstractTableModel):
     #na_values:least|greatest - for sorting
     options = {"striped": True, "stripesColor": "#fafafa", "na_values": "least",
                "tooltip_min_len": 21}
-    def __init__(self, dataframe=None): 
+    def __init__(self, dataframe=None):
         super().__init__()
         self.setDataFrame(dataframe if dataframe is not None else pd.DataFrame())
-        
+
     def setDataFrame(self, dataframe):
         self.df = dataframe.copy()
 #        self.df_full = self.df
         self.layoutChanged.emit()
- 
+
     def rowCount(self, parent):
         return len(self.df)
-        
+
     def columnCount(self, parent):
         return len(self.df.columns)
-        
+
     def readLevel(self, y=0, xs=0, xe=None, orient=None):
         c = getattr(self.df, ("columns", "index")[orient!=HorizontalHeaderDataRole])
         if not hasattr(c, "levels"): #not MultiIndex
@@ -411,7 +411,7 @@ class DataFrameModel(QtCore.QAbstractTableModel):
             children = self.readLevel(y+1, section_start, orient=orient)
             sibl[-1].appendRow(children)
         return sibl
- 
+
     def data(self, index, role):
         row, col = index.row(), index.column()
         if role in (Qt.DisplayRole, Qt.ToolTipRole):
@@ -433,7 +433,7 @@ class DataFrameModel(QtCore.QAbstractTableModel):
             hm = QtGui.QStandardItemModel()
             hm.appendRow(self.readLevel(orient=role))
             return hm
-            
+
     def reorder(self, oldIndex, newIndex, orientation):
         "Reorder columns / rows"
         horizontal = orientation==Qt.Horizontal
@@ -441,20 +441,20 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         cols.insert(newIndex, cols.pop(oldIndex))
         self.df = self.df[cols] if horizontal else self.df.T[cols].T
         return True
-            
-#    def filter(self, filt=None):            
+
+#    def filter(self, filt=None):
 #        self.df = self.df_full if filt is None else self.df[filt]
 #        self.layoutChanged.emit()
-        
+
     def headerData(self, section, orientation, role):
         if role != Qt.DisplayRole: return
         label = getattr(self.df, ("columns", "index")[orientation!=Qt.Horizontal])[section]
 #        return label if type(label) is tuple else label
         return ("\n", " | ")[orientation!=Qt.Horizontal].join(str(i) for i in label) if type(label) is tuple else str(label)
-            
+
     def dataFrame(self):
         return self.df
-        
+
     def sort(self, column, order):
 #        print("sort", column, order) #FIXME: double sort after setSortingEnabled(True)
         if len(self.df):
@@ -481,27 +481,26 @@ if __name__=="__main__":
     index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
     df=pd.DataFrame(pd.np.random.randn(6, 6), index=index[:6], columns=index[:6])
 
-    if 0:
+    if 1:
         tuples = [('A', 'one', 'X'), ('A', 'one', 'Y'), ('A', 'two', 'X'), ('A', 'two', 'Y'),
                   ('B', 'one', 'X'), ('B', 'one', 'Y'), ('B', 'two', 'X'), ('B', 'two', 'Y')]
         index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
         df = pd.DataFrame(pd.np.random.randint(0, 10, (8, 8)), index=index[:8], columns=index[:8])
 
     print("DataFrame:\n%s"%df)
-    
+
     #Prepare view
 #    oldh, oldv = view.horizontalHeader(), view.verticalHeader()
 #    oldh.setParent(form), oldv.setParent(form) #Save old headers for some reason
     MultiIndexHeaderView(Qt.Horizontal, view)
     MultiIndexHeaderView(Qt.Vertical, view)
     view.horizontalHeader().setMovable(True) #reorder DataFrame columns manually
-    
+
     #Set data
-    view.setModel(DataFrameModel(df))    
+    view.setModel(DataFrameModel(df))
     view.resizeColumnsToContents()
     view.resizeRowsToContents()
-    
+
     #Set sorting enabled (after setting model)
     view.setSortingEnabled(True)
     sys.exit(app.exec())
-    
