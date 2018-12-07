@@ -24,4 +24,4 @@ tuples = [('A', 'one', 'x'), ('A', 'one', 'y'), ('A', 'two', 'x'), ('A', 'two', 
 index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
 df = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
 # df = df.reset_index()
-show(df4=df)
+show(df)
