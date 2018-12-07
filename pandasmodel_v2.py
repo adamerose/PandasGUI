@@ -15,7 +15,6 @@ import pandas as pd
 import numpy as np
 import datetime
 import pyqt_fix
-import sys
 
 # Define role numbers for our custom headers
 HorizontalHeaderDataRole = Qt.UserRole
@@ -481,104 +480,7 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         if role in (HorizontalHeaderDataRole, VerticalHeaderDataRole):
             hm = QtGui.QStandardItemModel()
             hm.appendRow(self.readLevel(orient=role))
-
-            # Debug print statements
-            if 0:
-                def print_qitem(x, depth=0):
-                    print("   " * depth,
-                          '-------')
-                    print("   " * depth,
-                          x)
-                    if type(x) == QtGui.QStandardItem:
-                        print("   " * depth,
-                              x.text())
-
-                    if x is not None:
-                        rows = x.rowCount()
-                        cols = x.columnCount()
-                        print("   " * depth,
-                              "rows cols: ", rows, cols)
-                        for i in range(rows):
-                            for j in range(cols):
-                                if type(x) == QtGui.QStandardItemModel:
-                                    sub_x = x.item(i, j)
-                                else:
-                                    sub_x = x.child(i, j)
-
-                                print_qitem(sub_x, depth + 1)
-
-                print('----------------------------------------------')
-                print_qitem(hm)
-
             return hm
-
-    def readLevel(self, y=0, start=0, end=None, orient=None):
-        """
-        Recursively builds a hierarchical model of the header. Returns a list of QStandardItem that corresponds to
-        the top header level, and each QStandardItem represents a span of contiguous matching labels
-
-        In the example  below, readLevel returns a list of 2 QStandardItem objects with .text values "A" and "B",
-        and each one has two
-        |   A   |   B   | Header Level (y=0)
-        | W | X | Y | Z | Header Level (y=1)
-        -----------------
-        | 1 | 2 | 5 | 2 | Data
-
-        Args:
-            y (): Header level, where y=0 is the top level. Only MultiIndex headers will have multiple levels
-            start (): Section start
-            end (): Section end
-            orient (Qt.ItemDataRole): HorizontalHeaderDataRole or VerizontalHeaderDataRole
-
-        Returns: List of QStandardItem
-
-        """
-
-        if orient == HorizontalHeaderDataRole:
-            cols = self.df.columns
-        else:
-            cols = self.df.index
-
-        # If not MultiIndex
-        if not hasattr(cols, "levels"):
-            return [QtGui.QStandardItem(str(x)) for x in cols]
-
-        section_list = []  # List of QStandardItems
-        prev_label = None
-        end = end or len(cols)
-
-        section_start = start
-        for i in range(start, end):
-
-            # Get the label number corresponding to this header level and location in the MultiIndex
-            try:
-                label = cols.labels[y][i]
-            except IndexError:
-                label = None
-
-            if label != prev_label:
-                # Detected start of new section, add children to the previous section
-                if y < len(cols.levels) - 1 and (i > section_start):  # Note section_start is still for the last section
-                    # Create the list of QStandardItem objects representing the header labels below this one
-                    children = self.readLevel(y + 1, section_start, i, orient=orient)
-                    section_list[-1].appendRow(children)
-
-                # Create the QStandardItem for this section
-                section_label = str(cols.levels[y][label])
-                item = QtGui.QStandardItem(section_label)
-                section_list.append(item)
-
-                # Update these since we reached a new value, so it's the start of a new section
-                section_start = i
-                prev_label = label
-
-        # The previous loop adds children to the previous section once a new section is started. This never happens
-        # for the last section of the header so we do it here
-        if y + 1 < len(cols.levels):
-            children = self.readLevel(y + 1, start, end, orient=orient)
-            section_list[-1].appendRow(children)
-
-        return section_list
 
     def sort(self, column, order):
         """
@@ -636,6 +538,48 @@ class DataFrameModel(QtCore.QAbstractTableModel):
 
         return None
 
+    def readLevel(self, y=0, start=0, end=None, orient=None):
+        """
+
+        Args:
+            y ():
+            start (): Section start
+            end (): Section end
+            orient (Qt.ItemDataRole): HorizontalHeaderDataRole or VerizontalHeaderDataRole
+
+        Returns:
+
+        """
+        # print("-----------")
+        print("readLevel({}, {}, {}, {})".format(y, start, str(str(end) + ("   ") if end else end), orient))
+
+        if orient == HorizontalHeaderDataRole:
+            cols = self.df.columns
+        else:
+            cols = self.df.index
+
+        if not hasattr(cols, "levels"):  # not MultiIndex
+            return [QtGui.QStandardItem(str(i)) for i in cols]
+
+        sibl = []
+        prev_label = None
+        end = end or len(cols)
+
+        for i in range(start, end):
+            label = cols.labels[y][i]
+            if label != prev_label:
+                if y + 1 < len(cols.levels) and i > start:
+                    children = self.readLevel(y + 1, start, i, orient=orient)
+                    sibl[-1].appendRow(children)
+                item = QtGui.QStandardItem(str(cols.levels[y][label]))
+                sibl.append(item)
+                start = i
+                prev_label = label
+        if y + 1 < len(cols.levels):
+            children = self.readLevel(y + 1, start, end, orient=orient)
+            sibl[-1].appendRow(children)
+        return sibl
+
     def reorder(self, oldLocation, newLocation, orientation):
         """
         Rearrange rows / columns in the header by rearranging the underlying df index values.
@@ -675,50 +619,40 @@ class DataFrameView(QtWidgets.QTableView):
         HierarchicalHeaderView(orientation=Qt.Vertical, parent=self)
         self.horizontalHeader().setSectionsMovable(True)
         self.verticalHeader().setSectionsMovable(True)
-        self.setSortingEnabled(True)
-        self.resizeColumnsToContents()
-        self.resizeRowsToContents()
 
 
-if __name__ == "__main__":
-    test_case = 3
+def main():
+    import sys
 
-    if test_case == 1:
-        # Prepare sample data with 3 index levels
-        tuples = [('A', 'one', 'X'), ('A', 'one', 'Y'), ('A', 'two', 'X'), ('A', 'two', 'Y'),
-                  ('B', 'one', 'X'), ('B', 'one', 'Y'), ('B', 'two', 'X'), ('B', 'two', 'Y')]
-        index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
-        df = pd.DataFrame(pd.np.random.randint(0, 10, (8, 8)), index=index[:8], columns=index[:8])
+    app = QtWidgets.QApplication(sys.argv)
 
-    if test_case == 2:
-        # Prepare sample data with 3 index levels all unique
-        tuples = [('A', 'one', 'a'), ('B', 'two', 'b'), ('C', 'three', 'c'), ('D', 'four', 'd'),
-                  ('E', 'five', 'e'), ('F', 'six', 'f'), ('G', 'seven', 'g'), ('H', 'eight', 'h')]
-        index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
-        df = pd.DataFrame(pd.np.random.randint(0, 10, (8, 8)), index=index[:8], columns=index[:8])
+    # Prepare sample data with 3 index levels
+    tuples = [('A', 'one', 'X'), ('A', 'one', 'Y'), ('A', 'two', 'X'), ('A', 'two', 'Y'),
+              ('B', 'one', 'X'), ('B', 'one', 'Y'), ('B', 'two', 'X'), ('B', 'two', 'Y')]
+    index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
+    df = pd.DataFrame(pd.np.random.randint(0, 10, (8, 8)), index=index[:8], columns=index[:8])
 
-    if test_case == 3:
+    # Prepare sample data with 3 index levels
+    tuples = [('A', 'one', 'a'), ('B', 'two', 'b'), ('C', 'three', 'c'), ('D', 'four', 'd'),
+              ('E', 'five', 'e'), ('F', 'six', 'f'), ('G', 'seven', 'g'), ('H', 'eight', 'h')]
+    index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
+    df = pd.DataFrame(pd.np.random.randint(0, 10, (8, 8)), index=index[:8], columns=index[:8])
+
+    if 1:
         # Prepare sample data with 2 index levels
         tuples = [('A', 'one'), ('A', 'two'),
                   ('B', 'one'), ('B', 'two')]
         index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
         df = pd.DataFrame(pd.np.random.randint(0, 10, (4, 4)), index=index[:8], columns=index[:8])
 
-    if test_case == 4:
-        # Prepare sample data with 2 index levels
-        tuples = [('A', 'one'),('B', 'two')]
-        index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
-        df = pd.DataFrame(pd.np.random.randint(0, 10, (2, 2)), index=index[:8], columns=index[:8])
-
-    if test_case == 5:
+    if 0:
         # Prepare sample data basic
         data = pd.np.random.randint(0, 10, (10, 3)).astype(float)
         data[0][0] = pd.np.nan
+        print(data)
         df = pd.DataFrame(data, columns=['col1', 'col2', 'col3'])
 
     print("DataFrame:\n%s" % df)
-
-    app = QtWidgets.QApplication(sys.argv)
 
     # Build GUI
     window = QtWidgets.QWidget()
@@ -729,5 +663,12 @@ if __name__ == "__main__":
 
     # Settings & appearance
     window.setMinimumSize(700, 360)
+    view.setSortingEnabled(True)
+    view.resizeColumnsToContents()
+    view.resizeRowsToContents()
 
     app.exec()
+
+
+if __name__ == "__main__":
+    main()
