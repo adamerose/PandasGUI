@@ -17,14 +17,14 @@ class PandasGUI(QtWidgets.QMainWindow):
 
     def __init__(self, **kwargs):
         super().__init__()
-        self.dataframes = OrderedDict(kwargs)
+        self.namespace = OrderedDict(kwargs)
 
         # Create the navigation pane
         self.nav_view = QtWidgets.QTreeView()
         model = self.create_nav_model()
         rootnode = model.invisibleRootItem()
         self.main_nav_branch = QtGui.QStandardItem('Master')
-        for df_name in self.dataframes.keys():
+        for df_name in self.namespace.keys():
             self.add_nav_dataframe(df_name)
         rootnode.appendRow([self.main_nav_branch, None])
         self.nav_view.setModel(model)
@@ -49,7 +49,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.interpreter_signal.finished.connect(self.enable_interpreter)
 
         # Create the QTabWidget and add the tab_view
-        first_df = self.dataframes[(list(self.dataframes.keys())[0])]
+        first_df = self.namespace[(list(self.namespace.keys())[0])]
         self.generate_tabs(first_df)
 
         # Create main Widget
@@ -96,8 +96,11 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.show()
 
     def select_dataframe(self, name):
+        row_selected = name.row()
+        df = self.nav_view.model().index(0, 0).child(row_selected, 0).data()
+
         self.clear_layout(self.tab_layout)
-        self.generate_tabs(self.dataframes[name.data()])
+        self.generate_tabs(self.namespace[df])
         self.tab_layout.addWidget(self.tab_view)
 
     def create_nav_model(self):
@@ -107,7 +110,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         return model
 
     def add_nav_dataframe(self, df_name):
-        shape = self.dataframes[df_name].shape
+        shape = self.namespace[df_name].shape
         shape = str(shape[0]) + ' X ' + str(shape[1])
         name = QtGui.QStandardItem(df_name)
         shape = QtGui.QStandardItem(shape)
@@ -130,7 +133,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout()
 
-        self.df_model = DataFrameModel(self.df)
+        self.df_model = DataFrameModel(df)
         view = DataFrameView()
         view.setModel(self.df_model)
 
@@ -191,26 +194,29 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.run_command()
 
     def run_command(self):
-        namespace = self.dataframes
-        namespace['pd'] = pd
-        num_dfs = len(namespace) - 1
+        self.namespace['pd'] = pd
+        old_num_dfs = len(self.count_dfs())
         if self.command:
             try:
-                exec(self.command, namespace)
+                exec(self.command, self.namespace)
             except:
                 print(traceback.format_exc())
-            if len(namespace) > num_dfs:
-                new_df = list(namespace.keys())[-1]
+            new_num_dfs = len(self.count_dfs())
+            if new_num_dfs > old_num_dfs:
+                new_df = self.count_dfs()[-1]
                 self.add_nav_dataframe(new_df)
-            self.dataframes = namespace
             self.clear_layout(self.tab_layout)
-            self.generate_tabs(self.dataframes['df'])
+            self.generate_tabs(self.namespace['df'])
             self.tab_layout.addWidget(self.tab_view)
         self.console.setText('')
         self.command = None
 
     def printdf(self):
         print(self.df_model)
+
+    def count_dfs(self):
+        return [df for df in self.namespace.keys()
+                if isinstance(self.namespace[df], pd.DataFrame)]
 
     def clear_layout(self, layout):
         for i in reversed(range(layout.count())):
