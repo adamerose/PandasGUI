@@ -12,13 +12,14 @@ from PyQt5.QtCore import QAbstractItemModel, QModelIndex, QSize, QRect, Qt, QPoi
 from PyQt5.QtGui import QPainter, QFont, QFontMetrics, QPalette, QBrush, QColor, QTransform
 from PyQt5.QtWidgets import QStyleOptionHeader, QHeaderView, QWidget, QStyle
 import pandas as pd
+import numpy as np
 import datetime
 import pyqt_fix
-
 
 # Define role numbers for our custom headers
 HorizontalHeaderDataRole = Qt.UserRole
 VerticalHeaderDataRole = Qt.UserRole + 1
+
 
 class QList(list):
     push_back = lambda self, v: self.append(v)
@@ -32,8 +33,6 @@ class QList(list):
 
 
 QModelIndexList = QList
-
-
 
 
 class HierarchicalHeaderView(QHeaderView):
@@ -407,14 +406,19 @@ class HierarchicalHeaderView(QHeaderView):
 
 class DataFrameModel(QtCore.QAbstractTableModel):
     # na_values:least|greatest - for sorting
-    options = {"striped": True, "stripesColor": "#fafafa", "na_values": "least",
+    options = {"striped": True,
+               "stripesColor": "#fafafa",
+               "na_values": "least",
                "tooltip_min_len": 21}
 
     def __init__(self, dataframe=None):
         super().__init__()
 
-        df = dataframe if dataframe is not None else pd.DataFrame()
-        self.df = dataframe.copy()
+        if dataframe is None:
+            self.df = pd.DataFrame()
+        else:
+            self.df = dataframe.copy()
+
         self.layoutChanged.emit()
 
     def rowCount(self, parent):
@@ -438,24 +442,26 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         row, col = index.row(), index.column()
 
         if role in (Qt.DisplayRole, Qt.ToolTipRole):
-            # Return
             value = self.df.iat[row, col]
-            if value is not None and value == value:  # Convert to str except for None, NaN, NaT
+            if not pd.isnull(value):  # If not null then convert to str
                 if isinstance(value, float):
                     value = "{:n}".format(value)
                 elif isinstance(value, datetime.date):
-                    # FIXME: show microseconds optionally
                     value = value.strftime(("%x", "%c")[isinstance(value, datetime.datetime)])
                 else:
                     value = str(value)
                 if role == Qt.ToolTipRole:
                     if len(value) < self.options["tooltip_min_len"]: value = ""
                 return value
-        elif role == Qt.BackgroundRole:
+            else:
+                return None
+
+        if role == Qt.BackgroundRole:
             # Sets the data cell background shading pattern
             if self.options["striped"] and row % 2:
                 return QBrush(QColor(self.options["stripesColor"]))
-        elif role in (HorizontalHeaderDataRole, VerticalHeaderDataRole):
+
+        if role in (HorizontalHeaderDataRole, VerticalHeaderDataRole):
             hm = QtGui.QStandardItemModel()
             hm.appendRow(self.readLevel(orient=role))
             return hm
@@ -465,8 +471,8 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         Sort the DataFrame by column according to order
 
         Args:
-            column (): Index of the column (far left column = 0)
-            order (): Ascending = 0, Descending = 1
+            column (int): Index of the column (far left column = 0)
+            order (int): Ascending = 0, Descending = 1
 
         Returns: None
         """
@@ -478,11 +484,9 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         asc = order == Qt.AscendingOrder
 
         self.layoutAboutToBeChanged.emit()
-
         # na_pos = 'first' if (self.options["na_values"] == "least") == asc else 'last'
         na_pos = 'last'
         self.df.sort_values(self.df.columns[column], ascending=asc, inplace=True, na_position=na_pos)
-
         self.layoutChanged.emit()
 
     def headerData(self, section, orientation, role):
@@ -494,7 +498,7 @@ class DataFrameModel(QtCore.QAbstractTableModel):
 
     def readLevel(self, y=0, xs=0, xe=None, orient=None):
         print("-----------")
-        print("readLevel()")
+        print("readLevel({}, {}, {}, {})".format(y, xs, xe, orient))
         print("y", y)
         print("xs", xs)
         print("xe", xe)
@@ -520,13 +524,14 @@ class DataFrameModel(QtCore.QAbstractTableModel):
             sibl[-1].appendRow(children)
         return sibl
 
-    def reorder(self, oldIndex, newIndex, orientation):
+    def reorder(self, oldLocation, newLocation, orientation):
         """
-        Reorder rows / columns in the header. This happens when you drag them in the header.
+        Rearrange rows / columns in the header by rearranging the underlying df index values.
+        This happens when you drag around them in the header.
 
         Args:
-            oldIndex ():
-            newIndex ():
+            oldLocation (): Index of the
+            newLocation ():
             orientation ():
 
         Returns: True
@@ -534,16 +539,26 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         """
         print("-----------")
         print("reorder()")
-        print("oldIndex", oldIndex)
-        print("newIndex", newIndex)
+        print("oldIndex", oldLocation)
+        print("newIndex", newLocation)
         print("orientation", orientation)
 
-        horizontal = orientation == Qt.Horizontal
-        cols = list(self.df.columns if horizontal else self.df.index)
-        cols.insert(newIndex, cols.pop(oldIndex))
-        self.df = self.df[cols] if horizontal else self.df.T[cols].T
+        # # Swap rows
+        # old = self.df.iloc[oldLocation].copy()
+        # new = self.df.iloc[newLocation].copy()
+        # self.df.iloc[oldLocation], self.df.iloc[newLocation] = new, old
 
-        print("cols", cols)
+        horizontal = orientation == Qt.Horizontal
+        print(horizontal)
+        if horizontal:
+            cols = list(self.df.columns)
+            cols.insert(newLocation, cols.pop(oldLocation))
+            self.df = self.df[cols]
+        else:
+            cols = list(self.df.index)
+            cols.insert(newLocation, cols.pop(oldLocation))
+            self.df = self.df.T[cols].T
+
         return True
 
     #    def filter(self, filt=None):
@@ -551,19 +566,35 @@ class DataFrameModel(QtCore.QAbstractTableModel):
     #        self.layoutChanged.emit()
 
 
+class DataFrameView(QtWidgets.QTableView):
+    def __init__(self):
+        super().__init__()
+        HierarchicalHeaderView(orientation=Qt.Horizontal, parent=self)
+        HierarchicalHeaderView(orientation=Qt.Vertical, parent=self)
+        self.horizontalHeader().setSectionsMovable(True)
+        self.verticalHeader().setSectionsMovable(True)
+
+
 if __name__ == "__main__":
     import sys
 
     app = QtWidgets.QApplication(sys.argv)
 
-    # Prepare sample data 1
+    # Prepare sample data with 3 index levels
     tuples = [('A', 'one', 'X'), ('A', 'one', 'Y'), ('A', 'two', 'X'), ('A', 'two', 'Y'),
               ('B', 'one', 'X'), ('B', 'one', 'Y'), ('B', 'two', 'X'), ('B', 'two', 'Y')]
     index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
     df = pd.DataFrame(pd.np.random.randint(0, 10, (8, 8)), index=index[:8], columns=index[:8])
 
+    if 0:
+        # Prepare sample data with 2 index levels
+        tuples = [('A', 'one'), ('A', 'two'),
+                  ('B', 'one'), ('B', 'two')]
+        index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
+        df = pd.DataFrame(pd.np.random.randint(0, 10, (4, 4)), index=index[:8], columns=index[:8])
+
     if 1:
-        # Prepare sample data 2
+        # Prepare sample data basic
         data = pd.np.random.randint(0, 10, (10, 3)).astype(float)
         data[0][0] = pd.np.nan
         print(data)
@@ -571,23 +602,15 @@ if __name__ == "__main__":
 
     print("DataFrame:\n%s" % df)
 
+    # Build GUI
     window = QtWidgets.QWidget()
-    window.setMinimumSize(700, 260)
-
-    view = QtWidgets.QTableView()
+    view = DataFrameView()
+    view.setModel(DataFrameModel(df))
     QtWidgets.QVBoxLayout(window).addWidget(view)
     window.show()
 
-    # Prepare view
-    HierarchicalHeaderView(Qt.Horizontal, view)
-    HierarchicalHeaderView(Qt.Vertical, view)
-    view.horizontalHeader().setSectionsMovable(True)
-    view.verticalHeader().setSectionsMovable(True)
-
-    # Set data
-    view.setModel(DataFrameModel(df))
-
     # Settings & appearance
+    window.setMinimumSize(700, 360)
     view.setSortingEnabled(True)
     view.resizeColumnsToContents()
     view.resizeRowsToContents()

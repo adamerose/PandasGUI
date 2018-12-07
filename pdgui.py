@@ -159,7 +159,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         for i in reversed(range(layout.count())):
             layout.itemAt(i).widget().setParent(None)
 
-
 def show(df):
     app = QtWidgets.QApplication(sys.argv)
 
