@@ -653,8 +653,7 @@ class DataFrameView(QtWidgets.QTableView):
         self.resizeColumnsToContents()
         self.resizeRowsToContents()
 
-
-def main():
+if __name__ == "__main__":
     test_case = 1
 
     if test_case == 1:
@@ -699,7 +698,3 @@ def main():
     window.setMinimumSize(700, 360)
 
     app.exec()
-
-
-if __name__ == "__main__":
-    main()
