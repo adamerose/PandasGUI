@@ -267,7 +267,9 @@ def show(*args, **kwargs):
     app.exec_()
 
 
-def example():
+
+
+if __name__ == '__main__':
     df = pd.read_csv('pokemon.csv')
     df2 = pd.read_csv('sample.csv')
     tuples = [('A', 'one', 'x'), ('A', 'one', 'y'), ('A', 'two', 'x'), ('A', 'two', 'y'),
@@ -275,6 +277,3 @@ def example():
     index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
     df3 = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
     show(df2, multidf=df3)
-
-if __name__ == '__main__':
-    example()
