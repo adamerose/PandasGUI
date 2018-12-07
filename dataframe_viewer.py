@@ -619,9 +619,12 @@ class DataFrameView(QtWidgets.QTableView):
         HierarchicalHeaderView(orientation=Qt.Vertical, parent=self)
         self.horizontalHeader().setSectionsMovable(True)
         self.verticalHeader().setSectionsMovable(True)
+        self.setSortingEnabled(True)
+        self.resizeColumnsToContents()
+        self.resizeRowsToContents()
 
 
-def main():
+def main():add 
 
 
     test_case = 2
@@ -667,9 +670,7 @@ def main():
 
     # Settings & appearance
     window.setMinimumSize(700, 360)
-    view.setSortingEnabled(True)
-    view.resizeColumnsToContents()
-    view.resizeRowsToContents()
+
 
     app.exec()
 
