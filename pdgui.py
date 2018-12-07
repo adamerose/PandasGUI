@@ -208,7 +208,6 @@ class PandasGUI(QtWidgets.QMainWindow):
             self.generate_tabs(self.dataframes['df'])
             self.tab_layout.addWidget(self.tab_view)
         self.console.setText('')
-        self.console.setEnabled(True)
         self.command = None
 
     def printdf(self):
