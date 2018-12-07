@@ -5,6 +5,8 @@ import time
 import threading
 import queue
 import traceback
+from multiprocessing import Process
+from collections import OrderedDict
 
 # This fixes lack of stack trace on PyQt exceptions
 import pyqt_fix
@@ -13,18 +15,26 @@ from dataframe_viewer import DataFrameModel
 
 class PandasGUI(QtWidgets.QMainWindow):
 
-    def __init__(self, df):
+    def __init__(self, **kwargs):
         super().__init__()
-
-        if isinstance(df, list):
-            pass  # future
-
-        self.df = df
-        self.namespace = {'df': self.df,
-                          'pd': pd}
+        self.__dict__.update(kwargs)
+        self.dataframes = OrderedDict(kwargs)
 
         # Create the navigation pane
         self.nav_view = QtWidgets.QTreeView()
+        model = self.create_nav_model()
+        rootnode = model.invisibleRootItem()
+        branch1 = QtGui.QStandardItem('Master')
+        for df_name in self.dataframes.keys():
+            shape = self.dataframes[df_name].shape
+            shape = str(shape[0]) + ' X ' + str(shape[1])
+            name = QtGui.QStandardItem(df_name)
+            shape = QtGui.QStandardItem(shape)
+            branch1.appendRow([name, shape])
+        rootnode.appendRow([branch1, None])
+        self.nav_view.setModel(model)
+        self.nav_view.expandAll()
+        self.nav_view.clicked.connect(self.treefunction)
 
         # Create the console
         self.console = QtWidgets.QTextEdit(self)
@@ -43,7 +53,8 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.interpreter_signal.finished.connect(self.enable_interpreter)
 
         # Create the QTabWidget and add the tab_view
-        self.generate_tabs()
+        first_df = self.dataframes[(list(self.dataframes.keys())[0])]
+        self.generate_tabs(first_df)
 
         # Create main Widget
         self.main_layout = QtWidgets.QHBoxLayout()
@@ -88,24 +99,39 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         self.show()
 
-    def generate_tabs(self):
+    def treefunction(self, index):
+        self.clear_layout(self.tab_layout)
+        self.generate_tabs(self.dataframes[index.data()])
+        self.tab_layout.addWidget(self.tab_view)
+
+    def create_nav_model(self):
+        model = QtGui.QStandardItemModel(0, 2, self)
+        model.setHeaderData(0, QtCore.Qt.Horizontal, 'Name')
+        model.setHeaderData(1, QtCore.Qt.Horizontal, 'Shape')
+        return model
+
+    def add_nav_dataframe(self, model, name):
+        model.insertRow(0)
+        model.setData(model.index(0, 1), name)
+
+    def generate_tabs(self, df):
         if hasattr(self, 'tab_view'):
             delattr(self, 'tab_view')
         self.tab_view = QtWidgets.QTabWidget()
 
-        self.dataframe_tab = self.make_dataframe_tab()
-        self.statistics_tab = self.make_statistics_tab()
-        self.chart_tab = self.make_chart_tab()
+        self.dataframe_tab = self.make_dataframe_tab(df)
+        self.statistics_tab = self.make_statistics_tab(df)
+        self.chart_tab = self.make_chart_tab(df)
 
         self.tab_view.addTab(self.dataframe_tab, "Dataframe")
         self.tab_view.addTab(self.statistics_tab, "Statistics")
         self.tab_view.addTab(self.chart_tab, "Charts")
 
-    def make_dataframe_tab(self):
+    def make_dataframe_tab(self, df):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout()
 
-        self.df_model = DataFrameModel(self.df)
+        self.df_model = DataFrameModel(df)
         view = QtWidgets.QTableView()
         view.setSortingEnabled(True)
         view.setModel(self.df_model)
@@ -116,11 +142,11 @@ class PandasGUI(QtWidgets.QMainWindow):
         tab.setLayout(layout)
         return tab
 
-    def make_statistics_tab(self):
+    def make_statistics_tab(self, df):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout()
 
-        self.stats_model = DataFrameModel(self.df.describe())
+        self.stats_model = DataFrameModel(df.describe())
         view = QtWidgets.QTableView()
         view.setModel(self.stats_model)
 
@@ -131,7 +157,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         return tab
 
-    def make_chart_tab(self):
+    def make_chart_tab(self, df):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout()
 
@@ -192,7 +218,7 @@ class InterpreterSignal(QtCore.QObject):
     finished = QtCore.pyqtSignal()
 
 
-def show(df):
+def show(**kwargs):
     app = QtWidgets.QApplication(sys.argv)
 
     # Choose GUI appearance
@@ -201,9 +227,10 @@ def show(df):
     app.setStyle(style)
     print("PyQt5 Style: " + style)
 
-    win = PandasGUI(df)
+    win = PandasGUI(**kwargs)
     app.exec_()
 
 if __name__ == '__main__':
     df = pd.read_csv('pokemon.csv')
-    show(df)
+    df2 = pd.read_csv('sample.csv')
+    show(df=df, df2=df2)
