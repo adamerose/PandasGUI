@@ -16,8 +16,9 @@ class PandasGUI(QtWidgets.QMainWindow):
         super().__init__()
         self.namespace = OrderedDict(kwargs)
         self.namespace['pd'] = pd
-        for i, arg in enumerate(args):
-            dataframe_num = i+1
+        dataframe_num = 0
+        for arg in args:
+            dataframe_num += 1
             while ('df'+str(dataframe_num)) in self.namespace.keys():
                 dataframe_num += 1
             self.namespace['df'+str(dataframe_num)] = arg
