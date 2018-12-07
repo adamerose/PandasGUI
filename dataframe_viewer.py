@@ -624,9 +624,7 @@ class DataFrameView(QtWidgets.QTableView):
         self.resizeRowsToContents()
 
 
-def main():add 
-
-
+def main():
     test_case = 2
 
     if test_case == 1:

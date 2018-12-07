@@ -18,13 +18,15 @@ class PandasGUI(QtWidgets.QMainWindow):
     def __init__(self, **kwargs):
         super().__init__()
         self.namespace = OrderedDict(kwargs)
+        self.namespace['pd'] = pd
+        input_dataframes = self.count_dfs()
 
         # Create the navigation pane
         self.nav_view = QtWidgets.QTreeView()
         model = self.create_nav_model()
         rootnode = model.invisibleRootItem()
         self.main_nav_branch = QtGui.QStandardItem('Master')
-        for df_name in self.namespace.keys():
+        for df_name in input_dataframes:
             self.add_nav_dataframe(df_name)
         rootnode.appendRow([self.main_nav_branch, None])
         self.nav_view.setModel(model)
@@ -49,7 +51,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.interpreter_signal.finished.connect(self.enable_interpreter)
 
         # Create the QTabWidget and add the tab_view
-        first_df = self.namespace[(list(self.namespace.keys())[0])]
+        first_df = input_dataframes[0]
         self.generate_tabs(first_df)
 
         # Create main Widget
@@ -96,12 +98,11 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.show()
 
     def select_dataframe(self, name):
+        '''Examines navbar row pressed by user
+           and then changes the dataframe shown'''
         row_selected = name.row()
         df = self.nav_view.model().index(0, 0).child(row_selected, 0).data()
-
-        self.clear_layout(self.tab_layout)
-        self.generate_tabs(self.namespace[df])
-        self.tab_layout.addWidget(self.tab_view)
+        self.refresh_layout(dataframe_shown=df)
 
     def create_nav_model(self):
         model = QtGui.QStandardItemModel(0, 2, self)
@@ -110,6 +111,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         return model
 
     def add_nav_dataframe(self, df_name):
+        '''Adds a nav element to the navigation sidebar'''
         shape = self.namespace[df_name].shape
         shape = str(shape[0]) + ' X ' + str(shape[1])
         name = QtGui.QStandardItem(df_name)
@@ -117,6 +119,8 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.main_nav_branch.appendRow([name, shape])
 
     def generate_tabs(self, df):
+        '''Take a dataframe and creates tab information from it.'''
+        df = self.namespace[df]
         if hasattr(self, 'tab_view'):
             delattr(self, 'tab_view')
         self.tab_view = QtWidgets.QTabWidget()
@@ -181,20 +185,25 @@ class PandasGUI(QtWidgets.QMainWindow):
         return tab
 
     def enable_interpreter(self):
+        '''Starts a thread waiting for interpreter input.
+           Prevents locking of the gui while waiting'''
         self.thread = threading.Thread(target=self.get_interpreter_command,
                                        args=(self.interpreter_signal,))
         self.thread.start()
 
     def get_interpreter_command(self, signal):
+        '''Runs commands inputted in the interpreter'''
         self.command = input('Type command below\n')
         signal.finished.emit()
 
     def get_textbox_command(self):
+        '''Runs commands inputted to the textbox'''
         self.command = self.console.toPlainText()
         self.run_command()
 
     def run_command(self):
-        self.namespace['pd'] = pd
+        '''Runs user command and examines any variables added.
+           If the variable is a dataframe, adds it to the navbar.'''
         old_num_dfs = len(self.count_dfs())
         if self.command:
             try:
@@ -205,9 +214,9 @@ class PandasGUI(QtWidgets.QMainWindow):
             if new_num_dfs > old_num_dfs:
                 new_df = self.count_dfs()[-1]
                 self.add_nav_dataframe(new_df)
-            self.clear_layout(self.tab_layout)
-            self.generate_tabs(self.namespace['df'])
-            self.tab_layout.addWidget(self.tab_view)
+                self.refresh_layout(dataframe_shown=new_df)
+            else:
+                self.refresh_layout(dataframe_shown='df')
         self.console.setText('')
         self.command = None
 
@@ -215,15 +224,25 @@ class PandasGUI(QtWidgets.QMainWindow):
         print(self.df_model)
 
     def count_dfs(self):
+        '''returns all dfs in namespace'''
         return [df for df in self.namespace.keys()
                 if isinstance(self.namespace[df], pd.DataFrame)]
 
     def clear_layout(self, layout):
+        '''Clears all widgets from a layout'''
         for i in reversed(range(layout.count())):
             layout.itemAt(i).widget().setParent(None)
 
+    def refresh_layout(self, dataframe_shown):
+        '''Clears the layout then adds the tab view'''
+        self.clear_layout(self.tab_layout)
+        self.generate_tabs(dataframe_shown)
+        self.tab_layout.addWidget(self.tab_view)
+
 
 class InterpreterSignal(QtCore.QObject):
+    '''Signal class used for sending a finished signal when
+       user is finished interpreter input()'''
     finished = QtCore.pyqtSignal()
 
 
