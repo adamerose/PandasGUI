@@ -4,7 +4,7 @@ import sys
 
 # This fixes lack of stack trace on PyQt exceptions
 import pyqt_fix
-from dataframe_viewer import DataFrameModel
+from dataframe_viewer import DataFrameModel, DataFrameView
 
 
 class PandasGUI(QtWidgets.QMainWindow):
@@ -94,8 +94,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         layout = QtWidgets.QVBoxLayout()
 
         self.df_model = DataFrameModel(self.df)
-        view = QtWidgets.QTableView()
-        view.setSortingEnabled(True)
+        view = DataFrameView()
         view.setModel(self.df_model)
 
         # view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)

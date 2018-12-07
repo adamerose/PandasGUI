@@ -427,6 +427,22 @@ class DataFrameModel(QtCore.QAbstractTableModel):
     def columnCount(self, parent):
         return len(self.df.columns)
 
+    def flags(self, index):
+        ''' Set flag to allow items editable
+        (and enabled / selectable but those are on by default)'''
+        return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+
+    def setData(self, index, value, role=QtCore.Qt.EditRole):
+        ''' When an item is edited check if it is valid,
+            if it is, return True and emit dataChanged'''
+        if role == QtCore.Qt.EditRole:
+            row = index.row()
+            column = index.column()
+
+            self.df.iloc[row, column] = value
+            self.dataChanged.emit(index, index)
+            return True
+
     def data(self, index, role):
         """
         Returns the data stored under the given role for the item referred to by the index.
@@ -622,7 +638,7 @@ def main():
     index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
     df = pd.DataFrame(pd.np.random.randint(0, 10, (8, 8)), index=index[:8], columns=index[:8])
 
-    if 0:
+    if 1:
         # Prepare sample data with 2 index levels
         tuples = [('A', 'one'), ('A', 'two'),
                   ('B', 'one'), ('B', 'two')]
