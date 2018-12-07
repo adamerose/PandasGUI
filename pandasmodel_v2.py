@@ -427,6 +427,22 @@ class DataFrameModel(QtCore.QAbstractTableModel):
     def columnCount(self, parent):
         return len(self.df.columns)
 
+    def flags(self, index):
+        ''' Set flag to allow items editable
+        (and enabled / selectable but those are on by default)'''
+        return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+
+    def setData(self, index, value, role=QtCore.Qt.EditRole):
+        ''' When an item is edited check if it is valid,
+            if it is, return True and emit dataChanged'''
+        if role == QtCore.Qt.EditRole:
+            row = index.row()
+            column = index.column()
+
+            self.df.iloc[row, column] = value
+            self.dataChanged.emit(index, index)
+            return True
+
     def data(self, index, role):
         """
         Returns the data stored under the given role for the item referred to by the index.
@@ -493,6 +509,7 @@ class DataFrameModel(QtCore.QAbstractTableModel):
 
     def headerData(self, section, orientation, role):
         """
+        # FIXME: ADDED 'return None' AND THE PROGRAM STILL WORKS. DOES THIS FUNCTION DO NOTHING ?
         Returns the data for the given role and section in the header with the specified orientation.
 
         http://pyqt.sourceforge.net/Docs/PyQt4/qabstractitemmodel.html#headerData
@@ -514,52 +531,52 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         else:
             label = self.df.index[section]
 
-        print('-------------')
-        import traceback
-        import sys
-        traceback.print_stack(file=sys.stdout)
-        print('-------------')
+        '''
+        # return label if type(label) is tuple else label
+        return ("\n", " | ")[orientation != Qt.Horizontal].join(str(i) for i in label) if type(label) is tuple else str(label)
+        '''
 
+        return None
 
-        return label
-
-        #        return label if type(label) is tuple else label
-        return ("\n", " | ")[orientation != Qt.Horizontal].join(str(i) for i in label) if type(label) is tuple else str(
-            label)
-
-
-    def readLevel(self, y=0, xs=0, xe=None, orient=None):
+    def readLevel(self, y=0, start=0, end=None, orient=None):
         """
 
         Args:
             y ():
-            xs ():
-            xe ():
+            start (): Section start
+            end (): Section end
             orient (Qt.ItemDataRole): HorizontalHeaderDataRole or VerizontalHeaderDataRole
 
         Returns:
 
         """
         # print("-----------")
-        # print("readLevel({}, {}, {}, {})".format(y, xs, str(str(xe) + ("   ") if xe else xe), orient))
+        print("readLevel({}, {}, {}, {})".format(y, start, str(str(end) + ("   ") if end else end), orient))
 
-        c = getattr(self.df, ("columns", "index")[orient != HorizontalHeaderDataRole])
-        if not hasattr(c, "levels"):  # not MultiIndex
-            return [QtGui.QStandardItem(str(i)) for i in c]
+        if orient == HorizontalHeaderDataRole:
+            cols = self.df.columns
+        else:
+            cols = self.df.index
+
+        if not hasattr(cols, "levels"):  # not MultiIndex
+            return [QtGui.QStandardItem(str(i)) for i in cols]
+
         sibl = []
-        section_start, v, xe = xs, None, xe or len(c)
-        for i in range(xs, xe):
-            label = c.labels[y][i]
-            if label != v:
-                if y + 1 < len(c.levels) and i > xs:
-                    children = self.readLevel(y + 1, section_start, i, orient=orient)
+        prev_label = None
+        end = end or len(cols)
+
+        for i in range(start, end):
+            label = cols.labels[y][i]
+            if label != prev_label:
+                if y + 1 < len(cols.levels) and i > start:
+                    children = self.readLevel(y + 1, start, i, orient=orient)
                     sibl[-1].appendRow(children)
-                item = QtGui.QStandardItem(str(c.levels[y][label]))
+                item = QtGui.QStandardItem(str(cols.levels[y][label]))
                 sibl.append(item)
-                section_start = i
-                v = label
-        if y + 1 < len(c.levels):
-            children = self.readLevel(y + 1, section_start, orient=orient)
+                start = i
+                prev_label = label
+        if y + 1 < len(cols.levels):
+            children = self.readLevel(y + 1, start, end, orient=orient)
             sibl[-1].appendRow(children)
         return sibl
 
@@ -615,7 +632,13 @@ def main():
     index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
     df = pd.DataFrame(pd.np.random.randint(0, 10, (8, 8)), index=index[:8], columns=index[:8])
 
-    if 0:
+    # Prepare sample data with 3 index levels
+    tuples = [('A', 'one', 'a'), ('B', 'two', 'b'), ('C', 'three', 'c'), ('D', 'four', 'd'),
+              ('E', 'five', 'e'), ('F', 'six', 'f'), ('G', 'seven', 'g'), ('H', 'eight', 'h')]
+    index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
+    df = pd.DataFrame(pd.np.random.randint(0, 10, (8, 8)), index=index[:8], columns=index[:8])
+
+    if 1:
         # Prepare sample data with 2 index levels
         tuples = [('A', 'one'), ('A', 'two'),
                   ('B', 'one'), ('B', 'two')]
@@ -645,6 +668,7 @@ def main():
     view.resizeRowsToContents()
 
     app.exec()
+
 
 if __name__ == "__main__":
     main()
