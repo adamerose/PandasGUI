@@ -1,11 +1,8 @@
 from PyQt5 import QtCore, QtWidgets, QtGui
 import pandas as pd
 import sys
-import time
 import threading
-import queue
 import traceback
-from multiprocessing import Process
 from collections import OrderedDict
 
 # This fixes lack of stack trace on PyQt exceptions
