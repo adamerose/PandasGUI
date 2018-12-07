@@ -15,14 +15,17 @@ class PandasGUI(QtWidgets.QMainWindow):
     def __init__(self, *args, **kwargs):
         super().__init__()
         self.namespace = OrderedDict(kwargs)
-        self.namespace['pd'] = pd
+
+        # Adds positional arguements to namespace.
         dataframe_num = 0
         for arg in args:
             dataframe_num += 1
             while ('df'+str(dataframe_num)) in self.namespace.keys():
                 dataframe_num += 1
             self.namespace['df'+str(dataframe_num)] = arg
+
         input_dataframes = self.count_dfs()
+        self.namespace['pd'] = pd
 
         # Create the navigation pane
         self.nav_view = QtWidgets.QTreeView()
@@ -219,7 +222,8 @@ class PandasGUI(QtWidgets.QMainWindow):
                 self.add_nav_dataframe(new_df)
                 self.refresh_layout(dataframe_shown=new_df)
             else:
-                self.refresh_layout(dataframe_shown='df')
+                first_df = self.count_dfs()[0]
+                self.refresh_layout(dataframe_shown=first_df)
             self.console.setText('')
             self.command = None
 
@@ -269,7 +273,7 @@ def example():
               ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')]
     index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
     df3 = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
-    show(df, df2, multidf=df3)
+    show(df1=df2)
 
 if __name__ == '__main__':
     example()
