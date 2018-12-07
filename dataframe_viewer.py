@@ -16,6 +16,7 @@ import numpy as np
 import datetime
 import pyqt_fix
 import sys
+
 # Define role numbers for our custom headers
 HorizontalHeaderDataRole = Qt.UserRole
 VerticalHeaderDataRole = Qt.UserRole + 1
@@ -480,6 +481,27 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         if role in (HorizontalHeaderDataRole, VerticalHeaderDataRole):
             hm = QtGui.QStandardItemModel()
             hm.appendRow(self.readLevel(orient=role))
+            x = 1
+
+            def print_qitem(x, depth=0):
+                def rprint(*strings):
+                    print("   " * depth, *[*strings])
+
+                rprint('-------')
+                rprint(x)
+                rows = x.rowCount()
+                cols = x.columnCount()
+                rprint("rows cols: ", rows, cols)
+                for i in range(rows):
+                    for j in range(cols):
+                        if type(x) == QtGui.QStandardItemModel:
+                            x = x.item(i, j)
+                        else:
+                            x = x.child(i, j)
+                        if x is not None:
+                            print_qitem(x, depth + 1)
+
+            print_qitem(hm)
             return hm
 
     def sort(self, column, order):
@@ -561,14 +583,14 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         if not hasattr(cols, "levels"):  # not MultiIndex
             return [QtGui.QStandardItem(str(i)) for i in cols]
 
-        sibl = []
+        sibl = []  # List of QStandardItems
         prev_label = None
         end = end or len(cols)
 
         for i in range(start, end):
             label = cols.labels[y][i]
             if label != prev_label:
-                if y + 1 < len(cols.levels) and i > start:
+                if y < len(cols.levels) - 1 and i > start:
                     children = self.readLevel(y + 1, start, i, orient=orient)
                     sibl[-1].appendRow(children)
                 item = QtGui.QStandardItem(str(cols.levels[y][label]))
@@ -578,6 +600,14 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         if y + 1 < len(cols.levels):
             children = self.readLevel(y + 1, start, end, orient=orient)
             sibl[-1].appendRow(children)
+
+        if y == 999:
+            print(sibl)
+            print('-------')
+            for item in sibl:
+                print(item.rowCount(), item.columnCount())
+                print(item.data(HorizontalHeaderDataRole))
+                print(item.data(VerticalHeaderDataRole))
         return sibl
 
     def reorder(self, oldLocation, newLocation, orientation):
@@ -624,10 +654,8 @@ class DataFrameView(QtWidgets.QTableView):
         self.resizeRowsToContents()
 
 
-def main():add 
-
-
-    test_case = 2
+def main():
+    test_case = 1
 
     if test_case == 1:
         # Prepare sample data with 3 index levels
@@ -658,7 +686,6 @@ def main():add
 
     print("DataFrame:\n%s" % df)
 
-
     app = QtWidgets.QApplication(sys.argv)
 
     # Build GUI
@@ -670,7 +697,6 @@ def main():add
 
     # Settings & appearance
     window.setMinimumSize(700, 360)
-
 
     app.exec()
 
