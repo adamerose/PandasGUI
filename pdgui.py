@@ -99,7 +99,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
     def select_dataframe(self, name):
         '''Examines navbar row pressed by user
-           and then changes the dataframe shown'''
+           and then changes the dataframe shown.'''
         row_selected = name.row()
         df = self.nav_view.model().index(0, 0).child(row_selected, 0).data()
         self.refresh_layout(dataframe_shown=df)
@@ -186,26 +186,26 @@ class PandasGUI(QtWidgets.QMainWindow):
 
     def enable_interpreter(self):
         '''Starts a thread waiting for interpreter input.
-           Prevents locking of the gui while waiting'''
+           Prevents locking of the gui while waiting.'''
         self.thread = threading.Thread(target=self.get_interpreter_command,
                                        args=(self.interpreter_signal,))
         self.thread.start()
 
     def get_interpreter_command(self, signal):
-        '''Runs commands inputted in the interpreter'''
+        '''Runs commands inputted in the interpreter.'''
         self.command = input('Type command below\n')
         signal.finished.emit()
 
     def get_textbox_command(self):
-        '''Runs commands inputted to the textbox'''
+        '''Runs commands inputted to the textbox.'''
         self.command = self.console.toPlainText()
         self.run_command()
 
     def run_command(self):
         '''Runs user command and examines any variables added.
            If the variable is a dataframe, adds it to the navbar.'''
-        old_num_dfs = len(self.count_dfs())
         if self.command:
+            old_num_dfs = len(self.count_dfs())
             try:
                 exec(self.command, self.namespace)
             except:
@@ -217,24 +217,24 @@ class PandasGUI(QtWidgets.QMainWindow):
                 self.refresh_layout(dataframe_shown=new_df)
             else:
                 self.refresh_layout(dataframe_shown='df')
-        self.console.setText('')
-        self.command = None
+            self.console.setText('')
+            self.command = None
 
     def printdf(self):
         print(self.df_model)
 
     def count_dfs(self):
-        '''returns all dfs in namespace'''
+        '''Returns all dfs in namespace.'''
         return [df for df in self.namespace.keys()
                 if isinstance(self.namespace[df], pd.DataFrame)]
 
     def clear_layout(self, layout):
-        '''Clears all widgets from a layout'''
+        '''Clears all widgets from a layout.'''
         for i in reversed(range(layout.count())):
             layout.itemAt(i).widget().setParent(None)
 
     def refresh_layout(self, dataframe_shown):
-        '''Clears the layout then adds the tab view'''
+        '''Clears the tab layout then redraws it showing a new dataframe.'''
         self.clear_layout(self.tab_layout)
         self.generate_tabs(dataframe_shown)
         self.tab_layout.addWidget(self.tab_view)
@@ -242,7 +242,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
 class InterpreterSignal(QtCore.QObject):
     '''Signal class used for sending a finished signal when
-       user is finished interpreter input()'''
+       user is finished interpreter input().'''
     finished = QtCore.pyqtSignal()
 
 
@@ -262,7 +262,11 @@ def show(**kwargs):
 def example():
     df = pd.read_csv('pokemon.csv')
     df2 = pd.read_csv('sample.csv')
-    show(df=df, df2=df2)
+    tuples = [('A', 'one', 'x'), ('A', 'one', 'y'), ('A', 'two', 'x'), ('A', 'two', 'y'),
+              ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')]
+    index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
+    df3 = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
+    show(df=df, df2=df2, multidf=df3)
 
 if __name__ == '__main__':
     example()
