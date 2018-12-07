@@ -1,4 +1,9 @@
 import sys
+<<<<<<< HEAD
+
+
+=======
+>>>>>>> develop
 def my_excepthook(type, value, tback):
     # log the exception here
 
