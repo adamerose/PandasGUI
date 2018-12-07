@@ -17,28 +17,24 @@ class PandasGUI(QtWidgets.QMainWindow):
 
     def __init__(self, **kwargs):
         super().__init__()
-        self.__dict__.update(kwargs)
         self.dataframes = OrderedDict(kwargs)
 
         # Create the navigation pane
         self.nav_view = QtWidgets.QTreeView()
         model = self.create_nav_model()
         rootnode = model.invisibleRootItem()
-        branch1 = QtGui.QStandardItem('Master')
+        self.main_nav_branch = QtGui.QStandardItem('Master')
         for df_name in self.dataframes.keys():
-            shape = self.dataframes[df_name].shape
-            shape = str(shape[0]) + ' X ' + str(shape[1])
-            name = QtGui.QStandardItem(df_name)
-            shape = QtGui.QStandardItem(shape)
-            branch1.appendRow([name, shape])
-        rootnode.appendRow([branch1, None])
+            self.add_nav_dataframe(df_name)
+        rootnode.appendRow([self.main_nav_branch, None])
         self.nav_view.setModel(model)
         self.nav_view.expandAll()
-        self.nav_view.clicked.connect(self.treefunction)
+        self.nav_view.clicked.connect(self.select_dataframe)
 
         # Create the console
         self.console = QtWidgets.QTextEdit(self)
-        default_text = ('Press run button to run code in textbox.')
+        default_text = ('Press run button to run code in textbox.\n'
+                        'Or enter command into interpreter and press enter.')
         self.console.setPlaceholderText(default_text)
         font = QtGui.QFont()
         font.setPointSize(14)
@@ -99,9 +95,9 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         self.show()
 
-    def treefunction(self, index):
+    def select_dataframe(self, name):
         self.clear_layout(self.tab_layout)
-        self.generate_tabs(self.dataframes[index.data()])
+        self.generate_tabs(self.dataframes[name.data()])
         self.tab_layout.addWidget(self.tab_view)
 
     def create_nav_model(self):
@@ -110,9 +106,12 @@ class PandasGUI(QtWidgets.QMainWindow):
         model.setHeaderData(1, QtCore.Qt.Horizontal, 'Shape')
         return model
 
-    def add_nav_dataframe(self, model, name):
-        model.insertRow(0)
-        model.setData(model.index(0, 1), name)
+    def add_nav_dataframe(self, df_name):
+        shape = self.dataframes[df_name].shape
+        shape = str(shape[0]) + ' X ' + str(shape[1])
+        name = QtGui.QStandardItem(df_name)
+        shape = QtGui.QStandardItem(shape)
+        self.main_nav_branch.appendRow([name, shape])
 
     def generate_tabs(self, df):
         if hasattr(self, 'tab_view'):
@@ -193,14 +192,20 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.run_command()
 
     def run_command(self):
+        namespace = self.dataframes
+        namespace['pd'] = pd
+        num_dfs = len(namespace) - 1
         if self.command:
             try:
-                exec(self.command, globals())
+                exec(self.command, namespace)
             except:
                 print(traceback.format_exc())
-            self.df = df
+            if len(namespace) > num_dfs:
+                new_df = list(namespace.keys())[-1]
+                self.add_nav_dataframe(new_df)
+            self.dataframes = namespace
             self.clear_layout(self.tab_layout)
-            self.generate_tabs()
+            self.generate_tabs(self.dataframes['df'])
             self.tab_layout.addWidget(self.tab_view)
         self.console.setText('')
         self.console.setEnabled(True)
@@ -230,7 +235,11 @@ def show(**kwargs):
     win = PandasGUI(**kwargs)
     app.exec_()
 
-if __name__ == '__main__':
+
+def example():
     df = pd.read_csv('pokemon.csv')
     df2 = pd.read_csv('sample.csv')
     show(df=df, df2=df2)
+
+if __name__ == '__main__':
+    example()
