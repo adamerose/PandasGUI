@@ -480,6 +480,13 @@ if __name__=="__main__":
             ('foo', 'one', 'q'), ('foo', 'two', 'q'), ('qux', 'one', 'q'), ('qux', 'two', 'q')]
     index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
     df=pd.DataFrame(pd.np.random.randn(6, 6), index=index[:6], columns=index[:6])
+
+    if 0:
+        tuples = [('A', 'one', 'X'), ('A', 'one', 'Y'), ('A', 'two', 'X'), ('A', 'two', 'Y'),
+                  ('B', 'one', 'X'), ('B', 'one', 'Y'), ('B', 'two', 'X'), ('B', 'two', 'Y')]
+        index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
+        df = pd.DataFrame(pd.np.random.randint(0, 10, (8, 8)), index=index[:8], columns=index[:8])
+
     print("DataFrame:\n%s"%df)
     
     #Prepare view

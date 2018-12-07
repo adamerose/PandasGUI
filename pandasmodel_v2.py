@@ -468,7 +468,9 @@ class DataFrameModel(QtCore.QAbstractTableModel):
 
     def sort(self, column, order):
         """
-        Sort the DataFrame by column according to order
+        Sorts the model by column in the given order. The base class implementation does nothing.
+
+        http://pyqt.sourceforge.net/Docs/PyQt4/qabstractitemmodel.html#sort
 
         Args:
             column (int): Index of the column (far left column = 0)
@@ -490,19 +492,56 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         self.layoutChanged.emit()
 
     def headerData(self, section, orientation, role):
-        if role != Qt.DisplayRole: return
-        label = getattr(self.df, ("columns", "index")[orientation != Qt.Horizontal])[section]
+        """
+        Returns the data for the given role and section in the header with the specified orientation.
+
+        http://pyqt.sourceforge.net/Docs/PyQt4/qabstractitemmodel.html#headerData
+
+        Args:
+            section (): For horizontal headers, the section number corresponds to the column number.
+                        Similarly, for vertical headers, the section number corresponds to the row number.
+            orientation (int): Qt.Horizontal or Qt.Vertical
+            role (): Qt Role
+
+        Returns:
+
+        """
+        if role != Qt.DisplayRole:
+            return
+
+        if orientation == Qt.Horizontal:
+            label = self.df.columns[section]
+        else:
+            label = self.df.index[section]
+
+        print('-------------')
+        import traceback
+        import sys
+        traceback.print_stack(file=sys.stdout)
+        print('-------------')
+
+
+        return label
+
         #        return label if type(label) is tuple else label
         return ("\n", " | ")[orientation != Qt.Horizontal].join(str(i) for i in label) if type(label) is tuple else str(
             label)
 
+
     def readLevel(self, y=0, xs=0, xe=None, orient=None):
-        print("-----------")
-        print("readLevel({}, {}, {}, {})".format(y, xs, xe, orient))
-        print("y", y)
-        print("xs", xs)
-        print("xe", xe)
-        print("orient", orient)
+        """
+
+        Args:
+            y ():
+            xs ():
+            xe ():
+            orient (Qt.ItemDataRole): HorizontalHeaderDataRole or VerizontalHeaderDataRole
+
+        Returns:
+
+        """
+        # print("-----------")
+        # print("readLevel({}, {}, {}, {})".format(y, xs, str(str(xe) + ("   ") if xe else xe), orient))
 
         c = getattr(self.df, ("columns", "index")[orient != HorizontalHeaderDataRole])
         if not hasattr(c, "levels"):  # not MultiIndex
@@ -537,19 +576,8 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         Returns: True
 
         """
-        print("-----------")
-        print("reorder()")
-        print("oldIndex", oldLocation)
-        print("newIndex", newLocation)
-        print("orientation", orientation)
-
-        # # Swap rows
-        # old = self.df.iloc[oldLocation].copy()
-        # new = self.df.iloc[newLocation].copy()
-        # self.df.iloc[oldLocation], self.df.iloc[newLocation] = new, old
-
         horizontal = orientation == Qt.Horizontal
-        print(horizontal)
+
         if horizontal:
             cols = list(self.df.columns)
             cols.insert(newLocation, cols.pop(oldLocation))
@@ -561,6 +589,7 @@ class DataFrameModel(QtCore.QAbstractTableModel):
 
         return True
 
+    # TODO
     #    def filter(self, filt=None):
     #        self.df = self.df_full if filt is None else self.df[filt]
     #        self.layoutChanged.emit()
@@ -575,7 +604,7 @@ class DataFrameView(QtWidgets.QTableView):
         self.verticalHeader().setSectionsMovable(True)
 
 
-if __name__ == "__main__":
+def main():
     import sys
 
     app = QtWidgets.QApplication(sys.argv)
@@ -593,7 +622,7 @@ if __name__ == "__main__":
         index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
         df = pd.DataFrame(pd.np.random.randint(0, 10, (4, 4)), index=index[:8], columns=index[:8])
 
-    if 1:
+    if 0:
         # Prepare sample data basic
         data = pd.np.random.randint(0, 10, (10, 3)).astype(float)
         data[0][0] = pd.np.nan
@@ -616,3 +645,6 @@ if __name__ == "__main__":
     view.resizeRowsToContents()
 
     app.exec()
+
+if __name__ == "__main__":
+    main()
