@@ -533,8 +533,6 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         Returns: List of QStandardItem
 
         """
-        # print("-----------")
-        # print("readLevel({}, {}, {}, {})".format(y, start, str(str(end) + ("   ") if end else end), orient))
 
         if orient == HorizontalHeaderDataRole:
             cols = self.df.columns
@@ -545,7 +543,6 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         if not hasattr(cols, "levels"):
             return [QtGui.QStandardItem(str(x)) for x in cols]
 
-
         section_list = []  # List of QStandardItems
         prev_label = None
         end = end or len(cols)
@@ -554,14 +551,19 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         for i in range(start, end):
 
             # Get the label number corresponding to this header level and location in the MultiIndex
-            label = cols.labels[y][i]
+            try:
+                label = cols.labels[y][i]
+            except IndexError:
+                label = None
+
             if label != prev_label:
-                # If there are more header levels below this one, each label should have the labels under it as children
-                if y < len(cols.levels) - 1 and i > section_start:
+                # Detected start of new section, add children to the previous section
+                if y < len(cols.levels) - 1 and (i > section_start):  # Note section_start is still for the last section
                     # Create the list of QStandardItem objects representing the header labels below this one
-                    children = self.readLevel(y + 1, start, i, orient=orient)
+                    children = self.readLevel(y + 1, section_start, i, orient=orient)
                     section_list[-1].appendRow(children)
-                # Create the QStandardItem
+
+                # Create the QStandardItem for this section
                 section_label = str(cols.levels[y][label])
                 item = QtGui.QStandardItem(section_label)
                 section_list.append(item)
@@ -570,50 +572,12 @@ class DataFrameModel(QtCore.QAbstractTableModel):
                 section_start = i
                 prev_label = label
 
-        if y < len(cols.levels) - 1:
+        # The previous loop adds children to the previous section once a new section is started. This never happens
+        # for the last section of the header so we do it here
+        if y + 1 < len(cols.levels):
             children = self.readLevel(y + 1, start, end, orient=orient)
             section_list[-1].appendRow(children)
 
-        if y == 999:
-            print(section_list)
-            print('-------')
-            for item in section_list:
-                print(item.rowCount(), item.columnCount())
-                print(item.data(HorizontalHeaderDataRole))
-                print(item.data(VerticalHeaderDataRole))
-
-        if 0:
-            def print_qitem(x, depth=0):
-                print("   " * depth,
-                      '-------')
-                print("   " * depth,
-                      x)
-                if type(x) == QtGui.QStandardItem:
-                    print("   " * depth,
-                          x.text())
-
-                if x is not None:
-                    rows = x.rowCount()
-                    cols = x.columnCount()
-                    print("   " * depth,
-                          "rows cols: ", rows, cols)
-                    for i in range(rows):
-                        for j in range(cols):
-                            if type(x) == QtGui.QStandardItemModel:
-                                sub_x = x.item(i, j)
-                            else:
-                                sub_x = x.child(i, j)
-
-                            print_qitem(sub_x, depth + 1)
-
-            print('----------------------------------------------')
-            print_qitem(hm)
-
-        print('-------------')
-        print("  "*y, section_list)
-
-        if y==0:
-            x=2
         return section_list
 
     def sort(self, column, order):
@@ -741,6 +705,12 @@ if __name__ == "__main__":
         df = pd.DataFrame(pd.np.random.randint(0, 10, (4, 4)), index=index[:8], columns=index[:8])
 
     if test_case == 4:
+        # Prepare sample data with 2 index levels
+        tuples = [('A', 'one'),('B', 'two')]
+        index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
+        df = pd.DataFrame(pd.np.random.randint(0, 10, (2, 2)), index=index[:8], columns=index[:8])
+
+    if test_case == 5:
         # Prepare sample data basic
         data = pd.np.random.randint(0, 10, (10, 3)).astype(float)
         data[0][0] = pd.np.nan
