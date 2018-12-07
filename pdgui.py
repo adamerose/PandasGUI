@@ -12,10 +12,15 @@ from dataframe_viewer import DataFrameModel, DataFrameView
 
 class PandasGUI(QtWidgets.QMainWindow):
 
-    def __init__(self, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__()
         self.namespace = OrderedDict(kwargs)
         self.namespace['pd'] = pd
+        for i, arg in enumerate(args):
+            dataframe_num = i+1
+            while ('df'+str(dataframe_num)) in self.namespace.keys():
+                dataframe_num += 1
+            self.namespace['df'+str(dataframe_num)] = arg
         input_dataframes = self.count_dfs()
 
         # Create the navigation pane
@@ -243,7 +248,7 @@ class InterpreterSignal(QtCore.QObject):
     finished = QtCore.pyqtSignal()
 
 
-def show(**kwargs):
+def show(*args, **kwargs):
     app = QtWidgets.QApplication(sys.argv)
 
     # Choose GUI appearance
@@ -252,7 +257,7 @@ def show(**kwargs):
     app.setStyle(style)
     print("PyQt5 Style: " + style)
 
-    win = PandasGUI(**kwargs)
+    win = PandasGUI(*args, **kwargs)
     app.exec_()
 
 
@@ -263,7 +268,7 @@ def example():
               ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')]
     index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
     df3 = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
-    show(df=df, df2=df2, multidf=df3)
+    show(df, df2, multidf=df3)
 
 if __name__ == '__main__':
     example()
