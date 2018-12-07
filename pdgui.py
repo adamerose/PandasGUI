@@ -216,13 +216,14 @@ class PandasGUI(QtWidgets.QMainWindow):
                 exec(self.command, self.namespace)
             except:
                 print(traceback.format_exc())
-            new_num_dfs = len(self.count_dfs())
+            all_dfs = self.count_dfs()
+            new_num_dfs = len(all_dfs)
             if new_num_dfs > old_num_dfs:
-                new_df = self.count_dfs()[-1]
+                new_df = all_dfs[-1]
                 self.add_nav_dataframe(new_df)
                 self.refresh_layout(dataframe_shown=new_df)
             else:
-                first_df = self.count_dfs()[0]
+                first_df = all_dfs[0]
                 self.refresh_layout(dataframe_shown=first_df)
             self.console.setText('')
             self.command = None
