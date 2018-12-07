@@ -20,6 +20,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         dataframe_num = 0
         for arg in args:
             dataframe_num += 1
+            # Avoids overwriting dataframes
             while ('df'+str(dataframe_num)) in self.namespace.keys():
                 dataframe_num += 1
             self.namespace['df'+str(dataframe_num)] = arg
@@ -104,8 +105,8 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.show()
 
     def select_dataframe(self, name):
-        '''Examines navbar row pressed by user
-           and then changes the dataframe shown.'''
+        """Examines navbar row pressed by user
+           and then changes the dataframe shown."""
         row_selected = name.row()
         df = self.nav_view.model().index(0, 0).child(row_selected, 0).data()
         self.refresh_layout(dataframe_shown=df)
@@ -117,7 +118,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         return model
 
     def add_nav_dataframe(self, df_name):
-        '''Adds a nav element to the navigation sidebar'''
+        """Adds a nav element to the navigation sidebar"""
         shape = self.namespace[df_name].shape
         shape = str(shape[0]) + ' X ' + str(shape[1])
         name = QtGui.QStandardItem(df_name)
@@ -125,7 +126,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.main_nav_branch.appendRow([name, shape])
 
     def generate_tabs(self, df):
-        '''Take a dataframe and creates tab information from it.'''
+        """Take a dataframe and creates tab information from it."""
         df = self.namespace[df]
         if hasattr(self, 'tab_view'):
             delattr(self, 'tab_view')
@@ -191,25 +192,25 @@ class PandasGUI(QtWidgets.QMainWindow):
         return tab
 
     def enable_interpreter(self):
-        '''Starts a thread waiting for interpreter input.
-           Prevents locking of the gui while waiting.'''
+        """Starts a thread waiting for interpreter input.
+           Prevents locking of the gui while waiting."""
         self.thread = threading.Thread(target=self.get_interpreter_command,
                                        args=(self.interpreter_signal,))
         self.thread.start()
 
     def get_interpreter_command(self, signal):
-        '''Runs commands inputted in the interpreter.'''
+        """Runs commands inputted in the interpreter."""
         self.command = input('Type command below\n')
         signal.finished.emit()
 
     def get_textbox_command(self):
-        '''Runs commands inputted to the textbox.'''
+        """Runs commands inputted to the textbox."""
         self.command = self.console.toPlainText()
         self.run_command()
 
     def run_command(self):
-        '''Runs user command and examines any variables added.
-           If the variable is a dataframe, adds it to the navbar.'''
+        """Runs user command and examines any variables added.
+           If the variable is a dataframe, adds it to the navbar."""
         if self.command:
             old_num_dfs = len(self.count_dfs())
             try:
@@ -232,25 +233,25 @@ class PandasGUI(QtWidgets.QMainWindow):
         print(self.df_model)
 
     def count_dfs(self):
-        '''Returns all dfs in namespace.'''
+        """Returns names of all dfs in namespace."""
         return [df for df in self.namespace.keys()
                 if isinstance(self.namespace[df], pd.DataFrame)]
 
     def clear_layout(self, layout):
-        '''Clears all widgets from a layout.'''
+        """Clears all widgets from a layout."""
         for i in reversed(range(layout.count())):
             layout.itemAt(i).widget().setParent(None)
 
     def refresh_layout(self, dataframe_shown):
-        '''Clears the tab layout then redraws it showing a new dataframe.'''
+        """Clears the tab layout then redraws it showing a new dataframe."""
         self.clear_layout(self.tab_layout)
         self.generate_tabs(dataframe_shown)
         self.tab_layout.addWidget(self.tab_view)
 
 
 class InterpreterSignal(QtCore.QObject):
-    '''Signal class used for sending a finished signal when
-       user is finished interpreter input().'''
+    """Signal class used for sending a finished signal when
+       user is finished interpreter input()."""
     finished = QtCore.pyqtSignal()
 
 
@@ -274,7 +275,7 @@ def example():
               ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')]
     index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
     df3 = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
-    show(df1=df2)
+    show(df2, multidf=df3)
 
 if __name__ == '__main__':
     example()
