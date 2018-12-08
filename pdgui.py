@@ -144,21 +144,27 @@ class PandasGUI(QtWidgets.QMainWindow):
     # Nav bar functions
 
     def make_nav(self):
-        # Create the navigation pane
+        # Creates the navigation pane.
         df_names = list(self.df_dict.keys())
         self.nav_view = QtWidgets.QTreeView()
 
+        # Creates the headers.
         model = QtGui.QStandardItemModel(0, 2, self)
         model.setHeaderData(0, QtCore.Qt.Horizontal, 'Name')
         model.setHeaderData(1, QtCore.Qt.Horizontal, 'Shape')
-        rootnode = model.invisibleRootItem()
 
+        # Adds the user-inputted dataframes as navbar elements.
         self.main_nav_branch = QtGui.QStandardItem('Master')
+        rootnode = model.invisibleRootItem()
+        rootnode.appendRow([self.main_nav_branch, None])
         for df_name in df_names:
             self.add_nav_dataframe(df_name)
-        rootnode.appendRow([self.main_nav_branch, None])
-        self.nav_view.setModel(model)
+
+        # Sets navigation pane properties.
+        self.nav_view.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
+        self.nav_view.setSortingEnabled(True)
         self.nav_view.expandAll()
+        self.nav_view.setModel(model)
         self.nav_view.clicked.connect(self.select_dataframe)
 
     def select_dataframe(self, name):
@@ -168,11 +174,11 @@ class PandasGUI(QtWidgets.QMainWindow):
         df_name = self.nav_view.model().index(0, 0).child(row_selected, 0).data()
         df = self.df_dict[df_name]
 
-        # Remove all tabs from self.tab_widget
-        for i in range(self.tab_widget.count()):
+        # Remove all tabs from self.tab_widget.
+        for _ in range(self.tab_widget.count()):
             self.tab_widget.removeTab(0)
 
-        # Remake them with the new dataframe
+        # Remake them with the new dataframe.
         self.make_tabs(df)
 
     def create_nav_model(self):
@@ -188,9 +194,9 @@ class PandasGUI(QtWidgets.QMainWindow):
         shape = self.df_dict[df_name].shape
         shape = str(shape[0]) + ' X ' + str(shape[1])
 
-        df_name = QtGui.QStandardItem(df_name)
-        shape = QtGui.QStandardItem(shape)
-        self.main_nav_branch.appendRow([df_name, shape])
+        df_name_label = QtGui.QStandardItem(df_name)
+        shape_label = QtGui.QStandardItem(shape)
+        self.main_nav_branch.appendRow([df_name_label, shape_label])
 
     ####################
 
