@@ -158,28 +158,42 @@ class PandasGUI(QtWidgets.QMainWindow):
         rootnode = model.invisibleRootItem()
         rootnode.appendRow([self.main_nav_branch, None])
         for df_name in df_names:
-            self.add_nav_dataframe(df_name)
+            self.add_nav_dataframe(df_name, self.main_nav_branch)
 
         # Sets navigation pane properties.
         self.nav_view.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
         self.nav_view.setSortingEnabled(True)
-        self.nav_view.expandAll()
         self.nav_view.setModel(model)
+        self.nav_view.expandAll()
         self.nav_view.clicked.connect(self.select_dataframe)
 
-    def select_dataframe(self, name):
-        """Examines navbar row pressed by user
-           and then changes the dataframe shown."""
-        row_selected = name.row()
-        df_name = self.nav_view.model().index(0, 0).child(row_selected, 0).data()
-        df = self.df_dict[df_name]
+    def select_dataframe(self, location_clicked):
+        """
+        Examines navbar row pressed by user
+        and then changes the dataframe shown.
 
-        # Remove all tabs from self.tab_widget.
-        for _ in range(self.tab_widget.count()):
-            self.tab_widget.removeTab(0)
+        Args:
+            location_clicked: Automatically passed during clicked signal.
+                              Instance of QtCore.ModelIndex.
+                              Provides information on the location clicked.
+        """
 
-        # Remake them with the new dataframe.
-        self.make_tabs(df)
+        folder_clicked_index = location_clicked.parent().row()
+        df_clicked_index = location_clicked.row()
+
+        # Gets name of dataframe clicked by the row index.
+        nav_pane = self.nav_view.model()
+        df_folder = nav_pane.index(folder_clicked_index, 0)
+        df_name = df_folder.child(df_clicked_index, 0).data()
+        df = self.df_dict.get(df_name)
+
+        if df is not None:
+            # Remove all tabs from self.tab_widget.
+            for _ in range(self.tab_widget.count()):
+                self.tab_widget.removeTab(0)
+
+            # Remake them with the new dataframe.
+            self.make_tabs(df)
 
     def create_nav_model(self):
         model = QtGui.QStandardItemModel(0, 2, self)
@@ -187,7 +201,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         model.setHeaderData(1, QtCore.Qt.Horizontal, 'Shape')
         return model
 
-    def add_nav_dataframe(self, df_name):
+    def add_nav_dataframe(self, df_name, folder):
         """Adds a dataframe to the navigation sidebar"""
 
         # Calculate and format the shape of the DataFrame
@@ -196,7 +210,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         df_name_label = QtGui.QStandardItem(df_name)
         shape_label = QtGui.QStandardItem(shape)
-        self.main_nav_branch.appendRow([df_name_label, shape_label])
+        folder.appendRow([df_name_label, shape_label])
 
     ####################
 
