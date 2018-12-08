@@ -22,11 +22,17 @@ class PandasGUI(QtWidgets.QMainWindow):
         """
         super().__init__()
 
-        self.df_dict = OrderedDict(kwargs)
+        self.df_dict = {}
+
+        # Adds keyword arguments to namespace.
+        for i, (key, value) in enumerate(kwargs.items()):
+            self.df_dict[key] = value
 
         # Adds positional arguments to namespace.
-        for i, df in enumerate(args):
-            self.df_dict['untitled' + str(i+1)] = df
+        for i, value in enumerate(args):
+            self.df_dict['untitled' + str(i + 1)] = value
+
+
 
         # Create main Widget
         self.main_layout = QtWidgets.QHBoxLayout()
@@ -83,7 +89,6 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         return self.tab_widget
 
-
     def make_tab_dataframe(self, df):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout()
@@ -139,7 +144,6 @@ class PandasGUI(QtWidgets.QMainWindow):
     # Nav bar functions
 
     def make_nav(self):
-
         # Create the navigation pane
         df_names = list(self.df_dict.keys())
         self.nav_view = QtWidgets.QTreeView()
