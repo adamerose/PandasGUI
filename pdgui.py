@@ -154,15 +154,18 @@ class PandasGUI(QtWidgets.QMainWindow):
         model.setHeaderData(1, QtCore.Qt.Horizontal, 'Shape')
 
         # Adds the user-inputted dataframes as navbar elements.
-        self.main_nav_branch = QtGui.QStandardItem('Master')
+        self.main_nav_branch = QtGui.QStandardItem('Master Folder')
+        self.second_nav_branch = QtGui.QStandardItem('Other Folder')
         rootnode = model.invisibleRootItem()
+        rootnode.setFlags(rootnode.flags() &
+                          ~QtCore.Qt.ItemIsDropEnabled)
         rootnode.appendRow([self.main_nav_branch, None])
+        rootnode.appendRow([self.second_nav_branch, None])
         for df_name in df_names:
             self.add_nav_dataframe(df_name, self.main_nav_branch)
 
         # Sets navigation pane properties.
-        self.nav_view.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
-        self.nav_view.setSortingEnabled(True)
+        self.nav_view.setDragDropMode(self.nav_view.InternalMove)
         self.nav_view.setModel(model)
         self.nav_view.expandAll()
         self.nav_view.clicked.connect(self.select_dataframe)
@@ -178,13 +181,13 @@ class PandasGUI(QtWidgets.QMainWindow):
                               Provides information on the location clicked.
         """
 
-        folder_clicked_index = location_clicked.parent().row()
-        df_clicked_index = location_clicked.row()
+        df_parent_folder_index = location_clicked.parent().row()
+        df_clicked_row_index = location_clicked.row()
 
-        # Gets name of dataframe clicked by the row index.
+        # Gets name of dataframe clicked by using the row index.
         nav_pane = self.nav_view.model()
-        df_folder = nav_pane.index(folder_clicked_index, 0)
-        df_name = df_folder.child(df_clicked_index, 0).data()
+        df_parent_folder_name = nav_pane.index(df_parent_folder_index, 0)
+        df_name = df_parent_folder_name.child(df_clicked_row_index, 0).data()
         df = self.df_dict.get(df_name)
 
         if df is not None:
@@ -210,6 +213,13 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         df_name_label = QtGui.QStandardItem(df_name)
         shape_label = QtGui.QStandardItem(shape)
+
+        # Disables dropping dataframes on other dataframes in nav pane.
+        df_name_label.setFlags(df_name_label.flags() &
+                               ~QtCore.Qt.ItemIsDropEnabled)
+        shape_label.setFlags(shape_label.flags() &
+                             ~QtCore.Qt.ItemIsDropEnabled)
+
         folder.appendRow([df_name_label, shape_label])
 
     ####################
