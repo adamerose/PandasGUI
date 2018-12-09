@@ -1,14 +1,25 @@
-from PyQt5 import QtCore, QtWidgets, QtGui
-import pandas as pd
+import inspect
+import random
 import sys
 import threading
 import traceback
 from collections import OrderedDict
-import inspect
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+from matplotlib.backends.backend_qt5agg import \
+    FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import \
+    NavigationToolbar2QT as NavigationToolbar
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+from dataframe_viewer import DataFrameModel, DataFrameView
 
 # This fixes lack of stack trace on PyQt exceptions
 import pyqt_fix
-from dataframe_viewer import DataFrameModel, DataFrameView
+
+sns.set()
 
 
 class PandasGUI(QtWidgets.QMainWindow):
@@ -18,7 +29,8 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         Args:
             *args (): Tuple of DataFrame objects
-            **kwargs (): Dict of (key, value) pairs of (DataFrame name, DataFrame object)
+            **kwargs (): Dict of (key, value) pairs of
+                         {'DataFrame name': DataFrame object}
         """
         super().__init__()
 
@@ -66,13 +78,14 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Center window on screen
         screen = QtWidgets.QDesktopWidget().screenGeometry()
         size = self.geometry()
-        self.move((screen.width() - size.width()) / 2, (screen.height() - size.height()) / 2)
+        self.move((screen.width() - size.width()) / 2,
+                  (screen.height() - size.height()) / 2)
         self.setWindowTitle('PandasGUI')
 
         self.show()
 
     ####################
-    # Tab widget functions
+    # Tab widget construction functions.
 
     def make_tabs(self, df):
         """Take a DataFrame and creates tabs for it in self.tab_widget."""
@@ -98,7 +111,8 @@ class PandasGUI(QtWidgets.QMainWindow):
         view.setModel(self.df_model)
 
         # view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
-        view.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContentsOnFirstShow)
+        size_policy = QtWidgets.QAbstractScrollArea.AdjustToContentsOnFirstShow
+        view.setSizeAdjustPolicy(size_policy)
         layout.addWidget(view)
         tab.setLayout(layout)
         return tab
@@ -111,7 +125,8 @@ class PandasGUI(QtWidgets.QMainWindow):
         view = QtWidgets.QTableView()
         view.setModel(self.stats_model)
 
-        view.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContentsOnFirstShow)
+        size_policy = QtWidgets.QAbstractScrollArea.AdjustToContentsOnFirstShow
+        view.setSizeAdjustPolicy(size_policy)
         layout.addWidget(view)
 
         tab.setLayout(layout)
@@ -119,14 +134,29 @@ class PandasGUI(QtWidgets.QMainWindow):
         return tab
 
     def make_tab_charts(self, df):
+        # a figure instance to plot on
+        self.chart_figure = plt.figure()
+
+        # this is the Canvas Widget that displays the `figure`
+        # it takes the `figure` instance as a parameter to __init__
+        self.chart_canvas = FigureCanvas(self.chart_figure)
+
+        # this is the Navigation widget
+        # it takes the Canvas widget and a parent
+        toolbar = NavigationToolbar(self.chart_canvas, self)
+
+        # Just some button connected to `plot` method
+        button = QtWidgets.QPushButton('Plot')
+        button.clicked.connect(self.plot)
+
+        # set the layout
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout()
-
-        button = QtWidgets.QPushButton("Print DF")
-        button.clicked.connect(self.printdf)
-
+        layout.addWidget(toolbar)
+        layout.addWidget(self.chart_canvas)
         layout.addWidget(button)
         tab.setLayout(layout)
+
         return tab
 
     def make_tab_reshape(self):
@@ -178,13 +208,14 @@ class PandasGUI(QtWidgets.QMainWindow):
         Args:
             location_clicked: Automatically passed during clicked signal.
                               Instance of QtCore.ModelIndex.
-                              Provides information on the location clicked.
+                              Provides information on the location clicked,
+                              accessible with methods such as row() or data().
         """
 
         df_parent_folder_index = location_clicked.parent().row()
         df_clicked_row_index = location_clicked.row()
 
-        # Gets name of dataframe clicked by using the row index.
+        # Gets name of dataframe by using index of the row clicked.
         nav_pane = self.nav_view.model()
         df_parent_folder_name = nav_pane.index(df_parent_folder_index, 0)
         df_name = df_parent_folder_name.child(df_clicked_row_index, 0).data()
@@ -197,12 +228,6 @@ class PandasGUI(QtWidgets.QMainWindow):
 
             # Remake them with the new dataframe.
             self.make_tabs(df)
-
-    def create_nav_model(self):
-        model = QtGui.QStandardItemModel(0, 2, self)
-        model.setHeaderData(0, QtCore.Qt.Horizontal, 'Name')
-        model.setHeaderData(1, QtCore.Qt.Horizontal, 'Shape')
-        return model
 
     def add_nav_dataframe(self, df_name, folder):
         """Adds a dataframe to the navigation sidebar"""
@@ -219,13 +244,27 @@ class PandasGUI(QtWidgets.QMainWindow):
                                ~QtCore.Qt.ItemIsDropEnabled)
         shape_label.setFlags(shape_label.flags() &
                              ~QtCore.Qt.ItemIsDropEnabled)
+        df_name_label.setEditable(False)
+        shape_label.setEditable(False)
 
         folder.appendRow([df_name_label, shape_label])
 
     ####################
+    # Charts functions.
 
-    def printdf(self):
-        print(self.df_model)
+    def plot(self):
+        """plots some random stuff"""
+        data = [random.random() for i in range(10)]
+
+        # discards the old graph
+        self.chart_figure.clear()
+
+        # create an axis
+        ax = self.chart_figure.add_subplot(111)
+        ax.plot(data, 'o-')
+
+        # refresh canvas
+        self.chart_canvas.draw()
 
 
 def show(*args, **kwargs):
