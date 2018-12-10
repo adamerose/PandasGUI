@@ -22,17 +22,25 @@ class PandasGUI(QtWidgets.QMainWindow):
         """
         super().__init__()
 
+        # Dictionary holding all the DataFrames in the GUI keyed by name
         self.df_dict = {}
 
-        # Adds keyword arguments to namespace.
-        for i, (key, value) in enumerate(kwargs.items()):
-            self.df_dict[key] = value
+        # Dictionary holding metadata for the DataFrames, including the following:
+        '''
+        tab_widget: QTabWidget object
+        '''
+        self.df_metadata = {}
 
-        # Adds positional arguments to namespace.
-        for i, value in enumerate(args):
-            self.df_dict['untitled' + str(i + 1)] = value
+        # Adds keyword arguments to df_dict.
+        for i, (df_name, df_object) in enumerate(kwargs.items()):
+            self.df_dict[df_name] = df_object
+            self.df_metadata[df_name] = {}
 
-
+        # Adds positional arguments to df_dict.
+        for i, df_object in enumerate(args):
+            df_name = 'untitled' + str(i + 1)
+            self.df_dict[df_name] = df_object
+            self.df_metadata[df_name] = {}
 
         # Create main Widget
         self.main_layout = QtWidgets.QHBoxLayout()
@@ -43,17 +51,26 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Make the navigation bar
         self.make_nav()
 
-        # Make the QTabWidget
-        initial_df = list(self.df_dict.values())[0]
+        # Make the QTabWidgets for each DataFrame
 
-        self.tab_widget = QtWidgets.QTabWidget()
-        self.tab_widget.setContentsMargins(0, 0, 0, 0)
-        self.make_tabs(initial_df)
+        self.tabs_stacked_widget = QtWidgets.QStackedWidget()
+
+        for df_name, df_object in self.df_dict.items():
+            tab_widget = self.make_tab_widget(df_object)
+            self.df_metadata[df_name]['tab_widget'] = tab_widget
+            self.tabs_stacked_widget.addWidget(tab_widget)
+
+        initial_df_name = list(self.df_dict.keys())[0]
+        initial_tab_widget = self.df_metadata[initial_df_name]['tab_widget']
+
+        self.tabs_stacked_widget.setCurrentWidget(initial_tab_widget)
+        # self.tabs_stacked_widget.setContentsMargins(0, 0, 0, 0)
+
 
         # Adds navigation section to splitter.
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
         self.splitter.addWidget(self.nav_view)
-        self.splitter.addWidget(self.tab_widget)
+        self.splitter.addWidget(self.tabs_stacked_widget)
 
         # Combines navigation section and main section.
         self.main_layout.addWidget(self.splitter)
@@ -74,7 +91,7 @@ class PandasGUI(QtWidgets.QMainWindow):
     ####################
     # Tab widget functions
 
-    def make_tabs(self, df):
+    def make_tab_widget(self, df):
         """Take a DataFrame and creates tabs for it in self.tab_widget."""
 
         # Creates the tabs
@@ -82,12 +99,13 @@ class PandasGUI(QtWidgets.QMainWindow):
         statistics_tab = self.make_tab_statistics(df)
         chart_tab = self.make_tab_charts(df)
 
+        tab_widget = QtWidgets.QTabWidget()
         # Adds them to the tab_view
-        self.tab_widget.addTab(dataframe_tab, "Dataframe")
-        self.tab_widget.addTab(statistics_tab, "Statistics")
-        self.tab_widget.addTab(chart_tab, "Charts")
+        tab_widget.addTab(dataframe_tab, "Dataframe")
+        tab_widget.addTab(statistics_tab, "Statistics")
+        tab_widget.addTab(chart_tab, "Charts")
 
-        return self.tab_widget
+        return tab_widget
 
     def make_tab_dataframe(self, df):
         tab = QtWidgets.QWidget()
@@ -107,10 +125,11 @@ class PandasGUI(QtWidgets.QMainWindow):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout()
 
-        self.stats_model = DataFrameModel(df.describe())
+        stats_model = DataFrameModel(df.describe())
         view = QtWidgets.QTableView()
-        view.setModel(self.stats_model)
+        view.setModel(stats_model)
 
+        print(df.describe())
         view.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContentsOnFirstShow)
         layout.addWidget(view)
 
@@ -168,12 +187,10 @@ class PandasGUI(QtWidgets.QMainWindow):
         df_name = self.nav_view.model().index(0, 0).child(row_selected, 0).data()
         df = self.df_dict[df_name]
 
-        # Remove all tabs from self.tab_widget
-        for i in range(self.tab_widget.count()):
-            self.tab_widget.removeTab(0)
+        tab_widget = self.df_metadata[df_name]['tab_widget']
 
-        # Remake them with the new dataframe
-        self.make_tabs(df)
+        self.tabs_stacked_widget.setCurrentWidget(tab_widget)
+
 
     def create_nav_model(self):
         model = QtGui.QStandardItemModel(0, 2, self)
@@ -213,10 +230,12 @@ def show(*args, **kwargs):
 
 if __name__ == '__main__':
     pokemon = pd.read_csv('pokemon.csv')
-    x = pd.read_csv('sample.csv')
+
+    sample = pd.read_csv('sample.csv')
+
     tuples = [('A', 'one', 'x'), ('A', 'one', 'y'), ('A', 'two', 'x'), ('A', 'two', 'y'),
               ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')]
-
     index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
     multidf = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
-    show(x, multidf=multidf, pokemon=pokemon)
+
+    show(sample, multidf=multidf, pokemon=pokemon)
