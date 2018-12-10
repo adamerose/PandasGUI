@@ -1,10 +1,6 @@
 import inspect
 import pandas as pd
 
-x = pd.DataFrame([1,2,3])
-y = pd.DataFrame([1,2,3])
-z = pd.DataFrame([1,2,3])
-
 
 class mock_GUI():
     def __init__(self, *args, **kwargs):
@@ -24,7 +20,10 @@ class mock_GUI():
                     print(var_val)
 
 
-window = mock_GUI(x,y,z)
+if __name__ == '__main__':
+    x = pd.DataFrame([1,2,3])
+    y = pd.DataFrame([1,2,3])
+    z = pd.DataFrame([1,2,3])
 
-# # This inspects the frame of the caller and gets all variable names and values
-# self.callers_local_vars = inspect.currentframe().f_back.f_locals.items()
+    window = mock_GUI(x,y,z)
+
