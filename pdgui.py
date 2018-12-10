@@ -31,11 +31,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         '''
         self.df_metadata = {}
 
-        # Adds keyword arguments to df_dict.
-        for i, (df_name, df_object) in enumerate(kwargs.items()):
-            self.df_dict[df_name] = df_object
-            self.df_metadata[df_name] = {}
-
         # I needed to add a section '.f_back', not sure why
         callers_local_vars = inspect.currentframe().f_back.f_back.f_locals.items()
 
@@ -48,6 +43,11 @@ class PandasGUI(QtWidgets.QMainWindow):
                     print("TEST")
                     df_name = var_name
 
+            self.df_dict[df_name] = df_object
+            self.df_metadata[df_name] = {}
+
+        # Adds keyword arguments to df_dict.
+        for i, (df_name, df_object) in enumerate(kwargs.items()):
             self.df_dict[df_name] = df_object
             self.df_metadata[df_name] = {}
 
@@ -135,10 +135,9 @@ class PandasGUI(QtWidgets.QMainWindow):
         layout = QtWidgets.QVBoxLayout()
 
         stats_model = DataFrameModel(df.describe())
-        view = QtWidgets.QTableView()
+        view = DataFrameView()
         view.setModel(stats_model)
 
-        print(df.describe())
         view.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContentsOnFirstShow)
         layout.addWidget(view)
 
