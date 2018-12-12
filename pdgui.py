@@ -56,11 +56,11 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.make_nav()
 
         # Make the QTabWidget
-        initial_df = list(self.df_dict.values())[0]
+        self.shown_df = list(self.df_dict.values())[0]
 
         self.tab_widget = QtWidgets.QTabWidget()
         self.tab_widget.setContentsMargins(0, 0, 0, 0)
-        self.make_tabs(initial_df)
+        self.make_tabs(self.shown_df)
 
         # Adds navigation section to splitter.
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
@@ -109,6 +109,8 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.df_model = DataFrameModel(df)
         view = DataFrameView()
         view.setModel(self.df_model)
+        view.verticalHeader().sectionClicked.connect(self.header_clicked)
+        view.horizontalHeader().sectionClicked.connect(self.header_clicked)
 
         # view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
         size_policy = QtWidgets.QAbstractScrollArea.AdjustToContentsOnFirstShow
@@ -134,28 +136,36 @@ class PandasGUI(QtWidgets.QMainWindow):
         return tab
 
     def make_tab_charts(self, df):
-        # a figure instance to plot on
-        self.chart_figure = plt.figure()
+        '''Icons from https://www.freepik.com/'''
 
-        # this is the Canvas Widget that displays the `figure`
-        # it takes the `figure` instance as a parameter to __init__
-        self.chart_canvas = FigureCanvas(self.chart_figure)
+        scatterplot_btn = QtWidgets.QPushButton()
+        scatterplot_btn.setIcon(QtGui.QIcon('Images/scatter_icon_64x64.png'))
+        scatterplot_btn.setIconSize(QtCore.QSize(64, 64))
+        scatterplot_btn.setSizePolicy(QtWidgets.QSizePolicy.Preferred,
+                                      QtWidgets.QSizePolicy.Expanding)
+        scatterplot_btn.clicked.connect(self.get_chart_parameters)
+        boxplot_btn = QtWidgets.QPushButton()
+        boxplot_btn.setIcon(QtGui.QIcon('Images/box_plot_icon_64x64.png'))
+        boxplot_btn.setIconSize(QtCore.QSize(64, 64))
+        boxplot_btn.setSizePolicy(QtWidgets.QSizePolicy.Preferred,
+                                  QtWidgets.QSizePolicy.Expanding)
 
-        # this is the Navigation widget
-        # it takes the Canvas widget and a parent
-        toolbar = NavigationToolbar(self.chart_canvas, self)
+        button_layout = QtWidgets.QHBoxLayout()
+        button_layout.addWidget(scatterplot_btn)
+        button_layout.addWidget(boxplot_btn)
+        buttons = QtWidgets.QWidget()
+        buttons.setLayout(button_layout)
 
-        # Just some button connected to `plot` method
-        button = QtWidgets.QPushButton('Plot')
-        button.clicked.connect(self.plot)
+        charts = QtWidgets.QWidget()
+        self.chart_layout = QtWidgets.QVBoxLayout()
+        charts.setLayout(self.chart_layout)
 
-        # set the layout
-        tab = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout()
-        layout.addWidget(toolbar)
-        layout.addWidget(self.chart_canvas)
-        layout.addWidget(button)
-        tab.setLayout(layout)
+        self.charts_stack = QtWidgets.QStackedWidget(self)
+
+        self.charts_stack = QtWidgets.QStackedWidget(self.tab_widget)
+        self.charts_stack.addWidget(buttons)
+        self.charts_stack.addWidget(charts)
+        tab = self.charts_stack
 
         return tab
 
@@ -222,12 +232,13 @@ class PandasGUI(QtWidgets.QMainWindow):
         df = self.df_dict.get(df_name)
 
         if df is not None:
+            self.shown_df = df
             # Remove all tabs from self.tab_widget.
             for _ in range(self.tab_widget.count()):
                 self.tab_widget.removeTab(0)
 
             # Remake them with the new dataframe.
-            self.make_tabs(df)
+            self.make_tabs(self.shown_df)
 
     def add_nav_dataframe(self, df_name, folder):
         """Adds a dataframe to the navigation sidebar"""
@@ -252,19 +263,93 @@ class PandasGUI(QtWidgets.QMainWindow):
     ####################
     # Charts functions.
 
-    def plot(self):
+    def header_clicked(self, data):
+        ctrl_pressed = (QtGui.QGuiApplication.keyboardModifiers() ==
+                        QtCore.Qt.ControlModifier)
+        if ctrl_pressed:
+            self.headers_highlighted.append(data)
+        else:
+            self.headers_highlighted = [data]
+
+    def get_chart_parameters(self):
+        items = ("C", "C++", "Java", "Python")
+
+        item, ok_pressed = QtWidgets.QInputDialog.getItem(self, "select input dialog",
+                                                          "list of languages", items,
+                                                             0, False)
+
+        if ok_pressed and item:
+            self.scatter_plot()
+
+    def scatter_plot(self, x_values=None, y_values=None):
         """plots some random stuff"""
-        data = [random.random() for i in range(10)]
+        ###
+        # a figure instance to plot on
+        self.chart_figure = plt.figure()
+
+        # this is the Canvas Widget that displays the `figure`
+        # it takes the `figure` instance as a parameter to __init__
+        self.chart_canvas = FigureCanvas(self.chart_figure)
+        toolbar = NavigationToolbar(self.chart_canvas, self)
+        if x_values is None:
+            x_values = [random.random() for i in range(10)]
 
         # discards the old graph
         self.chart_figure.clear()
 
         # create an axis
         ax = self.chart_figure.add_subplot(111)
-        ax.plot(data, 'o-')
+        # ax.scatter(x_values)
+        ax.plot(x_values, 'o-')
 
         # refresh canvas
         self.chart_canvas.draw()
+
+        # this is the Navigation widget
+        # it takes the Canvas widget and a parent
+
+        # set the layout
+        # for i in reversed(range(self.chart_layout.count())):
+        #     self.chart_layout.itemAt(i).widget().setParent(None)
+
+        # self.chart_layout = None
+
+        self.chart_layout.addWidget(toolbar)
+        self.chart_layout.addWidget(self.chart_canvas)
+        self.charts_stack.setCurrentIndex(1)
+
+
+class ChartInputColumnsDialog(QtWidgets.QDialog):
+    def __init__(self, *args):
+        super().__init__()
+
+        layout = QWidgets.QVBoxLayout(self)
+
+        # nice widget for editing the date
+        # self.datetime = QDateTimeEdit(self)
+        # self.datetime.setCalendarPopup(True)
+        # self.datetime.setDateTime(QDateTime.currentDateTime())
+        parameters = len(args)
+        layout.addWidget(self.datetime)
+
+        # OK and Cancel buttons
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel,
+            Qt.Horizontal, self)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def dateTime(self):
+            return self.datetime.dateTime()
+
+    # static method to create the dialog and return (date, time, accepted)
+    @staticmethod
+    def getDateTime():
+        dialog = DateDialog()
+        result = dialog.exec_()
+        date = dialog.dateTime()
+        return (date.date(), date.time(), result == QDialog.Accepted)
 
 
 def show(*args, **kwargs):
@@ -281,6 +366,8 @@ def show(*args, **kwargs):
 
 
 if __name__ == '__main__':
+    tips = sns.load_dataset('tips')
+    tips = pd.DataFrame(tips)
     pokemon = pd.read_csv('pokemon.csv')
     x = pd.read_csv('sample.csv')
     tuples = [('A', 'one', 'x'), ('A', 'one', 'y'), ('A', 'two', 'x'), ('A', 'two', 'y'),
@@ -288,4 +375,6 @@ if __name__ == '__main__':
 
     index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
     multidf = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
-    show(x, multidf=multidf, pokemon=pokemon)
+    # plt.scatter(x=tips['total_bill'], y=tips['sex'])
+    # plt.show()
+    show(x, tips, multidf=multidf, pokemon=pokemon)

@@ -10,7 +10,7 @@ Adam Rose
 from PyQt5 import QtGui, QtCore, QtWidgets
 from PyQt5.QtCore import QAbstractItemModel, QModelIndex, QSize, QRect, Qt, QPoint
 from PyQt5.QtGui import QPainter, QFont, QFontMetrics, QPalette, QBrush, QColor, QTransform
-from PyQt5.QtWidgets import QStyleOptionHeader, QHeaderView, QWidget, QStyle
+from PyQt5.QtWidgets import QStyleOptionHeader, QHeaderView, QWidget, QStyle, QAbstractItemView
 import pandas as pd
 import numpy as np
 import datetime
@@ -675,7 +675,10 @@ class DataFrameView(QtWidgets.QTableView):
         HierarchicalHeaderView(orientation=Qt.Vertical, parent=self)
         self.horizontalHeader().setSectionsMovable(True)
         self.verticalHeader().setSectionsMovable(True)
-        self.setSortingEnabled(True)
+        self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        # self.setSelectionBehavior(QAbstractItemView.SelectColumns)
+        # self.setSortingEnabled(True)
         self.resizeColumnsToContents()
         self.resizeRowsToContents()
 
