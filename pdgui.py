@@ -21,36 +21,36 @@ class PandasGUI(QtWidgets.QMainWindow):
             **kwargs (): Dict of (key, value) pairs of (DataFrame name, DataFrame object)
         """
         super().__init__()
-
-        # Dictionary holding all the DataFrames in the GUI keyed by name
-        self.df_dict = {}
-
-        # Dictionary holding metadata for the DataFrames, including the following:
-        '''
-        tab_widget: QTabWidget object
-        '''
-        self.df_metadata = {}
         self.app = app
 
-        # I needed to add a section '.f_back', not sure why
+        # Dictionary where the key is the DataFrame name and the value is a dictionary holding the various objects
+        # associated with that DataFrame.
+        '''
+        dataframe: DataFrame object
+        view: DataFrameViewer object
+        model: DataFrameModel object
+        tab_widget: QTabWidget object
+        '''
+        self.df_dicts = {}
+
+        # I needed to add a second '.f_back', not sure why
         callers_local_vars = inspect.currentframe().f_back.f_back.f_locals.items()
 
-        # Adds positional arguments to df_dict.
+        # Adds positional arguments to df_dicts.
         for i, df_object in enumerate(args):
             df_name = 'untitled' + str(i + 1)
 
             for var_name, var_val in callers_local_vars:
                 if var_val is df_object:
-                    print("TEST")
                     df_name = var_name
 
-            self.df_dict[df_name] = df_object
-            self.df_metadata[df_name] = {}
+            self.df_dicts[df_name] = {}
+            self.df_dicts[df_name]['dataframe'] = df_object
 
         # Adds keyword arguments to df_dict.
         for i, (df_name, df_object) in enumerate(kwargs.items()):
-            self.df_dict[df_name] = df_object
-            self.df_metadata[df_name] = {}
+            self.df_dicts[df_name] = {}
+            self.df_dicts[df_name]['dataframe'] = df_object
 
         # Create main Widget
         self.main_layout = QtWidgets.QHBoxLayout()
@@ -68,17 +68,19 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         self.tabs_stacked_widget = QtWidgets.QStackedWidget()
 
-        for df_name, df_object in self.df_dict.items():
+        # Iterate over all dataframe names and make the tab_widgets
+        for df_name in self.df_dicts.keys():
+            df_object = self.df_dicts[df_name]['dataframe']
+
             tab_widget = self.make_tab_widget(df_object)
-            self.df_metadata[df_name]['tab_widget'] = tab_widget
+            self.df_dicts[df_name]['tab_widget'] = tab_widget
             self.tabs_stacked_widget.addWidget(tab_widget)
 
-        initial_df_name = list(self.df_dict.keys())[0]
-        initial_tab_widget = self.df_metadata[initial_df_name]['tab_widget']
+        initial_df_name = list(self.df_dicts.keys())[0]
+        initial_tab_widget = self.df_dicts[initial_df_name]['tab_widget']
 
         self.tabs_stacked_widget.setCurrentWidget(initial_tab_widget)
         # self.tabs_stacked_widget.setContentsMargins(0, 0, 0, 0)
-
 
         # Adds navigation section to splitter.
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
@@ -98,6 +100,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         size = self.geometry()
         self.move((screen.width() - size.width()) / 2, (screen.height() - size.height()) / 2)
         self.setWindowTitle('PandasGUI')
+        self.app.setWindowIcon(QtGui.QIcon('icon.png'))
 
         self.show()
 
@@ -124,8 +127,6 @@ class PandasGUI(QtWidgets.QMainWindow):
     def set_style(self, style):
         print("Setting style to", style)
         self.app.setStyle(style)
-
-
 
     ####################
     # Tab widget functions
@@ -165,7 +166,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         layout = QtWidgets.QVBoxLayout()
 
         tab_df = df.describe(include='all').T
-        tab_df.insert(loc=0,column='Type',value=df.dtypes)
+        tab_df.insert(loc=0, column='Type', value=df.dtypes)
         model = DataFrameModel(tab_df)
         view = DataFrameView()
         view.setModel(model)
@@ -204,7 +205,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
     def make_nav(self):
         # Create the navigation pane
-        df_names = list(self.df_dict.keys())
+        df_names = list(self.df_dicts.keys())
         self.nav_view = QtWidgets.QTreeView()
 
         model = QtGui.QStandardItemModel(0, 2, self)
@@ -226,10 +227,9 @@ class PandasGUI(QtWidgets.QMainWindow):
         row_selected = name.row()
         df_name = self.nav_view.model().index(0, 0).child(row_selected, 0).data()
 
-        tab_widget = self.df_metadata[df_name]['tab_widget']
+        tab_widget = self.df_dicts[df_name]['tab_widget']
 
         self.tabs_stacked_widget.setCurrentWidget(tab_widget)
-
 
     def create_nav_model(self):
         model = QtGui.QStandardItemModel(0, 2, self)
@@ -241,7 +241,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         """Adds a dataframe to the navigation sidebar"""
 
         # Calculate and format the shape of the DataFrame
-        shape = self.df_dict[df_name].shape
+        shape = self.df_dicts[df_name]['dataframe'].shape
         shape = str(shape[0]) + ' X ' + str(shape[1])
 
         df_name = QtGui.QStandardItem(df_name)
@@ -253,15 +253,18 @@ class PandasGUI(QtWidgets.QMainWindow):
     def printdf(self):
         print('debug')
 
+
 def start_gui(*args, **kwargs):
     app = QtWidgets.QApplication(sys.argv)
 
     win = PandasGUI(*args, **kwargs, app=app)
     app.exec_()
 
+
 def show(*args, **kwargs):
-    thread = Thread(target = start_gui, args=args, kwargs=kwargs)
+    thread = Thread(target=start_gui, args=args, kwargs=kwargs)
     thread.start()
+
 
 if __name__ == '__main__':
     pokemon = pd.read_csv('pokemon.csv')
@@ -274,4 +277,3 @@ if __name__ == '__main__':
     multidf = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
 
     show(sample, multidf=multidf, pokemon=pokemon)
-
