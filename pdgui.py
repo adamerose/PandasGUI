@@ -134,9 +134,11 @@ class PandasGUI(QtWidgets.QMainWindow):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout()
 
-        stats_model = DataFrameModel(df.describe())
+        tab_df = df.describe(include='all').T
+        tab_df.insert(loc=0,column='Type',value=df.dtypes)
+        model = DataFrameModel(tab_df)
         view = DataFrameView()
-        view.setModel(stats_model)
+        view.setModel(model)
 
         view.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContentsOnFirstShow)
         layout.addWidget(view)
