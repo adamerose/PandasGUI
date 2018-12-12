@@ -150,9 +150,9 @@ class PandasGUI(QtWidgets.QMainWindow):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout()
 
-        self.df_model = DataFrameModel(df)
+        model = DataFrameModel(df)
         view = DataFrameView()
-        view.setModel(self.df_model)
+        view.setModel(model)
 
         # view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
         view.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustToContentsOnFirstShow)
@@ -210,12 +210,12 @@ class PandasGUI(QtWidgets.QMainWindow):
         model = QtGui.QStandardItemModel(0, 2, self)
         model.setHeaderData(0, QtCore.Qt.Horizontal, 'Name')
         model.setHeaderData(1, QtCore.Qt.Horizontal, 'Shape')
-        rootnode = model.invisibleRootItem()
+        root_node = model.invisibleRootItem()
 
         self.main_nav_branch = QtGui.QStandardItem('Master')
         for df_name in df_names:
             self.add_nav_dataframe(df_name)
-        rootnode.appendRow([self.main_nav_branch, None])
+        root_node.appendRow([self.main_nav_branch, None])
         self.nav_view.setModel(model)
         self.nav_view.expandAll()
         self.nav_view.clicked.connect(self.select_dataframe)
@@ -225,7 +225,6 @@ class PandasGUI(QtWidgets.QMainWindow):
            and then changes the dataframe shown."""
         row_selected = name.row()
         df_name = self.nav_view.model().index(0, 0).child(row_selected, 0).data()
-        df = self.df_dict[df_name]
 
         tab_widget = self.df_metadata[df_name]['tab_widget']
 
@@ -252,7 +251,7 @@ class PandasGUI(QtWidgets.QMainWindow):
     ####################
 
     def printdf(self):
-        print(self.df_model)
+        print('debug')
 
 def start_gui(*args, **kwargs):
     app = QtWidgets.QApplication(sys.argv)
