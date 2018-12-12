@@ -1,7 +1,7 @@
 from PyQt5 import QtCore, QtWidgets, QtGui
 import pandas as pd
 import sys
-import threading
+from threading import Thread
 import traceback
 from collections import OrderedDict
 import inspect
@@ -13,7 +13,7 @@ from dataframe_viewer import DataFrameModel, DataFrameView
 
 class PandasGUI(QtWidgets.QMainWindow):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, app, **kwargs):
         """
 
         Args:
@@ -30,6 +30,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         tab_widget: QTabWidget object
         '''
         self.df_metadata = {}
+        self.app = app
 
         # I needed to add a section '.f_back', not sure why
         callers_local_vars = inspect.currentframe().f_back.f_back.f_locals.items()
@@ -56,6 +57,9 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         #########################################################
         # Creating and adding all widgets to main_layout
+
+        # Make the menu bar
+        self.make_menu_bar()
 
         # Make the navigation bar
         self.make_nav()
@@ -96,6 +100,32 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.setWindowTitle('PandasGUI')
 
         self.show()
+
+    ####################
+    # Menu bar functions
+
+    def make_menu_bar(self):
+
+        ## Create a menu for setting the GUI style with radio-style buttons in a QActionGroup
+        menubar = self.menuBar()
+        styleMenu = menubar.addMenu('&Set Style')
+        styleGroup = QtWidgets.QActionGroup(styleMenu, exclusive=True)
+
+        # Iterate over all GUI Styles that exist for the user's system
+        for style in QtWidgets.QStyleFactory.keys():
+            styleAction = QtWidgets.QAction(f'&{style}', self, checkable=True)
+            styleAction.triggered.connect(lambda state, style=style: self.set_style(style))
+            styleGroup.addAction(styleAction)
+            styleMenu.addAction(styleAction)
+
+        # Set the default style
+        styleAction.trigger()  # REEEEEEE
+
+    def set_style(self, style):
+        print("Setting style to", style)
+        self.app.setStyle(style)
+
+
 
     ####################
     # Tab widget functions
@@ -224,19 +254,15 @@ class PandasGUI(QtWidgets.QMainWindow):
     def printdf(self):
         print(self.df_model)
 
-
-def show(*args, **kwargs):
+def start_gui(*args, **kwargs):
     app = QtWidgets.QApplication(sys.argv)
 
-    # Choose GUI appearance
-    print(QtWidgets.QStyleFactory.keys())
-    style = "Fusion"
-    app.setStyle(style)
-    print("PyQt5 Style: " + style)
-
-    win = PandasGUI(*args, **kwargs)
+    win = PandasGUI(*args, **kwargs, app=app)
     app.exec_()
 
+def show(*args, **kwargs):
+    thread = Thread(target = start_gui, args=args, kwargs=kwargs)
+    thread.start()
 
 if __name__ == '__main__':
     pokemon = pd.read_csv('pokemon.csv')

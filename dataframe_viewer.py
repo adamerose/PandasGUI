@@ -458,7 +458,7 @@ class DataFrameModel(QtCore.QAbstractTableModel):
 
         row, col = index.row(), index.column()
 
-        if role in (Qt.DisplayRole, Qt.ToolTipRole):
+        if role in (Qt.DisplayRole, Qt.ToolTipRole, Qt.EditRole):
             value = self.df.iat[row, col]
             if not pd.isnull(value):  # If not null then convert to str
                 if isinstance(value, float):
