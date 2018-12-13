@@ -144,7 +144,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Set the default style
         styleAction.trigger()  # REEEEEEE
 
-        ## Creates a chart menu.
+        # Creates a chart menu.
         chartMenu = menubar.addMenu('&Plot Charts')
         # chartGroup = QtWidgets.QActionGroup(chartMenu)
         scatterChartAction = QtWidgets.QAction('&Scatter Chart', self)
@@ -343,18 +343,16 @@ class PandasGUI(QtWidgets.QMainWindow):
                                   headers_highlighted=self.headers_highlighted)
 
         # If the accept button is pressed, get the choices and plot.
-        # Otherwise Ignore.
+        # Otherwise ignore.
         if prompt.exec_() == prompt.Accepted:
             x, y = prompt.get_user_choice()
 
             # # a figure instance to plot on
             self.chart_figure = plt.figure()
-            x_values = self.df_shown[x]
-            y_values = self.df_shown[y]
 
             try:
                 ax = self.chart_figure.add_subplot(111)
-                ax.scatter(x_values, y_values)
+                ax.scatter(self.df_shown[x], self.df_shown[y])
             except:
                 print(traceback.print_exc())
             else:
