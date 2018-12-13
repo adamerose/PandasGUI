@@ -30,13 +30,10 @@ class PandasGUI(QtWidgets.QMainWindow):
         {dataframe name: objects}
 
         The objects are their own dictionary of:
-        {object name: object}
-
-        possible objects
-        dataframe: DataFrame object
-        view: DataFrameViewer object
-        model: DataFrameModel object
-        tab_widget: QTabWidget object
+        {'dataframe': DataFrame object
+        'view': DataFrameViewer object
+        'model': DataFrameModel object
+        'tab_widget': QTabWidget object}
 
         Args:
             *args (): Tuple of DataFrame objects
@@ -48,6 +45,8 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.df_dicts = {}
         self.headers_highlighted = []
 
+        # Hackiest code since 'nam.
+        # Allows naming of dataframe with the local variable name inputted.
         # I needed to add a second '.f_back', not sure why
         callers_local_vars = inspect.currentframe().f_back.f_back.f_locals.items()
 
@@ -68,7 +67,7 @@ class PandasGUI(QtWidgets.QMainWindow):
             self.df_dicts[df_name]['dataframe'] = df_object
 
         # Generates the user interface.
-        self.setupUi()
+        self.setupUI()
 
         # Center window on screen
         screen = QtWidgets.QDesktopWidget().screenGeometry()
@@ -81,7 +80,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Create main Widget
         self.show()
 
-    def setupUi(self):
+    def setupUI(self):
         """
         Creates and adds all widgets to main_layout.
         """
@@ -94,10 +93,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Make the navigation bar
         self.make_nav()
 
-        # Make the QTabWidget
-        inital_df = list(self.df_dicts.keys())[0]
-        self.df_shown = self.df_dicts[inital_df]['dataframe']
-
         # Make the QTabWidgets for each DataFrame
         self.tabs_stacked_widget = QtWidgets.QStackedWidget()
 
@@ -109,6 +104,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         initial_df_name = list(self.df_dicts.keys())[0]
         initial_tab_widget = self.df_dicts[initial_df_name]['tab_widget']
+        self.df_shown = self.df_dicts[initial_df_name]['dataframe']
 
         self.tabs_stacked_widget.setCurrentWidget(initial_tab_widget)
 
