@@ -342,6 +342,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         Then creates a scatter plot if 'OK' is pressed, otherwise
         does nothing.
         """
+
         multiindex = isinstance(self.df_shown.index, pd.core.index.MultiIndex)
         # Dictionary of {parameter name: possible options}
         parameters = {'x_values': self.df_shown.columns,
@@ -430,6 +431,10 @@ class ChartInputDialog(QtWidgets.QDialog):
         self.parameters = parameters
         self.make_input_form()
         self.df_has_multiindex_columns = multiindex
+
+        # Initializes make_input_form variables.
+        self.input_form = None
+        self.chart_combobox_widgets = None
 
         # Creates the 'OK' and 'Cancel' buttons.
         buttonBox = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok |
