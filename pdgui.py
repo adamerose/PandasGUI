@@ -480,12 +480,14 @@ class ChartInputDialog(QtWidgets.QDialog):
 
     def get_user_choice(self):
         """
-        Method to get the last text in the QComboBox widgets before the
+        Method to get the last text in all QComboBox widgets before the
         dialog closed. If the dataframe is multiindexed, converts the text
         to a tuple before returning.
 
         Returns:
-            last_combobox_values: list of strings or tuples from QComboBox
+            last_combobox_values: list of strings or tuples(if dataframe
+                                  columns are multiindexed) from QComboBox
+                                  text.
             widget text.
         """
         last_combobox_values = []
