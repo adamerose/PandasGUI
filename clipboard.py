@@ -4,7 +4,9 @@ from tkinter import Tk
 from pdgui import show
 x = Tk().clipboard_get()
 
-
+'''
+dataframe from clipboard
+'''
 data = []
 x=x.replace("%","")
 for line in x.split("\n"):
