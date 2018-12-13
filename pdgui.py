@@ -336,8 +336,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         else:
             self.headers_highlighted = [header_index]
 
-        print(self.headers_highlighted)
-
     def scatter_plot(self):
         """
         Shows a popup dialog asking for the inputs to the chart.
@@ -482,7 +480,7 @@ class ChartInputDialog(QtWidgets.QDialog):
 
         Returns:
             last_combobox_values: list of strings or tuples from QComboBox
-            Widget text.
+            widget text.
         """
         last_combobox_values = []
         for combobox in self.chart_combobox_widgets:
