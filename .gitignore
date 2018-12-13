@@ -1,3 +1,5 @@
 .idea
 __pycache__
+pyqt_fix.py
+test.py
 *scratch*
