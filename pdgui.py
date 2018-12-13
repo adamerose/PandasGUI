@@ -43,7 +43,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         super().__init__()
         self.app = app
         self.df_dicts = {}
-        self.headers_highlighted = []
 
         # Hackiest code since 'nam.
         # Allows naming of dataframe with the local variable name inputted.
@@ -191,6 +190,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         # Allows column highlighting detection.
         view.horizontalHeader().sectionClicked.connect(self.header_clicked)
+        self.headers_highlighted = []
 
         # view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
         size_policy = QtWidgets.QAbstractScrollArea.AdjustToContentsOnFirstShow
