@@ -4,6 +4,7 @@ import sys
 from threading import Thread
 import traceback
 from collections import OrderedDict
+import re
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -26,24 +27,24 @@ class PandasGUI(QtWidgets.QMainWindow):
 
     def __init__(self, *args, app, **kwargs):
         """
-        self.df_dicts is a dictionary of all dataframes in the GUI.
-        {dataframe name: objects}
-
-        The objects are their own dictionary of:
-        {'dataframe': DataFrame object
-        'view': DataFrameViewer object
-        'model': DataFrameModel object
-        'tab_widget': QTabWidget object}
-
         Args:
             *args (): Tuple of DataFrame objects
             **kwargs (): Dict of (key, value) pairs of
                          {'DataFrame name': DataFrame object}
         """
+
+        # self.df_dicts is a dictionary of all dataframes in the GUI.
+        # {dataframe name: objects}
+
+        # The objects are their own dictionary of:
+        # {'dataframe': DataFrame object
+        # 'view': DataFrameViewer object
+        # 'model': DataFrameModel object
+        # 'tab_widget': QTabWidget object}
         super().__init__()
         self.app = app
         self.df_dicts = {}
-        
+
         # setupUI() class variable initialization.
         self.main_layout = None
         self.tabs_stacked_widget = None
@@ -56,7 +57,6 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         # Tab widget class variable initialization.
         self.headers_highlighted = None
-
 
         # Hackiest code since 'nam.
         # Allows naming of dataframe with the local variable name inputted.
@@ -199,17 +199,17 @@ class PandasGUI(QtWidgets.QMainWindow):
         layout = QtWidgets.QVBoxLayout()
 
         df_model = DataFrameModel(df)
-        view = DataFrameView()
-        view.setModel(df_model)
+        self.view = DataFrameView()
+        self.view.setModel(df_model)
 
         # Allows column highlighting detection.
-        view.horizontalHeader().sectionClicked.connect(self.header_clicked)
+        self.view.horizontalHeader().sectionClicked.connect(self.header_clicked)
         self.headers_highlighted = []
 
         # view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
         size_policy = QtWidgets.QAbstractScrollArea.AdjustToContentsOnFirstShow
-        view.setSizeAdjustPolicy(size_policy)
-        layout.addWidget(view)
+        self.view.setSizeAdjustPolicy(size_policy)
+        layout.addWidget(self.view)
         tab.setLayout(layout)
         return tab
 
@@ -344,6 +344,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         Then creates a scatter plot if 'OK' is pressed, otherwise
         does nothing.
         """
+        multiindex = isinstance(self.df_shown.index, pd.core.index.MultiIndex)
         # Dictionary of {parameter name: possible options}
         parameters = {'x_values': self.df_shown.columns,
                       'y_values': self.df_shown.columns}
@@ -351,7 +352,8 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Makes an instance of a popup dialog to collect information.
         prompt = ChartInputDialog(window_title='Create Scatter Plot',
                                   parameters=parameters,
-                                  headers_highlighted=self.headers_highlighted)
+                                  headers_highlighted=self.headers_highlighted,
+                                  multiindex=multiindex)
 
         # If the accept button is pressed, get the choices and plot.
         # Otherwise ignore.
@@ -372,9 +374,11 @@ class PandasGUI(QtWidgets.QMainWindow):
     def boxplot(self):
         parameters = {'column': self.df_shown.columns,
                       'by': self.df_shown.columns}
+        multiindex = isinstance(self.df_shown.index, pd.core.index.MultiIndex)
         prompt = ChartInputDialog(window_title='Create Box Plot',
                                   parameters=parameters,
-                                  headers_highlighted=self.headers_highlighted)
+                                  headers_highlighted=self.headers_highlighted,
+                                  multiindex=multiindex)
         if prompt.exec_() == prompt.Accepted:
             column, by = prompt.get_user_choice()
 
@@ -387,9 +391,11 @@ class PandasGUI(QtWidgets.QMainWindow):
 
     def distplot(self):
         parameters = {'column': self.df_shown.columns}
+        multiindex = isinstance(self.df_shown.index, pd.core.index.MultiIndex)
         prompt = ChartInputDialog(window_title='Create Box Plot',
                                   parameters=parameters,
-                                  headers_highlighted=self.headers_highlighted)
+                                  headers_highlighted=self.headers_highlighted,
+                                  multiindex=multiindex)
         if prompt.exec_() == prompt.Accepted:
             column = prompt.get_user_choice()[0]
             data = self.df_shown[column]
@@ -407,7 +413,8 @@ class PandasGUI(QtWidgets.QMainWindow):
 
 class ChartInputDialog(QtWidgets.QDialog):
 
-    def __init__(self, window_title, parameters, headers_highlighted):
+    def __init__(self, window_title, parameters,
+                 headers_highlighted, multiindex):
         """
         Creates a popup dialog to get user inputs to plot a chart.
 
@@ -417,11 +424,13 @@ class ChartInputDialog(QtWidgets.QDialog):
                         {parameter name: parameter options}
             headers_highlighted: List of ints. Each element is the index of
                                  any columns highlighted in the main window.
+            multiindex: Bool that describes if the dataframe has a multiindex.
         """
         super().__init__()
         self.headers_highlighted = headers_highlighted
         self.parameters = parameters
         self.make_input_form()
+        self.df_has_multiindex = multiindex
 
         # Creates the 'OK' and 'Cancel' buttons.
         buttonBox = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok |
@@ -451,6 +460,7 @@ class ChartInputDialog(QtWidgets.QDialog):
         # iterates through the parameters, makes them into combo boxes
         # and adds to a list of QComboBox widgets.
         for i, (label, options) in enumerate(self.parameters.items()):
+            options = [str(option) for option in options]
             combobox_widget = QtWidgets.QComboBox()
             combobox_widget.addItems(options)
             self.chart_combobox_widgets.append(combobox_widget)
@@ -466,14 +476,22 @@ class ChartInputDialog(QtWidgets.QDialog):
     def get_user_choice(self):
         """
         Method to get the last text in the QComboBox widgets before the
-        dialog closed.
+        dialog closed. If the dataframe is multiindexed, converts the text
+        to a tuple before returning.
 
         Returns:
-            return_values: list of strings from QComboBox Widget text.
+            return_values: list of strings or tuples from QComboBox Widget text.
         """
-        last_combobox_text = [combobox.currentText()
-                              for combobox in self.chart_combobox_widgets]
-        return last_combobox_text
+        last_combobox_values = []
+        for combobox in self.chart_combobox_widgets:
+            combobox_text = combobox.currentText()
+            if self.df_has_multiindex:
+                combobox_tuple = tuple(combobox_text.split("'")[1::2])
+                last_combobox_values.append(combobox_tuple)
+            else:
+                last_combobox_values.append(combobox_text)
+
+        return last_combobox_values
 
 
 def start_gui(*args, **kwargs):
