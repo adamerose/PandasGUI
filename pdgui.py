@@ -339,8 +339,8 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         # Makes an instance of a popup dialog to collect information.
         prompt = ChartInputDialog(window_title='Create Scatter Plot',
-                                 parameters=parameters,
-                                 headers_highlighted=self.headers_highlighted)
+                                  parameters=parameters,
+                                  headers_highlighted=self.headers_highlighted)
 
         # If the accept button is pressed, get the choices and plot.
         # Otherwise Ignore.
@@ -364,8 +364,8 @@ class PandasGUI(QtWidgets.QMainWindow):
         parameters = {'column': self.df_shown.columns,
                       'by': self.df_shown.columns}
         prompt = ChartInputDialog(window_title='Create Box Plot',
-                                 parameters=parameters,
-                                 headers_highlighted=self.headers_highlighted)
+                                  parameters=parameters,
+                                  headers_highlighted=self.headers_highlighted)
         if prompt.exec_() == prompt.Accepted:
             column, by = prompt.get_user_choice()
 
@@ -379,8 +379,8 @@ class PandasGUI(QtWidgets.QMainWindow):
     def distplot(self):
         parameters = {'column': self.df_shown.columns}
         prompt = ChartInputDialog(window_title='Create Box Plot',
-                                 parameters=parameters,
-                                 headers_highlighted=self.headers_highlighted)
+                                  parameters=parameters,
+                                  headers_highlighted=self.headers_highlighted)
         if prompt.exec_() == prompt.Accepted:
             column = prompt.get_user_choice()[0]
             data = self.df_shown[column]
@@ -412,7 +412,7 @@ class ChartInputDialog(QtWidgets.QDialog):
         super().__init__()
         self.headers_highlighted = headers_highlighted
         self.parameters = parameters
-        self.createFormGroupBox()
+        self.make_input_form()
 
         # Creates the 'OK' and 'Cancel' buttons.
         buttonBox = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok |
@@ -422,20 +422,21 @@ class ChartInputDialog(QtWidgets.QDialog):
 
         # Adds the input form to the layout.
         mainLayout = QtWidgets.QVBoxLayout()
-        mainLayout.addWidget(self.formGroupBox)
+        mainLayout.addWidget(self.input_form)
         mainLayout.addWidget(buttonBox)
         self.setLayout(mainLayout)
 
         self.setWindowTitle(window_title)
+        self.resize(300, 100)
 
-    def createFormGroupBox(self):
+    def make_input_form(self):
         """
         Creates the form to get the columns the user wants to use
         to plot the chart using QComboBox widgets.
         If the headers highlighted are equal to the parameters the chart
         needs, autofills the QComboboxes with the highlighted columns.
         """
-        self.formGroupBox = QtWidgets.QGroupBox("Form layout")
+        self.input_form = QtWidgets.QGroupBox()
         layout = QtWidgets.QFormLayout()
 
         self.chart_parameter_widgets = {}
@@ -449,7 +450,7 @@ class ChartInputDialog(QtWidgets.QDialog):
             if len(self.headers_highlighted) == len(self.parameters):
                 self.chart_parameter_widgets[label].setCurrentIndex(self.headers_highlighted[i])
 
-        self.formGroupBox.setLayout(layout)
+        self.input_form.setLayout(layout)
 
     def get_user_choice(self):
         """
