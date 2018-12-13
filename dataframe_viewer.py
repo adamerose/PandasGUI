@@ -518,9 +518,9 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         the top header level, and each QStandardItem represents a span of contiguous matching labels
 
         In the example  below, readLevel returns a list of 2 QStandardItem objects with .text values "A" and "B",
-        and each one has two
+        and each one has two children with text values "X" and "Y"
         |   A   |   B   | Header Level (y=0)
-        | W | X | Y | Z | Header Level (y=1)
+        | X | Y | X | Y | Header Level (y=1)
         -----------------
         | 1 | 2 | 5 | 2 | Data
 
@@ -548,35 +548,30 @@ class DataFrameModel(QtCore.QAbstractTableModel):
         end = end or len(cols)
 
         section_start = start
-        for i in range(start, end):
+        for i in range(start, end + 1):
 
             # Get the label number corresponding to this header level and location in the MultiIndex
-            try:
-                label = cols.labels[y][i]
-            except IndexError:
+            if i == end:
                 label = None
+            else:
+                label = cols.labels[y][i]
 
             if label != prev_label:
-                # Detected start of new section, add children to the previous section
+                # Detect start of new section, add children to the previous section
                 if y < len(cols.levels) - 1 and (i > section_start):  # Note section_start is still for the last section
                     # Create the list of QStandardItem objects representing the header labels below this one
                     children = self.readLevel(y + 1, section_start, i, orient=orient)
                     section_list[-1].appendRow(children)
 
-                # Create the QStandardItem for this section
-                section_label = str(cols.levels[y][label])
-                item = QtGui.QStandardItem(section_label)
-                section_list.append(item)
+                if label is not None:
+                    # Create the QStandardItem for this section
+                    section_label = str(cols.levels[y][label])
+                    item = QtGui.QStandardItem(section_label)
+                    section_list.append(item)
 
                 # Update these since we reached a new value, so it's the start of a new section
                 section_start = i
                 prev_label = label
-
-        # The previous loop adds children to the previous section once a new section is started. This never happens
-        # for the last section of the header so we do it here
-        if y + 1 < len(cols.levels):
-            children = self.readLevel(y + 1, start, end, orient=orient)
-            section_list[-1].appendRow(children)
 
         return section_list
 
@@ -684,7 +679,7 @@ class DataFrameView(QtWidgets.QTableView):
 
 
 if __name__ == "__main__":
-    test_case = 3
+    test_case = 1
 
     if test_case == 1:
         # Prepare sample data with 3 index levels
@@ -692,6 +687,7 @@ if __name__ == "__main__":
                   ('B', 'one', 'X'), ('B', 'one', 'Y'), ('B', 'two', 'X'), ('B', 'two', 'Y')]
         index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
         df = pd.DataFrame(pd.np.random.randint(0, 10, (8, 8)), index=index[:8], columns=index[:8])
+        df = pd.DataFrame([[" ".join(tup) for tup in tuples] for i in range(8)], index=index, columns=index)
 
     if test_case == 2:
         # Prepare sample data with 3 index levels all unique
@@ -706,10 +702,11 @@ if __name__ == "__main__":
                   ('B', 'one'), ('B', 'two')]
         index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
         df = pd.DataFrame(pd.np.random.randint(0, 10, (4, 4)), index=index[:8], columns=index[:8])
+        df = pd.DataFrame([[" ".join(tup) for tup in tuples] for i in range(4)], index=index, columns=index)
 
     if test_case == 4:
         # Prepare sample data with 2 index levels
-        tuples = [('A', 'one'),('B', 'two')]
+        tuples = [('A', 'one'), ('B', 'two')]
         index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
         df = pd.DataFrame(pd.np.random.randint(0, 10, (2, 2)), index=index[:8], columns=index[:8])
 

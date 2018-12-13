@@ -148,7 +148,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         for style in QtWidgets.QStyleFactory.keys():
             styleAction = QtWidgets.QAction(f'&{style}', self, checkable=True)
             styleAction.triggered.connect(lambda state,
-                                          style=style: self.set_style(style))
+                                                 style=style: self.set_style(style))
             styleGroup.addAction(styleAction)
             styleMenu.addAction(styleAction)
 
