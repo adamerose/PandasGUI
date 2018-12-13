@@ -668,14 +668,56 @@ class DataFrameView(QtWidgets.QTableView):
         super().__init__()
         HierarchicalHeaderView(orientation=Qt.Horizontal, parent=self)
         HierarchicalHeaderView(orientation=Qt.Vertical, parent=self)
+
         self.horizontalHeader().setSectionsMovable(True)
         self.verticalHeader().setSectionsMovable(True)
+
         self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+
         # self.setSelectionBehavior(QAbstractItemView.SelectColumns)
-        # self.setSortingEnabled(True)
+        self.setSortingEnabled(False)
+
+    def setModel(self, model):
+        super().setModel(model)
+
+        # Fit columns to contents
         self.resizeColumnsToContents()
-        self.resizeRowsToContents()
+
+        # Add some cell padding
+        cols = self.model().columnCount(None)
+        rows = self.model().rowCount(None)
+        for i in range(cols):
+            paddedWidth = self.columnWidth(i) + 5
+            self.setColumnWidth(i, paddedWidth)
+        height = 0
+        for i in range(cols):
+            paddedHeight = self.rowHeight(i) + 3
+            self.setRowHeight(i, paddedHeight)
+
+
+
+    def sizeHint(self):
+        cols = self.model().columnCount(None)
+        rows = self.model().rowCount(None)
+
+        width = 0
+        for i in range(cols):
+            width += self.columnWidth(i)
+
+        height = 0
+        for i in range(rows):
+            height += self.rowHeight(i)
+
+        # FIXME: The height and width for hierarchical header are wrong
+        # height+=self.horizontalHeader().height()
+        # width+=self.verticalHeader().width()
+
+        # Approximation
+        height+=100
+        width+=150
+
+        return QSize(width, height)
 
 
 if __name__ == "__main__":
@@ -728,6 +770,6 @@ if __name__ == "__main__":
     window.show()
 
     # Settings & appearance
-    window.setMinimumSize(700, 360)
+    window.adjustSize()
 
     app.exec()

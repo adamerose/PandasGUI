@@ -32,6 +32,8 @@ class PandasGUI(QtWidgets.QMainWindow):
             **kwargs (): Dict of (key, value) pairs of
                          {'DataFrame name': DataFrame object}
         """
+        super().__init__()
+        self.app = app
 
         # self.df_dicts is a dictionary of all dataframes in the GUI.
         # {dataframe name: objects}
@@ -41,8 +43,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         # 'view': DataFrameViewer object
         # 'model': DataFrameModel object
         # 'tab_widget': QTabWidget object}
-        super().__init__()
-        self.app = app
         self.df_dicts = {}
 
         # setupUI() class variable initialization.
@@ -199,17 +199,14 @@ class PandasGUI(QtWidgets.QMainWindow):
         layout = QtWidgets.QVBoxLayout()
 
         df_model = DataFrameModel(df)
-        self.view = DataFrameView()
-        self.view.setModel(df_model)
+        view = DataFrameView()
+        view.setModel(df_model)
 
         # Allows column highlighting detection.
-        self.view.horizontalHeader().sectionClicked.connect(self.header_clicked)
+        view.horizontalHeader().sectionClicked.connect(self.header_clicked)
         self.headers_highlighted = []
 
-        # view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
-        size_policy = QtWidgets.QAbstractScrollArea.AdjustToContentsOnFirstShow
-        self.view.setSizeAdjustPolicy(size_policy)
-        layout.addWidget(self.view)
+        layout.addWidget(view)
         tab.setLayout(layout)
         return tab
 
@@ -226,8 +223,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         view = DataFrameView()
         view.setModel(model)
 
-        size_policy = QtWidgets.QAbstractScrollArea.AdjustToContentsOnFirstShow
-        view.setSizeAdjustPolicy(size_policy)
         layout.addWidget(view)
 
         tab.setLayout(layout)
