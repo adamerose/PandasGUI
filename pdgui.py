@@ -125,7 +125,8 @@ class PandasGUI(QtWidgets.QMainWindow):
 
     def make_menu_bar(self):
 
-        # Create a menu for setting the GUI style with radio-style buttons in a QActionGroup
+        # Create a menu for setting the GUI style.
+        # Uses radio-style buttons in a QActionGroup.
         menubar = self.menuBar()
         styleMenu = menubar.addMenu('&Set Style')
         styleGroup = QtWidgets.QActionGroup(styleMenu, exclusive=True)
@@ -133,7 +134,8 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Iterate over all GUI Styles that exist for the user's system
         for style in QtWidgets.QStyleFactory.keys():
             styleAction = QtWidgets.QAction(f'&{style}', self, checkable=True)
-            styleAction.triggered.connect(lambda state, style=style: self.set_style(style))
+            styleAction.triggered.connect(lambda state,
+                                          style=style: self.set_style(style))
             styleGroup.addAction(styleAction)
             styleMenu.addAction(styleAction)
 
@@ -291,12 +293,12 @@ class PandasGUI(QtWidgets.QMainWindow):
         nav_pane = self.nav_view.model()
         df_parent_folder_name = nav_pane.index(df_parent_folder_index, 0)
         df_name = df_parent_folder_name.child(df_clicked_row_index, 0).data()
-        df = self.df_dicts.get(df_name)
+        df_properties = self.df_dicts.get(df_name)
 
         # If the dataframe exists, change the tab widget shown.
-        if df is not None:
-            self.df_shown = self.df_dicts[df_name]['dataframe']
-            tab_widget = self.df_dicts[df_name]['tab_widget']
+        if df_properties is not None:
+            self.df_shown = df_properties['dataframe']
+            tab_widget = df_properties['tab_widget']
             self.tabs_stacked_widget.setCurrentWidget(tab_widget)
 
     ####################
@@ -455,7 +457,7 @@ class ChartInputDialog(QtWidgets.QDialog):
         dialog closed.
 
         Returns:
-            return_values: list of strings from the QComboBox Widgets.
+            return_values: list of strings from QComboBox Widget text.
         """
         return_values = [parameter.currentText()
                          for parameter in self.chart_combobox_widgets]
