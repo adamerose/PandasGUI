@@ -431,7 +431,7 @@ class ChartInputDialog(QtWidgets.QDialog):
         self.parameters = parameters
         self.df_has_multiindex_columns = multiindex
 
-        # Initializes make_input_form variables.
+        # Initializes make_input_form() class variables.
         self.input_form = None
         self.chart_combobox_widgets = None
 
@@ -462,9 +462,11 @@ class ChartInputDialog(QtWidgets.QDialog):
         layout = QtWidgets.QFormLayout()
 
         self.chart_combobox_widgets = []
-        # iterates through the parameters, makes them into combo boxes
+        # Iterates through the parameters, makes them into combo boxes
         # and adds to a list of QComboBox widgets.
         for i, (label, options) in enumerate(self.parameters.items()):
+            # Converts options to strings in the case that the options
+            # are defined as tuples (i.e. in multiindexed columns).
             options = [str(option) for option in options]
             combobox_widget = QtWidgets.QComboBox()
             combobox_widget.addItems(options)
@@ -486,9 +488,8 @@ class ChartInputDialog(QtWidgets.QDialog):
 
         Returns:
             last_combobox_values: list of strings or tuples(if dataframe
-                                  columns are multiindexed) from QComboBox
-                                  text.
-            widget text.
+                                  columns are multiindexed) pulled from
+                                  QComboBox widgets text.
         """
         last_combobox_values = []
         for combobox in self.chart_combobox_widgets:
