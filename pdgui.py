@@ -253,7 +253,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.nav_view.setModel(model)
         self.nav_view.expandAll()
         self.nav_view.clicked.connect(self.select_dataframe)
-    
+
     def add_nav_dataframe(self, df_name, folder):
         """Adds a dataframe to the navigation sidebar"""
 
@@ -310,7 +310,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         """
         Detects if headers are highlighted. If they are,
         adds them to a class variable holding all the columns
-        currently highlighted.
+        currently highlighted in a list.
         Requires holding control to highlight multiple headers.
 
         Args:
@@ -348,7 +348,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         if prompt.exec_() == prompt.Accepted:
             x, y = prompt.get_user_choice()
 
-            # # a figure instance to plot on
+            # a figure instance to plot on
             self.chart_figure = plt.figure()
 
             try:
@@ -402,11 +402,11 @@ class ChartInputDialog(QtWidgets.QDialog):
         Creates a popup dialog to get user inputs to plot a chart.
 
         Args:
-            window_title: string to label to window.
-            parameters: dictionary of chart input parameters
+            window_title: String to set the window name in the title bar.
+            parameters: Dictionary of chart input parameters
                         {parameter name: parameter options}
-            headers_highlighted: list of ints. Each element is the index
-                                 of the column highlighted.
+            headers_highlighted: List of ints. Each element is the index of
+                                 any columns highlighted in the main window.
         """
         super().__init__()
         self.headers_highlighted = headers_highlighted
@@ -434,7 +434,7 @@ class ChartInputDialog(QtWidgets.QDialog):
         to plot the chart.
         Displays options using QComboBox widgets.
         """
-        self.input_form = QtWidgets.QGroupBox()
+        self.input_form = QtWidgets.QGroupBox('Plot with Parameters:')
         layout = QtWidgets.QFormLayout()
 
         self.chart_combobox_widgets = []
@@ -461,9 +461,9 @@ class ChartInputDialog(QtWidgets.QDialog):
         Returns:
             return_values: list of strings from QComboBox Widget text.
         """
-        return_values = [parameter.currentText()
-                         for parameter in self.chart_combobox_widgets]
-        return return_values
+        last_combobox_text = [combobox.currentText()
+                              for combobox in self.chart_combobox_widgets]
+        return last_combobox_text
 
 
 def start_gui(*args, **kwargs):
