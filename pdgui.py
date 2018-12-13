@@ -43,6 +43,20 @@ class PandasGUI(QtWidgets.QMainWindow):
         super().__init__()
         self.app = app
         self.df_dicts = {}
+        
+        # setupUI() class variable initialization.
+        self.main_layout = None
+        self.tabs_stacked_widget = None
+        self.df_shown = None
+        self.splitter = None
+        self.main_widget = None
+
+        # Nav bar class variable initialization.
+        self.nav_view = None
+
+        # Tab widget class variable initialization.
+        self.headers_highlighted = None
+
 
         # Hackiest code since 'nam.
         # Allows naming of dataframe with the local variable name inputted.
@@ -184,9 +198,9 @@ class PandasGUI(QtWidgets.QMainWindow):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout()
 
-        self.df_model = DataFrameModel(df)
+        df_model = DataFrameModel(df)
         view = DataFrameView()
-        view.setModel(self.df_model)
+        view.setModel(df_model)
 
         # Allows column highlighting detection.
         view.horizontalHeader().sectionClicked.connect(self.header_clicked)
@@ -245,36 +259,32 @@ class PandasGUI(QtWidgets.QMainWindow):
         model.setHeaderData(1, QtCore.Qt.Horizontal, 'Shape')
         root_node = model.invisibleRootItem()
 
-        self.main_nav_branch = QtGui.QStandardItem('Master')
+        # Adds a dataframe to the navigation sidebar
+        main_nav_branch = QtGui.QStandardItem('Master')
         for df_name in df_names:
-            self.add_nav_dataframe(df_name, self.main_nav_branch)
+            # Calculate and format the shape of the DataFrame
+            shape = self.df_dicts[df_name]['dataframe'].shape
+            shape = str(shape[0]) + ' X ' + str(shape[1])
 
-        root_node.appendRow([self.main_nav_branch, None])
+            df_name_label = QtGui.QStandardItem(df_name)
+            shape_label = QtGui.QStandardItem(shape)
+
+            # Disables dropping dataframes on other dataframes in nav pane.
+            df_name_label.setFlags(df_name_label.flags() &
+                                   ~QtCore.Qt.ItemIsDropEnabled)
+            shape_label.setFlags(shape_label.flags() &
+                                 ~QtCore.Qt.ItemIsDropEnabled)
+
+            # Disables editing the names of the dataframes.
+            df_name_label.setEditable(False)
+            shape_label.setEditable(False)
+
+            main_nav_branch.appendRow([df_name_label, shape_label])
+
+        root_node.appendRow([main_nav_branch, None])
         self.nav_view.setModel(model)
         self.nav_view.expandAll()
         self.nav_view.clicked.connect(self.select_dataframe)
-
-    def add_nav_dataframe(self, df_name, folder):
-        """Adds a dataframe to the navigation sidebar"""
-
-        # Calculate and format the shape of the DataFrame
-        shape = self.df_dicts[df_name]['dataframe'].shape
-        shape = str(shape[0]) + ' X ' + str(shape[1])
-
-        df_name_label = QtGui.QStandardItem(df_name)
-        shape_label = QtGui.QStandardItem(shape)
-
-        # Disables dropping dataframes on other dataframes in nav pane.
-        df_name_label.setFlags(df_name_label.flags() &
-                               ~QtCore.Qt.ItemIsDropEnabled)
-        shape_label.setFlags(shape_label.flags() &
-                             ~QtCore.Qt.ItemIsDropEnabled)
-
-        # Disables editing the names of the dataframes.
-        df_name_label.setEditable(False)
-        shape_label.setEditable(False)
-
-        folder.appendRow([df_name_label, shape_label])
 
     def select_dataframe(self, location_clicked):
         """
@@ -349,10 +359,10 @@ class PandasGUI(QtWidgets.QMainWindow):
             x, y = prompt.get_user_choice()
 
             # a figure instance to plot on
-            self.chart_figure = plt.figure()
+            chart_figure = plt.figure()
 
             try:
-                ax = self.chart_figure.add_subplot(111)
+                ax = chart_figure.add_subplot(111)
                 ax.scatter(self.df_shown[x], self.df_shown[y])
             except:
                 print(traceback.print_exc())
