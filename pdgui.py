@@ -424,13 +424,14 @@ class ChartInputDialog(QtWidgets.QDialog):
                         {parameter name: parameter options}
             headers_highlighted: List of ints. Each element is the index of
                                  any columns highlighted in the main window.
-            multiindex: Bool that describes if the dataframe has a multiindex.
+            multiindex: Bool that describes if the dataframe columns
+                        are multiindexed.
         """
         super().__init__()
         self.headers_highlighted = headers_highlighted
         self.parameters = parameters
         self.make_input_form()
-        self.df_has_multiindex = multiindex
+        self.df_has_multiindex_columns = multiindex
 
         # Creates the 'OK' and 'Cancel' buttons.
         buttonBox = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok |
@@ -480,12 +481,14 @@ class ChartInputDialog(QtWidgets.QDialog):
         to a tuple before returning.
 
         Returns:
-            return_values: list of strings or tuples from QComboBox Widget text.
+            last_combobox_values: list of strings or tuples from QComboBox
+            Widget text.
         """
         last_combobox_values = []
         for combobox in self.chart_combobox_widgets:
             combobox_text = combobox.currentText()
-            if self.df_has_multiindex:
+            if self.df_has_multiindex_columns:
+                # Finds text in between single quotes to add to tuple.
                 combobox_tuple = tuple(combobox_text.split("'")[1::2])
                 last_combobox_values.append(combobox_tuple)
             else:
