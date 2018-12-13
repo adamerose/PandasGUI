@@ -1,7 +1,7 @@
 import inspect
 import random
 import sys
-import threading
+from threading import Thread
 import traceback
 from collections import OrderedDict
 
@@ -24,7 +24,7 @@ sns.set()
 
 class PandasGUI(QtWidgets.QMainWindow):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, app, **kwargs):
         """
 
         Args:
@@ -34,17 +34,35 @@ class PandasGUI(QtWidgets.QMainWindow):
         """
         super().__init__()
 
+        # Dictionary holding all the DataFrames in the GUI keyed by name
         self.df_dict = {}
 
-        # Adds keyword arguments to namespace.
-        for i, (key, value) in enumerate(kwargs.items()):
-            self.df_dict[key] = value
+        # Dictionary holding metadata for the DataFrames, including the following:
+        '''
+        tab_widget: QTabWidget object
+        '''
+        self.df_metadata = {}
+        self.app = app
 
-        # Adds positional arguments to namespace.
-        for i, value in enumerate(args):
-            self.df_dict['untitled' + str(i + 1)] = value
+        # I needed to add a section '.f_back', not sure why
+        callers_local_vars = inspect.currentframe().f_back.f_back.f_locals.items()
 
+        # Adds positional arguments to df_dict.
+        for i, df_object in enumerate(args):
+            df_name = 'untitled' + str(i + 1)
 
+            for var_name, var_val in callers_local_vars:
+                if var_val is df_object:
+                    print("TEST")
+                    df_name = var_name
+
+            self.df_dict[df_name] = df_object
+            self.df_metadata[df_name] = {}
+
+        # Adds keyword arguments to df_dict.
+        for i, (df_name, df_object) in enumerate(kwargs.items()):
+            self.df_dict[df_name] = df_object
+            self.df_metadata[df_name] = {}
 
         # Create main Widget
         self.main_layout = QtWidgets.QHBoxLayout()
@@ -52,20 +70,31 @@ class PandasGUI(QtWidgets.QMainWindow):
         #########################################################
         # Creating and adding all widgets to main_layout
 
+        # Make the menu bar
+        self.make_menu_bar()
+
         # Make the navigation bar
         self.make_nav()
 
         # Make the QTabWidget
-        self.shown_df = list(self.df_dict.values())[0]
+        self.df_shown = list(self.df_dict.values())[0]
 
-        self.tab_widget = QtWidgets.QTabWidget()
-        self.tab_widget.setContentsMargins(0, 0, 0, 0)
-        self.make_tabs(self.shown_df)
+        # Make the QTabWidgets for each DataFrame
+        self.tabs_stacked_widget = QtWidgets.QStackedWidget()
+        for df_name, df_object in self.df_dict.items():
+            tab_widget = self.make_tab_widget(df_object)
+            self.df_metadata[df_name]['tab_widget'] = tab_widget
+            self.tabs_stacked_widget.addWidget(tab_widget)
+
+        initial_df_name = list(self.df_dict.keys())[0]
+        initial_tab_widget = self.df_metadata[initial_df_name]['tab_widget']
+
+        self.tabs_stacked_widget.setCurrentWidget(initial_tab_widget)
 
         # Adds navigation section to splitter.
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
         self.splitter.addWidget(self.nav_view)
-        self.splitter.addWidget(self.tab_widget)
+        self.splitter.addWidget(self.tabs_stacked_widget)
 
         # Combines navigation section and main section.
         self.main_layout.addWidget(self.splitter)
@@ -85,9 +114,43 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.show()
 
     ####################
-    # Tab widget construction functions.
+    # Menu bar functions
 
-    def make_tabs(self, df):
+    def make_menu_bar(self):
+
+        ## Create a menu for setting the GUI style with radio-style buttons in a QActionGroup
+        menubar = self.menuBar()
+        styleMenu = menubar.addMenu('&Set Style')
+        styleGroup = QtWidgets.QActionGroup(styleMenu, exclusive=True)
+
+        # Iterate over all GUI Styles that exist for the user's system
+        for style in QtWidgets.QStyleFactory.keys():
+            styleAction = QtWidgets.QAction(f'&{style}', self, checkable=True)
+            styleAction.triggered.connect(lambda state, style=style: self.set_style(style))
+            styleGroup.addAction(styleAction)
+            styleMenu.addAction(styleAction)
+
+        # Set the default style
+        styleAction.trigger()  # REEEEEEE
+
+        ## Creates a chart menu.
+        chartMenu = menubar.addMenu('&Plot Charts')
+        # chartGroup = QtWidgets.QActionGroup(chartMenu)
+        scatterChartAction = QtWidgets.QAction('&Scatter Chart', self)
+        scatterChartAction.triggered.connect(self.scatter_plot)
+        chartMenu.addAction(scatterChartAction)
+        boxplotChartAction = QtWidgets.QAction('&Box Plot', self)
+        boxplotChartAction.triggered.connect(self.boxplot)
+        chartMenu.addAction(boxplotChartAction)
+
+    def set_style(self, style):
+        print("Setting style to", style)
+        self.app.setStyle(style)
+
+    ####################
+    # Tab widget functions
+
+    def make_tab_widget(self, df):
         """Take a DataFrame and creates tabs for it in self.tab_widget."""
 
         # Creates the tabs
@@ -95,12 +158,13 @@ class PandasGUI(QtWidgets.QMainWindow):
         statistics_tab = self.make_tab_statistics(df)
         chart_tab = self.make_tab_charts(df)
 
+        tab_widget = QtWidgets.QTabWidget()
         # Adds them to the tab_view
-        self.tab_widget.addTab(dataframe_tab, "Dataframe")
-        self.tab_widget.addTab(statistics_tab, "Statistics")
-        self.tab_widget.addTab(chart_tab, "Charts")
+        tab_widget.addTab(dataframe_tab, "Dataframe")
+        tab_widget.addTab(statistics_tab, "Statistics")
+        tab_widget.addTab(chart_tab, "Charts")
 
-        return self.tab_widget
+        return tab_widget
 
     def make_tab_dataframe(self, df):
         tab = QtWidgets.QWidget()
@@ -123,9 +187,11 @@ class PandasGUI(QtWidgets.QMainWindow):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout()
 
-        self.stats_model = DataFrameModel(df.describe())
-        view = QtWidgets.QTableView()
-        view.setModel(self.stats_model)
+        tab_df = df.describe(include='all').T
+        tab_df.insert(loc=0,column='Type',value=df.dtypes)
+        model = DataFrameModel(tab_df)
+        view = DataFrameView()
+        view.setModel(model)
 
         size_policy = QtWidgets.QAbstractScrollArea.AdjustToContentsOnFirstShow
         view.setSizeAdjustPolicy(size_policy)
@@ -136,37 +202,45 @@ class PandasGUI(QtWidgets.QMainWindow):
         return tab
 
     def make_tab_charts(self, df):
-        '''Icons from https://www.freepik.com/'''
+        # '''Icons from https://www.freepik.com/'''
 
-        scatterplot_btn = QtWidgets.QPushButton()
-        scatterplot_btn.setIcon(QtGui.QIcon('Images/scatter_icon_64x64.png'))
-        scatterplot_btn.setIconSize(QtCore.QSize(64, 64))
-        scatterplot_btn.setSizePolicy(QtWidgets.QSizePolicy.Preferred,
-                                      QtWidgets.QSizePolicy.Expanding)
-        scatterplot_btn.clicked.connect(self.get_chart_parameters)
-        boxplot_btn = QtWidgets.QPushButton()
-        boxplot_btn.setIcon(QtGui.QIcon('Images/box_plot_icon_64x64.png'))
-        boxplot_btn.setIconSize(QtCore.QSize(64, 64))
-        boxplot_btn.setSizePolicy(QtWidgets.QSizePolicy.Preferred,
-                                  QtWidgets.QSizePolicy.Expanding)
+        # scatterplot_btn = QtWidgets.QPushButton()
+        # scatterplot_btn.setIcon(QtGui.QIcon('Images/scatter_icon_64x64.png'))
+        # scatterplot_btn.setIconSize(QtCore.QSize(64, 64))
+        # scatterplot_btn.setSizePolicy(QtWidgets.QSizePolicy.Preferred,
+        #                               QtWidgets.QSizePolicy.Expanding)
+        # scatterplot_btn.clicked.connect(self.get_chart_parameters)
+        # boxplot_btn = QtWidgets.QPushButton()
+        # boxplot_btn.setIcon(QtGui.QIcon('Images/box_plot_icon_64x64.png'))
+        # boxplot_btn.setIconSize(QtCore.QSize(64, 64))
+        # boxplot_btn.setSizePolicy(QtWidgets.QSizePolicy.Preferred,
+        #                           QtWidgets.QSizePolicy.Expanding)
 
-        button_layout = QtWidgets.QHBoxLayout()
-        button_layout.addWidget(scatterplot_btn)
-        button_layout.addWidget(boxplot_btn)
-        buttons = QtWidgets.QWidget()
-        buttons.setLayout(button_layout)
+        # button_layout = QtWidgets.QHBoxLayout()
+        # button_layout.addWidget(scatterplot_btn)
+        # button_layout.addWidget(boxplot_btn)
+        # buttons = QtWidgets.QWidget()
+        # buttons.setLayout(button_layout)
 
-        charts = QtWidgets.QWidget()
-        self.chart_layout = QtWidgets.QVBoxLayout()
-        charts.setLayout(self.chart_layout)
+        # charts = QtWidgets.QWidget()
+        # self.chart_layout = QtWidgets.QVBoxLayout()
+        # charts.setLayout(self.chart_layout)
 
-        self.charts_stack = QtWidgets.QStackedWidget(self)
+        # self.charts_stack = QtWidgets.QStackedWidget(self)
 
-        self.charts_stack = QtWidgets.QStackedWidget(self.tab_widget)
-        self.charts_stack.addWidget(buttons)
-        self.charts_stack.addWidget(charts)
-        tab = self.charts_stack
+        # self.charts_stack = QtWidgets.QStackedWidget(self.tab_widget)
+        # self.charts_stack.addWidget(buttons)
+        # self.charts_stack.addWidget(charts)
+        # tab = self.charts_stack
 
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout()
+
+        button = QtWidgets.QPushButton("Print DF")
+        # button.clicked.connect(self.printdf)
+
+        layout.addWidget(button)
+        tab.setLayout(layout)
         return tab
 
     def make_tab_reshape(self):
@@ -174,7 +248,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         layout = QtWidgets.QVBoxLayout()
 
         button = QtWidgets.QPushButton("Print DF")
-        button.clicked.connect(self.printdf)
+        # button.clicked.connect(self.printdf)
 
         layout.addWidget(button)
         tab.setLayout(layout)
@@ -232,13 +306,9 @@ class PandasGUI(QtWidgets.QMainWindow):
         df = self.df_dict.get(df_name)
 
         if df is not None:
-            self.shown_df = df
-            # Remove all tabs from self.tab_widget.
-            for _ in range(self.tab_widget.count()):
-                self.tab_widget.removeTab(0)
-
-            # Remake them with the new dataframe.
-            self.make_tabs(self.shown_df)
+            self.df_shown = df
+            tab_widget = self.df_metadata[df_name]['tab_widget']
+            self.tabs_stacked_widget.setCurrentWidget(tab_widget)
 
     def add_nav_dataframe(self, df_name, folder):
         """Adds a dataframe to the navigation sidebar"""
@@ -271,110 +341,94 @@ class PandasGUI(QtWidgets.QMainWindow):
         else:
             self.headers_highlighted = [data]
 
-    def get_chart_parameters(self):
-        items = ("C", "C++", "Java", "Python")
+    def scatter_plot(self):
+        parameters = {'x_values': self.df_shown.columns,
+                      'y_values': self.df_shown.columns}
+        prompt = ChartInputColumnsDialog(window_title='Create Scatter Plot',
+                                         parameters=parameters)
+        if prompt.exec_() == prompt.Accepted:
+            x, y = prompt.get_parameters()
 
-        item, ok_pressed = QtWidgets.QInputDialog.getItem(self, "select input dialog",
-                                                          "list of languages", items,
-                                                             0, False)
-
-        if ok_pressed and item:
-            self.scatter_plot()
-
-    def scatter_plot(self, x_values=None, y_values=None):
-        """plots some random stuff"""
-        ###
-        # a figure instance to plot on
+        # # a figure instance to plot on
         self.chart_figure = plt.figure()
+        x_values = self.df_shown[x]
+        y_values = self.df_shown[y]
 
-        # this is the Canvas Widget that displays the `figure`
-        # it takes the `figure` instance as a parameter to __init__
-        self.chart_canvas = FigureCanvas(self.chart_figure)
-        toolbar = NavigationToolbar(self.chart_canvas, self)
-        if x_values is None:
-            x_values = [random.random() for i in range(10)]
-
-        # discards the old graph
-        self.chart_figure.clear()
-
-        # create an axis
         ax = self.chart_figure.add_subplot(111)
-        # ax.scatter(x_values)
-        ax.plot(x_values, 'o-')
+        ax.scatter(x_values, y_values)
+        # ax.plot(x_values, 'o-')
+        plt.show()
 
-        # refresh canvas
-        self.chart_canvas.draw()
+    def boxplot(self):
+        parameters = {'column': self.df_shown.columns,
+                      'by': self.df_shown.columns}
+        prompt = ChartInputColumnsDialog(window_title='Create Box Plot',
+                                         parameters=parameters)
+        if prompt.exec_() == prompt.Accepted:
+            column, by = prompt.get_user_choice()
 
-        # this is the Navigation widget
-        # it takes the Canvas widget and a parent
-
-        # set the layout
-        # for i in reversed(range(self.chart_layout.count())):
-        #     self.chart_layout.itemAt(i).widget().setParent(None)
-
-        # self.chart_layout = None
-
-        self.chart_layout.addWidget(toolbar)
-        self.chart_layout.addWidget(self.chart_canvas)
-        self.charts_stack.setCurrentIndex(1)
+        sns.boxplot(x=by, y=column, data=self.df_shown)
+        plt.show()
 
 
 class ChartInputColumnsDialog(QtWidgets.QDialog):
-    def __init__(self, *args):
+
+    def __init__(self, window_title, parameters):
         super().__init__()
+        self.parameters = parameters
+        self.createFormGroupBox(self.parameters)
 
-        layout = QWidgets.QVBoxLayout(self)
+        buttonBox = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok |
+                                               QtWidgets.QDialogButtonBox.Cancel)
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
 
-        # nice widget for editing the date
-        # self.datetime = QDateTimeEdit(self)
-        # self.datetime.setCalendarPopup(True)
-        # self.datetime.setDateTime(QDateTime.currentDateTime())
-        parameters = len(args)
-        layout.addWidget(self.datetime)
+        mainLayout = QtWidgets.QVBoxLayout()
+        mainLayout.addWidget(self.formGroupBox)
+        mainLayout.addWidget(buttonBox)
+        self.setLayout(mainLayout)
 
-        # OK and Cancel buttons
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.Ok | QDialogButtonBox.Cancel,
-            Qt.Horizontal, self)
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
+        self.setWindowTitle(window_title)
 
-    def dateTime(self):
-            return self.datetime.dateTime()
+    def createFormGroupBox(self, chart_parameters):
+        self.formGroupBox = QtWidgets.QGroupBox("Form layout")
+        layout = QtWidgets.QFormLayout()
 
-    # static method to create the dialog and return (date, time, accepted)
-    @staticmethod
-    def getDateTime():
-        dialog = DateDialog()
-        result = dialog.exec_()
-        date = dialog.dateTime()
-        return (date.date(), date.time(), result == QDialog.Accepted)
+        self.chart_parameter_widgets = {}
+        for label, options in chart_parameters.items():
+            self.chart_parameter_widgets[label] = QtWidgets.QComboBox()
+            self.chart_parameter_widgets[label].addItems(options)
+            layout.addRow(QtWidgets.QLabel(label), self.chart_parameter_widgets[label])
+
+        self.formGroupBox.setLayout(layout)
+
+    def get_user_choice(self):
+        return_values = [parameter.currentText()
+                         for parameter in self.chart_parameter_widgets.values()]
+        return return_values
+
+
+def start_gui(*args, **kwargs):
+    app = QtWidgets.QApplication(sys.argv)
+
+    win = PandasGUI(*args, **kwargs, app=app)
+    app.exec_()
 
 
 def show(*args, **kwargs):
-    app = QtWidgets.QApplication(sys.argv)
-
-    # Choose GUI appearance
-    print(QtWidgets.QStyleFactory.keys())
-    style = "Fusion"
-    app.setStyle(style)
-    print("PyQt5 Style: " + style)
-
-    win = PandasGUI(*args, **kwargs)
-    app.exec_()
-
+    thread = Thread(target=start_gui, args=args, kwargs=kwargs)
+    thread.start()
 
 if __name__ == '__main__':
     tips = sns.load_dataset('tips')
     tips = pd.DataFrame(tips)
     pokemon = pd.read_csv('pokemon.csv')
-    x = pd.read_csv('sample.csv')
+
+    sample = pd.read_csv('sample.csv')
+
     tuples = [('A', 'one', 'x'), ('A', 'one', 'y'), ('A', 'two', 'x'), ('A', 'two', 'y'),
               ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')]
-
     index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
     multidf = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
-    # plt.scatter(x=tips['total_bill'], y=tips['sex'])
-    # plt.show()
-    show(x, tips, multidf=multidf, pokemon=pokemon)
+
+    show(sample, tips, multidf=multidf, pokemon=pokemon)
