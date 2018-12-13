@@ -307,7 +307,7 @@ class PandasGUI(QtWidgets.QMainWindow):
     def header_clicked(self, header_index):
         """
         Detects if headers are highlighted. If they are,
-        adds them to a class variable holding all the dataframes
+        adds them to a class variable holding all the columns
         currently highlighted.
         Requires holding control to highlight multiple headers.
 
