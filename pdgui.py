@@ -343,7 +343,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         does nothing.
         """
 
-        multiindex = isinstance(self.df_shown.index, pd.core.index.MultiIndex)
+        has_multiindex = isinstance(self.df_shown.index, pd.core.index.MultiIndex)
         # Dictionary of {parameter name: possible options}
         parameters = {'x_values': self.df_shown.columns,
                       'y_values': self.df_shown.columns}
@@ -352,7 +352,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         prompt = ChartInputDialog(window_title='Create Scatter Plot',
                                   parameters=parameters,
                                   headers_highlighted=self.headers_highlighted,
-                                  multiindex=multiindex)
+                                  multiindex=has_multiindex)
 
         # If the accept button is pressed, get the choices and plot.
         # Otherwise ignore.
@@ -373,11 +373,11 @@ class PandasGUI(QtWidgets.QMainWindow):
     def boxplot(self):
         parameters = {'column': self.df_shown.columns,
                       'by': self.df_shown.columns}
-        multiindex = isinstance(self.df_shown.index, pd.core.index.MultiIndex)
+        has_multiindex = isinstance(self.df_shown.index, pd.core.index.MultiIndex)
         prompt = ChartInputDialog(window_title='Create Box Plot',
                                   parameters=parameters,
                                   headers_highlighted=self.headers_highlighted,
-                                  multiindex=multiindex)
+                                  multiindex=has_multiindex)
         if prompt.exec_() == prompt.Accepted:
             column, by = prompt.get_user_choice()
 
@@ -390,11 +390,11 @@ class PandasGUI(QtWidgets.QMainWindow):
 
     def distplot(self):
         parameters = {'column': self.df_shown.columns}
-        multiindex = isinstance(self.df_shown.index, pd.core.index.MultiIndex)
+        has_multiindex = isinstance(self.df_shown.index, pd.core.index.MultiIndex)
         prompt = ChartInputDialog(window_title='Create Box Plot',
                                   parameters=parameters,
                                   headers_highlighted=self.headers_highlighted,
-                                  multiindex=multiindex)
+                                  multiindex=has_multiindex)
         if prompt.exec_() == prompt.Accepted:
             column = prompt.get_user_choice()[0]
             data = self.df_shown[column]
@@ -429,12 +429,13 @@ class ChartInputDialog(QtWidgets.QDialog):
         super().__init__()
         self.headers_highlighted = headers_highlighted
         self.parameters = parameters
-        self.make_input_form()
         self.df_has_multiindex_columns = multiindex
 
         # Initializes make_input_form variables.
         self.input_form = None
         self.chart_combobox_widgets = None
+
+        self.make_input_form()
 
         # Creates the 'OK' and 'Cancel' buttons.
         buttonBox = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.Ok |
