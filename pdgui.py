@@ -10,7 +10,6 @@ import inspect
 import pyqt_fix
 from dataframe_viewer import DataFrameModel, DataFrameView
 
-
 class PandasGUI(QtWidgets.QMainWindow):
 
     def __init__(self, *args, app, **kwargs):
@@ -70,9 +69,8 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         # Iterate over all dataframe names and make the tab_widgets
         for df_name in self.df_dicts.keys():
-            df_object = self.df_dicts[df_name]['dataframe']
 
-            tab_widget = self.make_tab_widget(df_object)
+            tab_widget = self.make_tab_widget(df_name)
             self.df_dicts[df_name]['tab_widget'] = tab_widget
             self.tabs_stacked_widget.addWidget(tab_widget)
 
@@ -80,7 +78,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         initial_tab_widget = self.df_dicts[initial_df_name]['tab_widget']
 
         self.tabs_stacked_widget.setCurrentWidget(initial_tab_widget)
-        # self.tabs_stacked_widget.setContentsMargins(0, 0, 0, 0)
 
         # Adds navigation section to splitter.
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
@@ -131,13 +128,13 @@ class PandasGUI(QtWidgets.QMainWindow):
     ####################
     # Tab widget functions
 
-    def make_tab_widget(self, df):
+    def make_tab_widget(self, df_name):
         """Take a DataFrame and creates tabs for it in self.tab_widget."""
 
         # Creates the tabs
-        dataframe_tab = self.make_tab_dataframe(df)
-        statistics_tab = self.make_tab_statistics(df)
-        chart_tab = self.make_tab_charts(df)
+        dataframe_tab = self.make_tab_dataframe(df_name)
+        statistics_tab = self.make_tab_statistics(df_name)
+        chart_tab = self.make_tab_charts()
 
         tab_widget = QtWidgets.QTabWidget()
         # Adds them to the tab_view
@@ -147,7 +144,10 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         return tab_widget
 
-    def make_tab_dataframe(self, df):
+    def make_tab_dataframe(self, df_name):
+
+        df = self.df_dicts[df_name]['dataframe']
+
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout()
 
@@ -161,7 +161,10 @@ class PandasGUI(QtWidgets.QMainWindow):
         tab.setLayout(layout)
         return tab
 
-    def make_tab_statistics(self, df):
+    def make_tab_statistics(self, df_name):
+
+        df = self.df_dicts[df_name]['dataframe']
+
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout()
 
@@ -178,7 +181,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         return tab
 
-    def make_tab_charts(self, df):
+    def make_tab_charts(self):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout()
 
@@ -189,16 +192,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         tab.setLayout(layout)
         return tab
 
-    def make_tab_reshape(self):
-        tab = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout()
-
-        button = QtWidgets.QPushButton("Print DF")
-        button.clicked.connect(self.printdf)
-
-        layout.addWidget(button)
-        tab.setLayout(layout)
-        return tab
 
     ####################
     # Nav bar functions
@@ -215,16 +208,27 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         self.main_nav_branch = QtGui.QStandardItem('Master')
         for df_name in df_names:
-            self.add_nav_dataframe(df_name)
+            # Adds a dataframe to the navigation sidebar
+
+            # Calculate and format the shape of the DataFrame
+            shape = self.df_dicts[df_name]['dataframe'].shape
+            shape = str(shape[0]) + ' X ' + str(shape[1])
+
+            df_name = QtGui.QStandardItem(df_name)
+            df_name.setEditable(False)
+            shape = QtGui.QStandardItem(shape)
+            shape.setEditable(False)
+            self.main_nav_branch.appendRow([df_name, shape])
+
         root_node.appendRow([self.main_nav_branch, None])
         self.nav_view.setModel(model)
         self.nav_view.expandAll()
         self.nav_view.clicked.connect(self.select_dataframe)
 
-    def select_dataframe(self, name):
+    def select_dataframe(self, index):
         """Examines navbar row pressed by user
            and then changes the dataframe shown."""
-        row_selected = name.row()
+        row_selected = index.row()
         df_name = self.nav_view.model().index(0, 0).child(row_selected, 0).data()
 
         tab_widget = self.df_dicts[df_name]['tab_widget']
@@ -236,17 +240,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         model.setHeaderData(0, QtCore.Qt.Horizontal, 'Name')
         model.setHeaderData(1, QtCore.Qt.Horizontal, 'Shape')
         return model
-
-    def add_nav_dataframe(self, df_name):
-        """Adds a dataframe to the navigation sidebar"""
-
-        # Calculate and format the shape of the DataFrame
-        shape = self.df_dicts[df_name]['dataframe'].shape
-        shape = str(shape[0]) + ' X ' + str(shape[1])
-
-        df_name = QtGui.QStandardItem(df_name)
-        shape = QtGui.QStandardItem(shape)
-        self.main_nav_branch.appendRow([df_name, shape])
 
     ####################
 
