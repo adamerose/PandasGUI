@@ -249,6 +249,28 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.nav_view.setModel(model)
         self.nav_view.expandAll()
         self.nav_view.clicked.connect(self.select_dataframe)
+    
+    def add_nav_dataframe(self, df_name, folder):
+        """Adds a dataframe to the navigation sidebar"""
+
+        # Calculate and format the shape of the DataFrame
+        shape = self.df_dicts[df_name]['dataframe'].shape
+        shape = str(shape[0]) + ' X ' + str(shape[1])
+
+        df_name_label = QtGui.QStandardItem(df_name)
+        shape_label = QtGui.QStandardItem(shape)
+
+        # Disables dropping dataframes on other dataframes in nav pane.
+        df_name_label.setFlags(df_name_label.flags() &
+                               ~QtCore.Qt.ItemIsDropEnabled)
+        shape_label.setFlags(shape_label.flags() &
+                             ~QtCore.Qt.ItemIsDropEnabled)
+
+        # Disables editing the names of the dataframes.
+        df_name_label.setEditable(False)
+        shape_label.setEditable(False)
+
+        folder.appendRow([df_name_label, shape_label])
 
     def select_dataframe(self, location_clicked):
         """
@@ -271,32 +293,11 @@ class PandasGUI(QtWidgets.QMainWindow):
         df_name = df_parent_folder_name.child(df_clicked_row_index, 0).data()
         df = self.df_dicts.get(df_name)
 
+        # If the dataframe exists, change the tab widget shown.
         if df is not None:
             self.df_shown = self.df_dicts[df_name]['dataframe']
             tab_widget = self.df_dicts[df_name]['tab_widget']
             self.tabs_stacked_widget.setCurrentWidget(tab_widget)
-
-    def add_nav_dataframe(self, df_name, folder):
-        """Adds a dataframe to the navigation sidebar"""
-
-        # Calculate and format the shape of the DataFrame
-        shape = self.df_dicts[df_name]['dataframe'].shape
-        shape = str(shape[0]) + ' X ' + str(shape[1])
-
-        df_name_label = QtGui.QStandardItem(df_name)
-        shape_label = QtGui.QStandardItem(shape)
-
-        # Disables dropping dataframes on other dataframes in nav pane.
-        df_name_label.setFlags(df_name_label.flags() &
-                               ~QtCore.Qt.ItemIsDropEnabled)
-        shape_label.setFlags(shape_label.flags() &
-                             ~QtCore.Qt.ItemIsDropEnabled)
-
-        # Disables editing the names of the dataframes.
-        df_name_label.setEditable(False)
-        shape_label.setEditable(False)
-
-        folder.appendRow([df_name_label, shape_label])
 
     ####################
     # Charts functions.
@@ -426,23 +427,25 @@ class ChartInputDialog(QtWidgets.QDialog):
     def make_input_form(self):
         """
         Creates the form to get the columns the user wants to use
-        to plot the chart using QComboBox widgets.
-        If the headers highlighted are equal to the parameters the chart
-        needs, autofills the QComboboxes with the highlighted columns.
+        to plot the chart.
+        Displays options using QComboBox widgets.
         """
         self.input_form = QtWidgets.QGroupBox()
         layout = QtWidgets.QFormLayout()
 
-        self.chart_parameter_widgets = {}
-        # loops through the parameters, makes them into combo boxes
-        # and adds to a dict {parameter name: QComboBox widget}.
+        self.chart_combobox_widgets = []
+        # iterates through the parameters, makes them into combo boxes
+        # and adds to a list of QComboBox widgets.
         for i, (label, options) in enumerate(self.parameters.items()):
-            self.chart_parameter_widgets[label] = QtWidgets.QComboBox()
-            self.chart_parameter_widgets[label].addItems(options)
-            layout.addRow(QtWidgets.QLabel(label), self.chart_parameter_widgets[label])
+            combobox_widget = QtWidgets.QComboBox()
+            combobox_widget.addItems(options)
+            self.chart_combobox_widgets.append(combobox_widget)
+            layout.addRow(QtWidgets.QLabel(label), self.chart_combobox_widgets[i])
 
+            # If the headers highlighted are equal to the parameters the chart
+            # needs, autofills the QComboboxes with the highlighted columns.
             if len(self.headers_highlighted) == len(self.parameters):
-                self.chart_parameter_widgets[label].setCurrentIndex(self.headers_highlighted[i])
+                self.chart_combobox_widgets[i].setCurrentIndex(self.headers_highlighted[i])
 
         self.input_form.setLayout(layout)
 
@@ -455,8 +458,7 @@ class ChartInputDialog(QtWidgets.QDialog):
             return_values: list of strings from the QComboBox Widgets.
         """
         return_values = [parameter.currentText()
-                         for parameter in
-                         self.chart_parameter_widgets.values()]
+                         for parameter in self.chart_combobox_widgets]
         return return_values
 
 
