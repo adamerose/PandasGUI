@@ -307,8 +307,8 @@ class PandasGUI(QtWidgets.QMainWindow):
     def header_clicked(self, header_index):
         """
         Detects if headers are highlighted. If they are,
-        sets the default text on the create_plot dialogs to
-        the highlighted headers.
+        adds them to a class variable holding all the dataframes
+        currently highlighted.
         Requires holding control to highlight multiple headers.
 
         Args:
