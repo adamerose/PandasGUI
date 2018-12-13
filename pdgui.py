@@ -188,6 +188,8 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.df_model = DataFrameModel(df)
         view = DataFrameView()
         view.setModel(self.df_model)
+
+        # Allows column highlighting detection.
         view.horizontalHeader().sectionClicked.connect(self.header_clicked)
 
         # view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
