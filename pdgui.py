@@ -325,6 +325,8 @@ class PandasGUI(QtWidgets.QMainWindow):
         else:
             self.headers_highlighted = [header_index]
 
+        print(self.headers_highlighted)
+
     def scatter_plot(self):
         """
         Shows a popup dialog asking for the inputs to the chart.
@@ -336,7 +338,7 @@ class PandasGUI(QtWidgets.QMainWindow):
                       'y_values': self.df_shown.columns}
 
         # Makes an instance of a popup dialog to collect information.
-        prompt = MakeChartDialog(window_title='Create Scatter Plot',
+        prompt = ChartInputDialog(window_title='Create Scatter Plot',
                                  parameters=parameters,
                                  headers_highlighted=self.headers_highlighted)
 
@@ -350,41 +352,51 @@ class PandasGUI(QtWidgets.QMainWindow):
             x_values = self.df_shown[x]
             y_values = self.df_shown[y]
 
-            ax = self.chart_figure.add_subplot(111)
-            ax.scatter(x_values, y_values)
-            # ax.plot(x_values, 'o-')
-            plt.show()
+            try:
+                ax = self.chart_figure.add_subplot(111)
+                ax.scatter(x_values, y_values)
+            except:
+                print(traceback.print_exc())
+            else:
+                plt.show()
 
     def boxplot(self):
         parameters = {'column': self.df_shown.columns,
                       'by': self.df_shown.columns}
-        prompt = MakeChartDialog(window_title='Create Box Plot',
+        prompt = ChartInputDialog(window_title='Create Box Plot',
                                  parameters=parameters,
                                  headers_highlighted=self.headers_highlighted)
         if prompt.exec_() == prompt.Accepted:
             column, by = prompt.get_user_choice()
-            print(column, by)
 
-            sns.boxplot(x=by, y=column, data=self.df_shown)
-            plt.show()
+            try:
+                sns.boxplot(x=by, y=column, data=self.df_shown)
+            except:
+                print(traceback.print_exc())
+            else:
+                plt.show()
 
     def distplot(self):
         parameters = {'column': self.df_shown.columns}
-        prompt = MakeChartDialog(window_title='Create Box Plot',
+        prompt = ChartInputDialog(window_title='Create Box Plot',
                                  parameters=parameters,
                                  headers_highlighted=self.headers_highlighted)
         if prompt.exec_() == prompt.Accepted:
             column = prompt.get_user_choice()[0]
             data = self.df_shown[column]
 
-            sns.distplot(data)
-            plt.show()
+            try:
+                sns.distplot(data)
+            except:
+                print(traceback.print_exc())
+            else:
+                plt.show()
 
     def printdf(self):
         print('debug')
 
 
-class MakeChartDialog(QtWidgets.QDialog):
+class ChartInputDialog(QtWidgets.QDialog):
 
     def __init__(self, window_title, parameters, headers_highlighted):
         """
