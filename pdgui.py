@@ -15,7 +15,7 @@ from matplotlib.backends.backend_qt5agg import \
     NavigationToolbar2QT as NavigationToolbar
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from dataframe_viewer import DataFrameModel, DataFrameView
+from pandasgui.dataframe_viewer import DataFrameModel, DataFrameView
 
 # This fixes lack of stack trace on PyQt exceptions
 import pyqt_fix
