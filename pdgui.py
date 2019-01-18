@@ -507,15 +507,13 @@ def start_gui(*args, **kwargs):
 
 
 def show(*args, **kwargs):
-
-
     # TODO: Implement this correctly
     # https://stackoverflow.com/questions/37693818/run-pyqt-gui-main-app-in-seperate-thread
     # http://doc.qt.io/qt-5/thread-basics.html#gui-thread-and-worker-thread
     # thread = Thread(target=start_gui, args=args, kwargs=kwargs)
     # thread.start()
 
-    start_gui()
+    start_gui(*args, **kwargs)
 
 
 if __name__ == '__main__':
