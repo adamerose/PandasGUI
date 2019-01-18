@@ -43,6 +43,8 @@ class PandasGUI(QtWidgets.QMainWindow):
         # 'view': DataFrameViewer object
         # 'model': DataFrameModel object
         # 'tab_widget': QTabWidget object}
+        # 'display_df': DataFrame object
+        # This is a truncated version of the dataframe for displaying
         self.df_dicts = {}
 
         # setupUI() class variable initialization.
@@ -194,6 +196,11 @@ class PandasGUI(QtWidgets.QMainWindow):
     def make_tab_dataframe(self, df_name):
 
         df = self.df_dicts[df_name]['dataframe']
+
+        # Create a smaller version to display so it doesn't lag
+        df = df.head(1000)
+
+        self.df_dicts[df_name]['display_df'] = df
 
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout()
