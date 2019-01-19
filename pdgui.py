@@ -1,11 +1,13 @@
 import inspect
 import random
 import sys
-from threading import Thread
+import threading
+import multiprocessing
 import traceback
 from collections import OrderedDict
 import re
-
+import time
+import threading
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
@@ -199,7 +201,6 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         # Create a smaller version to display so it doesn't lag
         df = df.head(1000)
-
         self.df_dicts[df_name]['display_df'] = df
 
         tab = QtWidgets.QWidget()
@@ -505,22 +506,12 @@ class ChartInputDialog(QtWidgets.QDialog):
 
         return last_combobox_values
 
-
-def start_gui(*args, **kwargs):
+def show(*args, **kwargs):
     app = QtWidgets.QApplication(sys.argv)
 
     win = PandasGUI(*args, **kwargs, app=app)
     app.exec_()
 
-
-def show(*args, **kwargs):
-    # TODO: Implement this correctly
-    # https://stackoverflow.com/questions/37693818/run-pyqt-gui-main-app-in-seperate-thread
-    # http://doc.qt.io/qt-5/thread-basics.html#gui-thread-and-worker-thread
-    # thread = Thread(target=start_gui, args=args, kwargs=kwargs)
-    # thread.start()
-
-    start_gui(*args, **kwargs)
 
 
 if __name__ == '__main__':
