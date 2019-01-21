@@ -64,6 +64,10 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         # Adds keyword arguments to df_dict.
         for i, (df_name, df_object) in enumerate(kwargs.items()):
+
+            if type(df_object) == pd.core.series.Series:
+                df_object = df_object.to_frame()
+                print(f'"{df_name}" was automatically converted from Series to DataFrame')
             self.df_dicts[df_name] = {}
             self.df_dicts[df_name]['dataframe'] = df_object
 
