@@ -27,7 +27,7 @@ sns.set()
 
 class PandasGUI(QtWidgets.QMainWindow):
 
-    def __init__(self, *args, app, **kwargs):
+    def __init__(self, **kwargs):
         """
         Args:
             *args (): Tuple of DataFrame objects
@@ -35,7 +35,7 @@ class PandasGUI(QtWidgets.QMainWindow):
                          {'DataFrame name': DataFrame object}
         """
         super().__init__()
-        self.app = app
+        self.app = QtWidgets.QApplication.instance()
 
         # self.df_dicts is a dictionary of all dataframes in the GUI.
         # {dataframe name: objects}
@@ -61,22 +61,6 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         # Tab widget class variable initialization.
         self.headers_highlighted = None
-
-        # Hackiest code since 'nam.
-        # Allows naming of dataframe with the local variable name inputted.
-        # I needed to add a second '.f_back', not sure why
-        callers_local_vars = inspect.currentframe().f_back.f_back.f_locals.items()
-
-        # Adds positional arguments to df_dicts.
-        for i, df_object in enumerate(args):
-            df_name = 'untitled' + str(i + 1)
-
-            for var_name, var_val in callers_local_vars:
-                if var_val is df_object:
-                    df_name = var_name
-
-            self.df_dicts[df_name] = {}
-            self.df_dicts[df_name]['dataframe'] = df_object
 
         # Adds keyword arguments to df_dict.
         for i, (df_name, df_object) in enumerate(kwargs.items()):
@@ -507,16 +491,34 @@ class ChartInputDialog(QtWidgets.QDialog):
         return last_combobox_values
 
 def show(*args, **kwargs):
+    # Get the variable names (in the scope show() was called from) of DataFrames passed to show()
+    callers_local_vars = inspect.currentframe().f_back.f_locals.items()
+
+    # Make a dictionary out of these variable names and DataFrames
+    dataframes = {}
+    for i, df_object in enumerate(args):
+        df_name = 'untitled' + str(i + 1)
+
+        for var_name, var_val in callers_local_vars:
+            if var_val is df_object:
+                df_name = var_name
+
+        dataframes[df_name] = df_object
+
+    # Add these to the kwargs
+    if(any([key in kwargs.keys() for key in dataframes.keys()])):
+        print("Warning! Duplicate DataFrame names were given, duplicates were ignored.")
+    kwargs = {**kwargs, **dataframes}
+
+
     app = QtWidgets.QApplication(sys.argv)
 
-    win = PandasGUI(*args, **kwargs, app=app)
+    win = PandasGUI(**kwargs)
     app.exec_()
 
 
 
 if __name__ == '__main__':
-    tips = sns.load_dataset('tips')
-    tips = pd.DataFrame(tips)
     pokemon = pd.read_csv('pokemon.csv')
 
     sample = pd.read_csv('sample.csv')
@@ -526,4 +528,4 @@ if __name__ == '__main__':
     index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
     multidf = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
 
-    show(sample, tips, multidf=multidf, pokemon=pokemon)
+    show(sample, multidf=multidf, pokemon=pokemon)
