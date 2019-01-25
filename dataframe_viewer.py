@@ -14,8 +14,12 @@ from PyQt5.QtWidgets import QStyleOptionHeader, QHeaderView, QWidget, QStyle, QA
 import pandas as pd
 import numpy as np
 import datetime
-import pyqt_fix
 import sys
+
+try:
+    import pyqt_fix
+except:
+    pass
 
 # Define role numbers for our custom headers
 HorizontalHeaderDataRole = Qt.UserRole
