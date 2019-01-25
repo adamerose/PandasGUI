@@ -20,7 +20,10 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from pandasgui.dataframe_viewer import DataFrameModel, DataFrameView
 
 # This fixes lack of stack trace on PyQt exceptions
-import pyqt_fix
+try:
+    import pyqt_fix
+except:
+    pass
 
 sns.set()
 
