@@ -171,8 +171,8 @@ class PandasGUI(QtWidgets.QMainWindow):
         """Take a DataFrame and creates tabs for it in self.tab_widget."""
 
         # Creates the tabs
-        dataframe_tab = self.make_tab_dataframe(df_name)
-        statistics_tab = self.make_tab_statistics(df_name)
+        dataframe_tab = self.make_dataframe_tab(df_name)
+        statistics_tab = self.make_statistics_tab(df_name)
         chart_tab = self.make_tab_charts()
 
         tab_widget = QtWidgets.QTabWidget()
@@ -183,7 +183,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         return tab_widget
 
-    def make_tab_dataframe(self, df_name):
+    def make_dataframe_tab(self, df_name):
 
         df = self.df_dicts[df_name]['dataframe']
 
@@ -206,7 +206,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         tab.setLayout(layout)
         return tab
 
-    def make_tab_statistics(self, df_name):
+    def make_statistics_tab(self, df_name):
 
         df = self.df_dicts[df_name]['dataframe']
 
@@ -494,11 +494,12 @@ class ChartInputDialog(QtWidgets.QDialog):
 
         return last_combobox_values
 
+
 def show(*args, **kwargs):
-    # Get the variable names (in the scope show() was called from) of DataFrames passed to show()
+    # Get the variable names in the scope show() was called from
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
 
-    # Make a dictionary out of these variable names and DataFrames
+    # Make a dictionary of the DataFrames from the position args and get their variable names using inspect
     dataframes = {}
     for i, df_object in enumerate(args):
         df_name = 'untitled' + str(i + 1)
@@ -509,17 +510,15 @@ def show(*args, **kwargs):
 
         dataframes[df_name] = df_object
 
-    # Add these to the kwargs
-    if(any([key in kwargs.keys() for key in dataframes.keys()])):
+    # Add the dictionary of positional args to the kwargs
+    if (any([key in kwargs.keys() for key in dataframes.keys()])):
         print("Warning! Duplicate DataFrame names were given, duplicates were ignored.")
     kwargs = {**kwargs, **dataframes}
 
-
+    # Creeate the application and PandasGUI window
     app = QtWidgets.QApplication(sys.argv)
-
     win = PandasGUI(**kwargs)
     app.exec_()
-
 
 
 if __name__ == '__main__':

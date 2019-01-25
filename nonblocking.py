@@ -59,3 +59,6 @@ if __name__ == '__main__':
     multidf = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
 
     show(sample, multidf=multidf, pokemon=pokemon)
+    show(sample, multidf=multidf, pokemon=pokemon)
+
+    print('test')
