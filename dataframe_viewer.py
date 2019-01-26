@@ -686,7 +686,7 @@ class DataFrameView(QtWidgets.QTableView):
         super().setModel(model)
 
         # Fit columns to contents
-        self.resizeColumnsToContents()
+        # self.resizeColumnsToContents()
 
         # Add some cell padding
         cols = self.model().columnCount(None)

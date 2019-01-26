@@ -54,7 +54,7 @@ if X:
 
 
 if X:
-    df = pd.read_csv('pokemon.csv')
+    df = pd.read_csv('sample_data/pokemon.csv')
     keys = ['Generation']
     categories = ['Type 1', 'Type 2']
     data = {'Attack': ['min', 'max'], 'Defense': ['mean']}

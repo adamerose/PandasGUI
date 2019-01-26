@@ -49,9 +49,9 @@ def show(*args, **kwargs):
 
 if __name__ == '__main__':
     import pandas as pd
-    pokemon = pd.read_csv('pokemon.csv')
+    pokemon = pd.read_csv('sample_data/pokemon.csv')
 
-    sample = pd.read_csv('sample.csv')
+    sample = pd.read_csv('sample_data/sample.csv')
 
     tuples = [('A', 'one', 'x'), ('A', 'one', 'y'), ('A', 'two', 'x'), ('A', 'two', 'y'),
               ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')]

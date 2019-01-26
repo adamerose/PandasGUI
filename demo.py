@@ -15,7 +15,7 @@ if __name__ == '__main__':
         'Total': {0: 189.05, 1: 999.5, 2: 179.64, 3: 539.73, 4: 167.44, 5: 299.4, 6: 149.25, 7: 449.1, 8: 63.68}}
     df1 = pd.DataFrame(sample_data)
 
-    df2 = pd.read_csv('pokemon.csv')
+    df2 = pd.read_csv('sample_data/pokemon.csv')
 
     tuples = [('A', 'one', 'x'), ('A', 'one', 'y'), ('A', 'two', 'x'), ('A', 'two', 'y'),
               ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')]
