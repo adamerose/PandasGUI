@@ -64,7 +64,6 @@ from matplotlib.backends.backend_qt5agg import \
 from matplotlib.backends.backend_qt5agg import \
     NavigationToolbar2QT as NavigationToolbar
 from PyQt5 import QtCore, QtGui, QtWidgets
-
 from pandasgui.dataframe_viewer import DataFrameModel, DataFrameView
 
 # This fixes lack of stack trace on PyQt exceptions
@@ -212,6 +211,10 @@ class PandasGUI(QtWidgets.QMainWindow):
         distplotChartAction.triggered.connect(self.distplot)
         chartMenu.addAction(distplotChartAction)
 
+        scatterDialogAction = QtWidgets.QAction('&Scatter Dialog', self)
+        scatterDialogAction.triggered.connect(self.scatter_dialog)
+        chartMenu.addAction(scatterDialogAction)
+
     def set_style(self, style):
         print("Setting style to", style)
         self.app.setStyle(style)
@@ -358,6 +361,11 @@ class PandasGUI(QtWidgets.QMainWindow):
 
     ####################
     # Charts functions.
+
+    def scatter_dialog(self):
+        from scatter import scatterDialog
+        self.win = scatterDialog(self.df_dicts)
+
 
     def header_clicked(self, header_index):
         """
@@ -583,7 +591,8 @@ def main():
 
     # big = pd.read_csv('sample_data/1500000 Sales Records.csv')
     # show(big)
-    show(sample, multidf=multidf, pokemon=pokemon)
+    show(pokemon)
+    # show(sample, multidf=multidf, pokemon=pokemon)
 
 
 if __name__ == '__main__':

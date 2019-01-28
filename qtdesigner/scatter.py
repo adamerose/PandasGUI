@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'scatter.ui'
+# Form implementation generated from reading ui file 'C:\_MyFiles\Programming\Python Projects\pandasgui\qtdesigner\scatter.ui'
 #
 # Created by: PyQt5 UI code generator 5.9.2
 #
@@ -8,85 +8,54 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-class Ui_Dialog(object):
-    def setupUi(self, Dialog):
-        Dialog.setObjectName("Dialog")
-        Dialog.resize(703, 654)
-        self.verticalLayout = QtWidgets.QVBoxLayout(Dialog)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.comboBox = QtWidgets.QComboBox(Dialog)
-        self.comboBox.setObjectName("comboBox")
-        self.comboBox.addItem("")
-        self.verticalLayout.addWidget(self.comboBox)
-        self.horizontalLayout = QtWidgets.QHBoxLayout()
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        self.listWidget = QtWidgets.QListWidget(Dialog)
-        self.listWidget.setObjectName("listWidget")
-        item = QtWidgets.QListWidgetItem()
-        self.listWidget.addItem(item)
-        item = QtWidgets.QListWidgetItem()
-        self.listWidget.addItem(item)
-        item = QtWidgets.QListWidgetItem()
-        self.listWidget.addItem(item)
-        self.horizontalLayout.addWidget(self.listWidget)
-        self.verticalLayout_2 = QtWidgets.QVBoxLayout()
-        self.verticalLayout_2.setObjectName("verticalLayout_2")
-        spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout_2.addItem(spacerItem)
-        self.pushButton_2 = QtWidgets.QPushButton(Dialog)
-        self.pushButton_2.setObjectName("pushButton_2")
-        self.verticalLayout_2.addWidget(self.pushButton_2)
-        self.pushButton = QtWidgets.QPushButton(Dialog)
-        self.pushButton.setObjectName("pushButton")
-        self.verticalLayout_2.addWidget(self.pushButton)
-        spacerItem1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout_2.addItem(spacerItem1)
-        self.horizontalLayout.addLayout(self.verticalLayout_2)
-        self.treeWidget = QtWidgets.QTreeWidget(Dialog)
-        self.treeWidget.setObjectName("treeWidget")
-        item_0 = QtWidgets.QTreeWidgetItem(self.treeWidget)
-        item_0.setFlags(QtCore.Qt.ItemIsSelectable|QtCore.Qt.ItemIsUserCheckable|QtCore.Qt.ItemIsEnabled)
-        item_0 = QtWidgets.QTreeWidgetItem(self.treeWidget)
-        item_0 = QtWidgets.QTreeWidgetItem(self.treeWidget)
-        self.horizontalLayout.addWidget(self.treeWidget)
-        self.verticalLayout.addLayout(self.horizontalLayout)
-        self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_2.addItem(spacerItem2)
-        self.pushButton_4 = QtWidgets.QPushButton(Dialog)
-        self.pushButton_4.setObjectName("pushButton_4")
-        self.horizontalLayout_2.addWidget(self.pushButton_4)
-        self.pushButton_3 = QtWidgets.QPushButton(Dialog)
-        self.pushButton_3.setObjectName("pushButton_3")
-        self.horizontalLayout_2.addWidget(self.pushButton_3)
-        self.verticalLayout.addLayout(self.horizontalLayout_2)
+class scatterDialog(QtWidgets.QDialog):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+        self.show()
 
-        self.retranslateUi(Dialog)
-        QtCore.QMetaObject.connectSlotsByName(Dialog)
+    def initUI(self):
+        layout = QtWidgets.QVBoxLayout()
+        self.setLayout(layout)
+        self.columnPicker = columnPicker()
 
-    def retranslateUi(self, Dialog):
-        _translate = QtCore.QCoreApplication.translate
-        Dialog.setWindowTitle(_translate("Dialog", "Dialog"))
-        self.comboBox.setItemText(0, _translate("Dialog", "Pokemon"))
-        __sortingEnabled = self.listWidget.isSortingEnabled()
-        self.listWidget.setSortingEnabled(False)
-        item = self.listWidget.item(0)
-        item.setText(_translate("Dialog", "Attack"))
-        item = self.listWidget.item(1)
-        item.setText(_translate("Dialog", "Defense"))
-        item = self.listWidget.item(2)
-        item.setText(_translate("Dialog", "Generation"))
-        self.listWidget.setSortingEnabled(__sortingEnabled)
-        self.pushButton_2.setText(_translate("Dialog", ">"))
-        self.pushButton.setText(_translate("Dialog", "<"))
-        self.treeWidget.headerItem().setText(0, _translate("Dialog", "Column Name"))
-        __sortingEnabled = self.treeWidget.isSortingEnabled()
-        self.treeWidget.setSortingEnabled(False)
-        self.treeWidget.topLevelItem(0).setText(0, _translate("Dialog", "Y Variable"))
-        self.treeWidget.topLevelItem(1).setText(0, _translate("Dialog", "X Variable"))
-        self.treeWidget.topLevelItem(2).setText(0, _translate("Dialog", "Color By"))
-        self.treeWidget.setSortingEnabled(__sortingEnabled)
-        self.pushButton_4.setText(_translate("Dialog", "Finish"))
-        self.pushButton_3.setText(_translate("Dialog", "Cancel"))
 
+class columnPicker(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__()
+        self.show()
+
+        layout = QtWidgets.QHBoxLayout()
+        self.setLayout(layout)
+
+        # Make tree
+        self.columnDestination = QtWidgets.QTreeWidget()
+        self.columnDestination.setDragDropMode(QtWidgets.QTreeWidget.InternalMove)
+        self.columnDestination.root
+        # Add tree sections
+        sections = ['X Variable', 'Y Variable', 'Color By']
+        for name in sections:
+            treeItem = QtWidgets.QTreeWidgetItem(self.columnDestination, [name])
+            treeItem.setFlags(treeItem.flags() & ~QtCore.Qt.ItemIsDragEnabled)
+
+        # Add items to layout
+        layout.addWidget(self.columnDestination)
+
+        # Select first section
+        self.columnDestination.setCurrentItem(self.columnDestination.topLevelItem(0))
+
+        # Add to items to selection section
+        self.addTreeItem('test1')
+        self.addTreeItem('test2')
+
+    def addTreeItem(self, label):
+        # Add to tree
+        destinationSection = self.columnDestination.selectedItems()[0]
+        treeItem = QtWidgets.QTreeWidgetItem(destinationSection, [label])
+        destinationSection.setExpanded(True)
+        treeItem.setFlags(treeItem.flags() & ~QtCore.Qt.ItemIsDropEnabled)
+
+import sys
+app = QtWidgets.QApplication(sys.argv)
+win = columnPicker()
+app.exec_()

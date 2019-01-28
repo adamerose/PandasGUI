@@ -7,32 +7,37 @@ def pivot(df, keys, categories, data):
     return pivoted_df
 
 def flatten_multiindex(mi, sep=' - ', format=None):
-    # Flatten multi-index headers
-    if format == None:
-        # Flattern by putting sep between each header value
-        flat_index = [sep.join(col).strip(sep) for col in mi.values]
+    if type(mi) == pd.core.indexes.base.Index:
+        return mi
+    elif type(mi) == pd.core.indexes.multi.MultiIndex:
+        # Flatten multi-index headers
+        if format == None:
+            # Flattern by putting sep between each header value
+            flat_index = [sep.join(col).strip(sep) for col in mi.values]
+        else:
+            # Flatten according to the provided format string
+            flat_index = []
+            for tuple in mi.values:
+
+                placeholders = []
+                for name in mi.names:
+                    if name is None:
+                        name = ''
+                    name = '{' + str(name) + '}'
+                    placeholders.append(name)
+
+                # Check if index segment contains each placeholder
+                if all([item != '' for item in tuple]):
+                    # Replace placeholders in format with corresponding values
+                    flat_name = format
+                    for i, val in enumerate(tuple):  # Iterates over the values in this index segment
+                        flat_name = flat_name.replace(placeholders[i], val)
+                else:
+                    # If the segment doesn't contain all placeholders, just join them with sep instead
+                    flat_name = sep.join(tuple).strip(sep)
+                flat_index.append(flat_name)
     else:
-        # Flatten according to the provided format string
-        flat_index = []
-        for tuple in mi.values:
-
-            placeholders = []
-            for name in mi.names:
-                if name is None:
-                    name = ''
-                name = '{' + str(name) + '}'
-                placeholders.append(name)
-
-            # Check if index segment contains each placeholder
-            if all([item != '' for item in tuple]):
-                # Replace placeholders in format with corresponding values
-                flat_name = format
-                for i, val in enumerate(tuple):  # Iterates over the values in this index segment
-                    flat_name = flat_name.replace(placeholders[i], val)
-            else:
-                # If the segment doesn't contain all placeholders, just join them with sep instead
-                flat_name = sep.join(tuple).strip(sep)
-            flat_index.append(flat_name)
+        raise TypeError
 
     return flat_index
 
