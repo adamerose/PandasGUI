@@ -1,16 +1,9 @@
-# -*- coding: utf-8 -*-
-
-# Form implementation generated from reading ui file 'C:\_MyFiles\Programming\Python Projects\pandasgui\qtdesigner\scatter.ui'
-#
-# Created by: PyQt5 UI code generator 5.9.2
-#
-# WARNING! All changes made in this file will be lost!
-
 from PyQt5 import QtCore, QtWidgets
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
-from functions import flatten_multiindex
+
+from pandasgui.functions import flatten_multiindex
 
 class scatterDialog(QtWidgets.QDialog):
     def __init__(self, dataframes, parent=None):

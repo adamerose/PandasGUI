@@ -1,7 +1,6 @@
 import inspect
-import sys
 import traceback
-import time
+import sys
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -517,6 +516,7 @@ def show(*args, nonblocking=False, **kwargs):
 
     # Run the GUI in a separate process
     if nonblocking:
+        print("Nonblocking mode")
         from nonblocking import show_nonblocking
         show_nonblocking(**kwargs)
         return
@@ -527,7 +527,7 @@ def show(*args, nonblocking=False, **kwargs):
     app.exec_()
 
 
-def main():
+if __name__ == '__main__':
     pokemon = pd.read_csv('sample_data/pokemon.csv')
     sample = pd.read_csv('sample_data/sample.csv')
 
@@ -540,7 +540,3 @@ def main():
     # show(big)
     show(pokemon)
     # show(sample, multidf=multidf, pokemon=pokemon)
-
-
-if __name__ == '__main__':
-    main()

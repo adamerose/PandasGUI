@@ -5,7 +5,6 @@ from PyQt5.QtWidgets import QStyleOptionHeader, QHeaderView, QWidget, QStyle, QA
 import pandas as pd
 import datetime
 import sys
-
 try:
     import pyqt_fix
 except:
@@ -689,8 +688,6 @@ class DataFrameView(QtWidgets.QTableView):
             paddedHeight = self.rowHeight(i) + 3
             self.setRowHeight(i, paddedHeight)
 
-
-
     def sizeHint(self):
         cols = self.model().columnCount(None)
         rows = self.model().rowCount(None)
@@ -708,8 +705,8 @@ class DataFrameView(QtWidgets.QTableView):
         # width+=self.verticalHeader().width()
 
         # Approximation
-        height+=100
-        width+=150
+        height += 100
+        width += 150
 
         return QSize(width, height)
 

@@ -4,3 +4,5 @@ pyqt_fix.py
 test.py
 *scratch*
 1500000 Sales Records.csv
+*.pyc
+qtdesigner

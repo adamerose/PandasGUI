@@ -1,13 +1,14 @@
 '''
 This module creates a nonblocking instance of the Pandas GUI in a separate process. Works in both script & interactive mode
 '''
+
 import multiprocess
 
 
 def start_gui(**kwargs):
     import sys
     from PyQt5 import QtWidgets
-    from gui import PandasGUI
+    from pandasgui.gui import PandasGUI
 
     # Set up QApplication
     app = QtWidgets.QApplication.instance()
@@ -27,7 +28,7 @@ def show_nonblocking(**kwargs):
 
 if __name__ == '__main__':
     import pandas as pd
-    from gui import show
+    from pandasgui.gui import show
 
     pokemon = pd.read_csv('sample_data/pokemon.csv')
 
@@ -40,5 +41,3 @@ if __name__ == '__main__':
 
     show(sample, nonblocking=True)
     show(multidf)
-
-    print('test')
