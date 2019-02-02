@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from tkinter import Tk
-from pdgui import show
+
 x = Tk().clipboard_get()
 
 '''

@@ -1,18 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Dec  1 15:12:20 2015
-@author: МакаровАС
-https://github.com/Winand/dataframemodel
-
-Modified on 2018-12-05
-Adam Rose
-"""
 from PyQt5 import QtGui, QtCore, QtWidgets
 from PyQt5.QtCore import QAbstractItemModel, QModelIndex, QSize, QRect, Qt, QPoint
 from PyQt5.QtGui import QPainter, QFont, QFontMetrics, QPalette, QBrush, QColor, QTransform
 from PyQt5.QtWidgets import QStyleOptionHeader, QHeaderView, QWidget, QStyle, QAbstractItemView
 import pandas as pd
-import numpy as np
 import datetime
 import sys
 

@@ -1,68 +1,11 @@
-# region PROFILING CODE ############
 import inspect
 import sys
-import time
-import functools
-import colorama
-from colorama import Fore, Style
-
-INCLUDE_FAST_LINES = False
-glob_call_time_stack = []
-
-
-def cprint(*args):
-    sargs = [str(arg) for arg in args]
-    print(Fore.RED + ' '.join(sargs) + Style.RESET_ALL)
-
-
-def tracefunc(frame, event, arg,
-              indent=[0], filename=__file__, call_time_stack=glob_call_time_stack, last_line_num=[None],
-              last_line_start=[None]):
-    if (frame.f_code.co_filename == filename):
-        if event == "call":
-            call_time_stack.append(time.time())
-            indent[0] += 3
-            cprint("-" * indent[0] + "> call function", frame.f_code.co_name)
-        elif event == "return":
-            cprint("<" + "-" * indent[0], "exit function", frame.f_code.co_name,
-                   f"({time.time() - call_time_stack.pop():.2f})")
-            indent[0] -= 3
-        if event == 'line':
-            this_line_start = time.time()
-            this_line_num = frame.f_lineno
-
-            if last_line_num[0] is not None:
-                last_line_duration = this_line_start - last_line_start[0]
-                if INCLUDE_FAST_LINES or last_line_duration > 0.05:
-                    cprint("Line {} took {:.2f}s".format(last_line_num[0], last_line_duration))
-
-            last_line_start[0] = this_line_start
-            last_line_num[0] = this_line_num
-    return tracefunc
-
-
-profiling_enabled = False
-if profiling_enabled:
-    sys.settrace(tracefunc)
-# endregion ##########################
-
-import inspect
-import random
-import sys
-import threading
-import multiprocessing
 import traceback
-from collections import OrderedDict
-import re
 import time
-import threading
+
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-from matplotlib.backends.backend_qt5agg import \
-    FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import \
-    NavigationToolbar2QT as NavigationToolbar
 from PyQt5 import QtCore, QtGui, QtWidgets
 from pandasgui.dataframe_viewer import DataFrameModel, DataFrameView
 
@@ -71,8 +14,6 @@ try:
     import pyqt_fix
 except:
     pass
-
-sns.set()
 
 
 class PandasGUI(QtWidgets.QMainWindow):
@@ -364,8 +305,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
     def scatter_dialog(self):
         from scatter import scatterDialog
-        self.win = scatterDialog(self.df_dicts)
-
+        self.win = scatterDialog(self.df_dicts, parent=self)
 
     def header_clicked(self, header_index):
         """
@@ -459,6 +399,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
     def printdf(self):
         print('debug')
+
 
 class ChartInputDialog(QtWidgets.QDialog):
 
@@ -554,7 +495,7 @@ class ChartInputDialog(QtWidgets.QDialog):
         return last_combobox_values
 
 
-def show(*args, **kwargs):
+def show(*args, nonblocking=False, **kwargs):
     # Get the variable names in the scope show() was called from
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
 
@@ -573,6 +514,12 @@ def show(*args, **kwargs):
     if (any([key in kwargs.keys() for key in dataframes.keys()])):
         print("Warning! Duplicate DataFrame names were given, duplicates were ignored.")
     kwargs = {**kwargs, **dataframes}
+
+    # Run the GUI in a separate process
+    if nonblocking:
+        from nonblocking import show_nonblocking
+        show_nonblocking(**kwargs)
+        return
 
     # Creeate the application and PandasGUI window
     app = QtWidgets.QApplication(sys.argv)

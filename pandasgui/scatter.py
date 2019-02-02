@@ -6,42 +6,68 @@
 #
 # WARNING! All changes made in this file will be lost!
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 from functions import flatten_multiindex
 
 class scatterDialog(QtWidgets.QDialog):
-    def __init__(self, dataframes):
-        super().__init__()
-        self.show()
+    def __init__(self, dataframes, parent=None):
+        super().__init__(parent)
+
+        self.dataframes = dataframes
 
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
 
+        # Create DataFrame picker dropdown
         self.dataframePicker = QtWidgets.QComboBox()
         for df_name in dataframes.keys():
             self.dataframePicker.addItem(df_name)
+        self.dataframePicker.currentIndexChanged.connect(self.initColumnPicker)
 
-        selected_column = self.dataframePicker.itemText(self.dataframePicker.currentIndex())
-        self.dataframe = dataframes[selected_column]['dataframe'].copy()
-        self.dataframe.columns = flatten_multiindex(self.dataframe.columns)
-        column_names = self.dataframe.columns
-        print(column_names)
-        self.columnPicker = columnPicker(column_names)
+        # Build column picker
+        self.columnPicker = columnPicker([])
+        self.initColumnPicker()
 
+        # Add button
         btnFinish = QtWidgets.QPushButton("Plot")
         btnFinish.clicked.connect(self.finish)
+        btnReset = QtWidgets.QPushButton("Reset")
+        btnReset.clicked.connect(self.initColumnPicker)
+        buttonLayout = QtWidgets.QHBoxLayout()
+        spacer = QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        buttonLayout.addSpacerItem(spacer)
+        buttonLayout.addWidget(btnReset)
+        buttonLayout.addWidget(btnFinish)
+
+        # Add all to layout
         layout.addWidget(self.dataframePicker)
         layout.addWidget(self.columnPicker)
-        layout.addWidget(btnFinish)
+        layout.addLayout(buttonLayout)
+        self.resize(640,480)
+
+        self.show()
+
+    def initColumnPicker(self):
+        selected_dataframe = self.dataframePicker.itemText(self.dataframePicker.currentIndex())
+
+        self.dataframe = self.dataframes[selected_dataframe]['dataframe'].copy()
+        self.dataframe.columns = flatten_multiindex(self.dataframe.columns)
+        column_names = self.dataframe.columns
+
+        self.columnPicker.resetValues(column_names)
+
 
     def finish(self):
         dict = self.columnPicker.getDestinationItems()
         x = dict['X Variable'][0]
         y = dict['Y Variable'][0]
-        c = dict['Color By'][0]
+        try:
+            c = dict['Color By'][0]
+        except IndexError:
+            c = None
 
         print(x,y,c)
 
@@ -66,12 +92,11 @@ class columnPicker(QtWidgets.QWidget):
         btnLayout.addWidget(btnMoveRight)
         btnLayout.addWidget(btnMoveLeft)
 
+        # List settings
+        self.columnSource.setDragDropMode(QtWidgets.QListWidget.DragDrop)
         # Add column names
         for name in column_names:
             self.columnSource.addItem(name)
-
-        # List settings
-        self.columnSource.setDragDropMode(QtWidgets.QListWidget.DragDrop)
 
         # Tree settings
         self.columnDestination.setHeaderLabels(['Column Name'])
@@ -88,16 +113,28 @@ class columnPicker(QtWidgets.QWidget):
             # This doesn't work. https://bugreports.qt.io/browse/QTBUG-59354
             # treeItem.setChildIndicatorPolicy(QtWidgets.QTreeWidgetItem.DontShowIndicator)
 
-
         # Add items to layout
         layout.addWidget(self.columnSource)
         layout.addLayout(btnLayout)
         layout.addWidget(self.columnDestination)
 
-        self.show()
-
         # Select first section
         self.columnDestination.setCurrentItem(self.columnDestination.topLevelItem(0))
+
+    def resetValues(self, column_names):
+
+        # Clear list
+        self.columnSource.clear()
+
+        # Add column names
+        for name in column_names:
+            self.columnSource.addItem(name)
+
+        # Clear tree
+        for i in range(self.columnDestination.topLevelItemCount()):
+            section = self.columnDestination.topLevelItem(i)
+            for j in reversed(range(section.childCount())):
+                section.removeChild(section.child(j))
 
     def moveRight(self):
         sourceItems = self.columnSource.selectedItems()
@@ -151,6 +188,7 @@ if __name__=='__main__':
     sample = pd.read_csv('sample_data/sample.csv')
     dataframes['sample'] = {}
     dataframes['sample']['dataframe'] = sample
+
 
     import sys
     app = QtWidgets.QApplication(sys.argv)

@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from pdgui import show
 
 
 def pivot(df, keys, categories, data):
@@ -43,21 +42,22 @@ def flatten_multiindex(mi, sep=' - ', format=None):
 
 
 #### EXAMPLES ####
-from pandasgui.nonblocking import show
+from gui import show
 X = False  # I'm just using "if X:" instead of "if False:" so my IDE doesn't complain about unreachable code
 #### flatten_multiindex ####
-if X:
+if 1:
     arrays = [['bar', 'bar', 'baz', 'baz', 'foo', 'foo', 'qux', 'qux'],
               ['one', 'two', 'one', 'two', 'one', 'two', 'one', 'two']]
     tuples = list(zip(*arrays))
     index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
     s = pd.Series(np.random.randn(8), index=index)
-    show(s)
+    show(s,nonblocking=True)
     s.index = flatten_multiindex(s.index)
     show(s)
 
-
-
+#### pivot ####
+if X:
+    pass
 if X:
     df = pd.read_csv('sample_data/pokemon.csv')
     keys = ['Generation']
@@ -69,3 +69,4 @@ if X:
     aggregated = grouped.agg(data)
     aggregated.columns.names = ['AggColumn','AggFunc']
     pivoted_df = aggregated.unstack(categories)
+
