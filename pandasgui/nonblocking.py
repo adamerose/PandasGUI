@@ -16,7 +16,7 @@ def start_gui(**kwargs):
         app = QtWidgets.QApplication(sys.argv)
 
     # Make GUi
-    win = PandasGUI(**kwargs)
+    win = PandasGUI(nonblocking=True, **kwargs)
 
     app.exec_()
 

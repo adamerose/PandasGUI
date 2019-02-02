@@ -17,7 +17,7 @@ except:
 
 class PandasGUI(QtWidgets.QMainWindow):
 
-    def __init__(self, **kwargs):
+    def __init__(self, nonblocking=False, **kwargs):
         """
         Args:
             *args (): Tuple of DataFrame objects
@@ -65,7 +65,11 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.setupUI()
 
         # Window settings
-        self.setWindowTitle('PandasGUI')
+        if nonblocking:
+            self.setWindowTitle('PandasGUI (nonblocking)')
+        else:
+            self.setWindowTitle('PandasGUI')
+
         self.app.setWindowIcon(QtGui.QIcon('icon.png'))
 
         # Create main Widget
@@ -303,7 +307,7 @@ class PandasGUI(QtWidgets.QMainWindow):
     # Charts functions.
 
     def scatter_dialog(self):
-        from scatter import scatterDialog
+        from pandasgui.scatter import scatterDialog
         self.win = scatterDialog(self.df_dicts, parent=self)
 
     def header_clicked(self, header_index):
@@ -517,12 +521,14 @@ def show(*args, nonblocking=False, **kwargs):
     # Run the GUI in a separate process
     if nonblocking:
         print("Nonblocking mode")
-        from nonblocking import show_nonblocking
+        from pandasgui.nonblocking import show_nonblocking
         show_nonblocking(**kwargs)
         return
 
     # Creeate the application and PandasGUI window
-    app = QtWidgets.QApplication(sys.argv)
+    app = QtWidgets.QApplication.instance()
+    if not app:
+        app = QtWidgets.QApplication(sys.argv)
     win = PandasGUI(**kwargs)
     app.exec_()
 
@@ -539,4 +545,5 @@ if __name__ == '__main__':
     # big = pd.read_csv('sample_data/1500000 Sales Records.csv')
     # show(big)
     show(pokemon)
+    show(sample)
     # show(sample, multidf=multidf, pokemon=pokemon)
