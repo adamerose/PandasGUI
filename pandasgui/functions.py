@@ -40,33 +40,33 @@ def flatten_multiindex(mi, sep=' - ', format=None):
 
     return flat_index
 
+if __name__=='__main__':
+    #### EXAMPLES ####
+    from gui import show
+    X = False  # I'm just using "if X:" instead of "if False:" so my IDE doesn't complain about unreachable code
+    #### flatten_multiindex ####
+    if 1:
+        arrays = [['bar', 'bar', 'baz', 'baz', 'foo', 'foo', 'qux', 'qux'],
+                  ['one', 'two', 'one', 'two', 'one', 'two', 'one', 'two']]
+        tuples = list(zip(*arrays))
+        index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
+        s = pd.Series(np.random.randn(8), index=index)
+        show(s,nonblocking=True)
+        s.index = flatten_multiindex(s.index)
+        show(s)
 
-#### EXAMPLES ####
-from gui import show
-X = False  # I'm just using "if X:" instead of "if False:" so my IDE doesn't complain about unreachable code
-#### flatten_multiindex ####
-if 1:
-    arrays = [['bar', 'bar', 'baz', 'baz', 'foo', 'foo', 'qux', 'qux'],
-              ['one', 'two', 'one', 'two', 'one', 'two', 'one', 'two']]
-    tuples = list(zip(*arrays))
-    index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
-    s = pd.Series(np.random.randn(8), index=index)
-    show(s,nonblocking=True)
-    s.index = flatten_multiindex(s.index)
-    show(s)
+    #### pivot ####
+    if X:
+        pass
+    if X:
+        df = pd.read_csv('sample_data/pokemon.csv')
+        keys = ['Generation']
+        categories = ['Type 1', 'Type 2']
+        data = {'Attack': ['min', 'max'], 'Defense': ['mean']}
+        # data = {'Attack': ['mean']}
 
-#### pivot ####
-if X:
-    pass
-if X:
-    df = pd.read_csv('sample_data/pokemon.csv')
-    keys = ['Generation']
-    categories = ['Type 1', 'Type 2']
-    data = {'Attack': ['min', 'max'], 'Defense': ['mean']}
-    # data = {'Attack': ['mean']}
-
-    grouped = df.groupby(keys + categories)
-    aggregated = grouped.agg(data)
-    aggregated.columns.names = ['AggColumn','AggFunc']
-    pivoted_df = aggregated.unstack(categories)
+        grouped = df.groupby(keys + categories)
+        aggregated = grouped.agg(data)
+        aggregated.columns.names = ['AggColumn','AggFunc']
+        pivoted_df = aggregated.unstack(categories)
 
