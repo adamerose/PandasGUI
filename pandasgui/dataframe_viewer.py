@@ -17,15 +17,8 @@ VerticalHeaderDataRole = Qt.UserRole + 1
 
 
 class QList(list):
-    push_back = lambda self, v: self.append(v)
-
     def indexOf(self, v):
         return self.index(v) if v in self else -1
-
-    push_front = lambda self, v: self.insert(0, v)
-    size = lambda self: len(self)
-    empty = lambda self: not len(self)
-
 
 QModelIndexList = QList
 
@@ -35,211 +28,6 @@ class HierarchicalHeaderView(QHeaderView):
     This class is a Python port of
     http://qt-apps.org/content/show.php/HierarchicalHeaderView?content=103154
     """
-
-    class private_data:
-        headerModel = None
-
-        def initFromNewModel(self, orientation: int, model: QAbstractItemModel):
-            self.headerModel = model.data(QModelIndex(),
-                                          HorizontalHeaderDataRole if orientation == Qt.Horizontal else VerticalHeaderDataRole)
-
-        def findRootIndex(self, index: QModelIndex) -> QModelIndex:
-            while index.parent().isValid():
-                index = index.parent()
-            return index
-
-        def parentIndexes(self, index: QModelIndex) -> QModelIndexList:
-            indexes = QModelIndexList()
-            while index.isValid():
-                indexes.push_front(index)
-                index = index.parent()
-            return indexes
-
-        def findLeaf(self, currentIndex: QModelIndex, sectionIndex: int, currentLeafIndex: int) -> QModelIndex:
-            if currentIndex.isValid():
-                childCount = currentIndex.model().columnCount(currentIndex)
-                if childCount:
-                    for i in range(childCount):
-                        res, currentLeafIndex = self.findLeaf(currentIndex.child(0, i), sectionIndex, currentLeafIndex)
-                        if res.isValid():
-                            return res, currentLeafIndex
-                else:
-                    currentLeafIndex += 1
-                    if currentLeafIndex == sectionIndex:
-                        return currentIndex, currentLeafIndex
-            return QModelIndex(), currentLeafIndex
-
-        def leafIndex(self, sectionIndex: int) -> QModelIndex:
-            if self.headerModel:
-                currentLeafIndex = -1
-                for i in range(self.headerModel.columnCount()):
-                    res, currentLeafIndex = self.findLeaf(self.headerModel.index(0, i), sectionIndex, currentLeafIndex)
-                    if res.isValid():
-                        return res
-            return QModelIndex()
-
-        def searchLeafs(self, currentIndex: QModelIndex) -> QModelIndexList:
-            res = QModelIndexList()
-            if currentIndex.isValid():
-                childCount = currentIndex.model().columnCount(currentIndex)
-                if childCount:
-                    for i in range(childCount):
-                        res += self.searchLeafs(currentIndex.child(0, i))
-                else:
-                    res.push_back(currentIndex)
-            return res
-
-        def leafs(self, searchedIndex: QModelIndex) -> QModelIndexList:
-            leafs = QModelIndexList()
-            if searchedIndex.isValid():
-                childCount = searchedIndex.model().columnCount(searchedIndex)
-                for i in range(childCount):
-                    leafs += self.searchLeafs(searchedIndex.child(0, i))
-            return leafs
-
-        def setForegroundBrush(self, opt: QStyleOptionHeader, index: QModelIndex):
-            foregroundBrush = index.data(Qt.ForegroundRole)
-            if foregroundBrush:
-                opt.palette.setBrush(QPalette.ButtonText, QBrush(foregroundBrush))
-
-        def setBackgroundBrush(self, opt: QStyleOptionHeader, index: QModelIndex):
-            backgroundBrush = index.data(Qt.BackgroundRole)
-            if backgroundBrush:
-                opt.palette.setBrush(QPalette.Button, QBrush(backgroundBrush))
-                opt.palette.setBrush(QPalette.Window, QBrush(backgroundBrush))
-
-        def cellSize(self, leafIndex: QModelIndex, hv: QHeaderView, styleOptions: QStyleOptionHeader) -> QSize:
-            res = QSize()
-            variant = leafIndex.data(Qt.SizeHintRole)
-            if variant:
-                res = variant
-            fnt = QFont(hv.font())
-            var = leafIndex.data(Qt.FontRole)
-            if var:
-                fnt = var
-            fnt.setBold(True)
-            fm = QFontMetrics(fnt)
-            size = QSize(fm.size(0, leafIndex.data(Qt.DisplayRole)) + QSize(4, 0))  # WA: add more horizontal size (4px)
-            if leafIndex.data(Qt.UserRole):
-                size.transpose()
-            decorationsSize = QSize(hv.style().sizeFromContents(QStyle.CT_HeaderSection, styleOptions, QSize(), hv))
-            emptyTextSize = QSize(fm.size(0, ""))
-            return res.expandedTo(size + decorationsSize - emptyTextSize)
-
-        def currentCellWidth(self, searchedIndex: QModelIndex, leafIndex: QModelIndex, sectionIndex: int,
-                             hv: QHeaderView) -> int:
-            leafsList = QModelIndexList(self.leafs(searchedIndex))
-            if leafsList.empty():
-                return hv.sectionSize(sectionIndex)
-            width = 0
-            firstLeafSectionIndex = sectionIndex - leafsList.indexOf(leafIndex)
-            for i in range(leafsList.size()):
-                width += hv.sectionSize(firstLeafSectionIndex + i)
-            return width
-
-        def currentCellLeft(self, searchedIndex: QModelIndex, leafIndex: QModelIndex, sectionIndex: int, left: int,
-                            hv: QHeaderView) -> int:
-            leafsList = QModelIndexList(self.leafs(searchedIndex))
-            if not leafsList.empty():
-                n = leafsList.indexOf(leafIndex)
-                firstLeafSectionIndex = sectionIndex - n
-                n -= 1
-                for n in range(n, 0 - 1, -1):
-                    left -= hv.sectionSize(firstLeafSectionIndex + n)
-            return left
-
-        def paintHorizontalCell(self, painter: QPainter, hv: QHeaderView, cellIndex: QModelIndex,
-                                leafIndex: QModelIndex, logicalLeafIndex: int, styleOptions: QStyleOptionHeader,
-                                sectionRect: QRect, top: int):
-            uniopt = QStyleOptionHeader(styleOptions)
-            self.setForegroundBrush(uniopt, cellIndex)
-            self.setBackgroundBrush(uniopt, cellIndex)
-            height = self.cellSize(cellIndex, hv, uniopt).height()
-            if cellIndex == leafIndex:
-                height = sectionRect.height() - top
-            left = self.currentCellLeft(cellIndex, leafIndex, logicalLeafIndex, sectionRect.left(), hv)
-            width = self.currentCellWidth(cellIndex, leafIndex, logicalLeafIndex, hv)
-            r = QRect(left, top, width, height)
-            uniopt.text = cellIndex.data(Qt.DisplayRole)
-            painter.save()
-            uniopt.rect = r
-            if cellIndex.data(Qt.UserRole):
-                hv.style().drawControl(QStyle.CE_HeaderSection, uniopt, painter, hv)
-                m = QTransform()
-                m.rotate(-90)
-                painter.setWorldMatrix(m, True)
-                new_r = QRect(0, 0, r.height(), r.width())
-                new_r.moveCenter(QPoint(-r.center().y(), r.center().x()))
-                uniopt.rect = new_r
-                hv.style().drawControl(QStyle.CE_HeaderLabel, uniopt, painter, hv)
-            else:
-                hv.style().drawControl(QStyle.CE_Header, uniopt, painter, hv)
-            painter.restore()
-            return top + height
-
-        def paintHorizontalSection(self, painter: QPainter, sectionRect: QRect,
-                                   logicalLeafIndex: int, hv: QHeaderView,
-                                   styleOptions: QStyleOptionHeader, leafIndex: QModelIndex):
-            #            print(logicalLeafIndex)
-            oldBO = painter.brushOrigin()
-            top = sectionRect.y()
-            indexes = QModelIndexList(self.parentIndexes(leafIndex))
-            for i in range(indexes.size()):
-                realStyleOptions = QStyleOptionHeader(styleOptions)
-                if i < indexes.size() - 1 and (
-                        realStyleOptions.state & QStyle.State_Sunken or realStyleOptions.state & QStyle.State_On):
-                    t = QStyle.State(QStyle.State_Sunken | QStyle.State_On)
-                    realStyleOptions.state = realStyleOptions.state & ~t  # FIXME: parent items are not highlighted
-                if i < indexes.size() - 1:  # Use sortIndicator for inner level only
-                    realStyleOptions.sortIndicator = False
-                #                if i==0:
-                #                    print(self.leafs(indexes[i]), leafIndex)
-                top = self.paintHorizontalCell(painter, hv, indexes[i], leafIndex, logicalLeafIndex, realStyleOptions,
-                                               sectionRect, top)
-            painter.setBrushOrigin(oldBO)
-
-        def paintVerticalCell(self, painter: QPainter, hv: QHeaderView, cellIndex: QModelIndex, leafIndex: QModelIndex,
-                              logicalLeafIndex: int, styleOptions: QStyleOptionHeader, sectionRect: QRect, left: int):
-            uniopt = QStyleOptionHeader(styleOptions)
-            self.setForegroundBrush(uniopt, cellIndex)
-            self.setBackgroundBrush(uniopt, cellIndex)
-            width = self.cellSize(cellIndex, hv, uniopt).width()
-            if cellIndex == leafIndex:
-                width = sectionRect.width() - left
-            top = self.currentCellLeft(cellIndex, leafIndex, logicalLeafIndex, sectionRect.top(), hv)
-            height = self.currentCellWidth(cellIndex, leafIndex, logicalLeafIndex, hv)
-            r = QRect(left, top, width, height)
-            uniopt.text = cellIndex.data(Qt.DisplayRole)
-            painter.save()
-            uniopt.rect = r
-            if cellIndex.data(Qt.UserRole):
-                hv.style().drawControl(QStyle.CE_HeaderSection, uniopt, painter, hv)
-                m = QTransform()
-                m.rotate(-90)
-                painter.setWorldMatrix(m, True)
-                new_r = QRect(0, 0, r.height(), r.width())
-                new_r.moveCenter(QPoint(-r.center().y(), r.center().x()))
-                uniopt.rect = new_r
-                hv.style().drawControl(QStyle.CE_HeaderLabel, uniopt, painter, hv)
-            else:
-                hv.style().drawControl(QStyle.CE_Header, uniopt, painter, hv)
-            painter.restore()
-            return left + width
-
-        def paintVerticalSection(self, painter: QPainter, sectionRect: QRect, logicalLeafIndex: int, hv: QHeaderView,
-                                 styleOptions: QStyleOptionHeader, leafIndex: QModelIndex):
-            oldBO = painter.brushOrigin()
-            left = sectionRect.x()
-            indexes = QModelIndexList(self.parentIndexes(leafIndex))
-            for i in range(indexes.size()):
-                realStyleOptions = QStyleOptionHeader(styleOptions)
-                if i < indexes.size() - 1 and (
-                        realStyleOptions.state & QStyle.State_Sunken or realStyleOptions.state & QStyle.State_On):
-                    t = QStyle.State(QStyle.State_Sunken | QStyle.State_On)
-                    realStyleOptions.state = realStyleOptions.state & ~t  # FIXME: parent items are not highlighted
-                left = self.paintVerticalCell(painter, hv, indexes[i], leafIndex, logicalLeafIndex, realStyleOptions,
-                                              sectionRect, left)
-            painter.setBrushOrigin(oldBO)
 
     def __init__(self, orientation: Qt.Orientation, parent: QWidget):
         super().__init__(orientation, parent)
@@ -256,20 +44,26 @@ class HierarchicalHeaderView(QHeaderView):
         self.show()
 
     def on_sectionMoved(self, logicalIndex, oldVisualIndex, newVisualIndex):
+        ''' Runs when user moves a header section '''
+
         view, model = self.parent(), self.parent().model()
         if not hasattr(model, "reorder"):
             print("Model requires reorder method")
             return
-        if getattr(self, "manual_move", False):
-            self.manual_move = False
-            return
-        self.manual_move = True
-        self.moveSection(newVisualIndex, oldVisualIndex)  # cancel move
-        if model.reorder(oldVisualIndex, newVisualIndex, self.orientation()):
+
+        model.layoutAboutToBeChanged.emit()
+        model.reorder(oldVisualIndex, newVisualIndex, self.orientation())
+
+        if 0:
             # Reorder column widths / row heights
             horizontal = self.orientation() == Qt.Horizontal
-            itemSize = (view.rowHeight, view.columnWidth)[horizontal]
-            setItemSize = (view.setRowHeight, view.setColumnWidth)[horizontal]
+            if horizontal:
+                itemSize = view.columnWidth
+                setItemSize = view.setColumnWidth
+            else:
+                itemSize = view.rowHeight
+                setItemSize = view.setRowHeight
+
             rng = sorted((oldVisualIndex, newVisualIndex))
             options = [(itemSize(i), i) for i in range(rng[0], rng[1] + 1)]
             options.insert(newVisualIndex - rng[0], options.pop(oldVisualIndex - rng[0]))
@@ -282,9 +76,8 @@ class HierarchicalHeaderView(QHeaderView):
                 if sortIndIndex is not None:  # sort indicator is among sections being reordered
                     self.setSortIndicator(sortIndIndex + rng[0],
                                           self.sortIndicatorOrder())  # FIXME: does unnecessary sorting
-            model.layoutChanged.emit()  # update view
-        else:
-            print("Model reorder failed!")
+
+        model.layoutChanged.emit()  # update view
 
     def styleOptionForCell(self, logicalInd: int) -> QStyleOptionHeader:
         opt = QStyleOptionHeader()
@@ -373,6 +166,7 @@ class HierarchicalHeaderView(QHeaderView):
         super().paintSection(painter, rect, logicalIndex)
 
     def on_sectionResized(self, logicalIndex: int):
+        ''' Runs when user resizes a header section '''
         if self.isSectionHidden(logicalIndex):
             return
         leafIndex = QModelIndex(self._pd.leafIndex(logicalIndex))
@@ -399,10 +193,218 @@ class HierarchicalHeaderView(QHeaderView):
     def layoutChanged(self):
         if self.model():
             self._pd.initFromNewModel(self.orientation(), self.model())
-            axis = ("column", "row")[self.orientation() != Qt.Horizontal]
-            cnt = getattr(self.model(), axis + "Count")(QModelIndex())
-            if cnt:
-                self.initializeSections(0, cnt - 1)
+            if self.orientation() == Qt.Horizontal:
+                axis = "column"
+            else:
+                axis = "row"
+            count = getattr(self.model(), axis + "Count")(QModelIndex())
+            if count:
+                self.initializeSections(0, count - 1)
+
+    class private_data:
+        headerModel = None
+
+        def initFromNewModel(self, orientation: int, model: QAbstractItemModel):
+            self.headerModel = model.data(QModelIndex(),
+                                          HorizontalHeaderDataRole if orientation == Qt.Horizontal else VerticalHeaderDataRole)
+
+        def findRootIndex(self, index: QModelIndex) -> QModelIndex:
+            while index.parent().isValid():
+                index = index.parent()
+            return index
+
+        def parentIndexes(self, index: QModelIndex) -> QModelIndexList:
+            indexes = QModelIndexList()
+            while index.isValid():
+                indexes.insert(0, index)  # Insert at front of indexes list
+                index = index.parent()
+            return indexes
+
+        def findLeaf(self, currentIndex: QModelIndex, sectionIndex: int, currentLeafIndex: int) -> QModelIndex:
+            if currentIndex.isValid():
+                childCount = currentIndex.model().columnCount(currentIndex)
+                if childCount:
+                    for i in range(childCount):
+                        res, currentLeafIndex = self.findLeaf(currentIndex.child(0, i), sectionIndex, currentLeafIndex)
+                        if res.isValid():
+                            return res, currentLeafIndex
+                else:
+                    currentLeafIndex += 1
+                    if currentLeafIndex == sectionIndex:
+                        return currentIndex, currentLeafIndex
+            return QModelIndex(), currentLeafIndex
+
+        def leafIndex(self, sectionIndex: int) -> QModelIndex:
+            if self.headerModel:
+                currentLeafIndex = -1
+                for i in range(self.headerModel.columnCount()):
+                    res, currentLeafIndex = self.findLeaf(self.headerModel.index(0, i), sectionIndex, currentLeafIndex)
+                    if res.isValid():
+                        return res
+            return QModelIndex()
+
+        def searchLeafs(self, currentIndex: QModelIndex) -> QModelIndexList:
+            res = QModelIndexList()
+            if currentIndex.isValid():
+                childCount = currentIndex.model().columnCount(currentIndex)
+                if childCount:
+                    for i in range(childCount):
+                        res += self.searchLeafs(currentIndex.child(0, i))
+                else:
+                    res.append(currentIndex)
+            return res
+
+        def leafs(self, searchedIndex: QModelIndex) -> QModelIndexList:
+            leafs = QModelIndexList()
+            if searchedIndex.isValid():
+                childCount = searchedIndex.model().columnCount(searchedIndex)
+                for i in range(childCount):
+                    leafs += self.searchLeafs(searchedIndex.child(0, i))
+            return leafs
+
+        def setForegroundBrush(self, opt: QStyleOptionHeader, index: QModelIndex):
+            foregroundBrush = index.data(Qt.ForegroundRole)
+            if foregroundBrush:
+                opt.palette.setBrush(QPalette.ButtonText, QBrush(foregroundBrush))
+
+        def setBackgroundBrush(self, opt: QStyleOptionHeader, index: QModelIndex):
+            backgroundBrush = index.data(Qt.BackgroundRole)
+            if backgroundBrush:
+                opt.palette.setBrush(QPalette.Button, QBrush(backgroundBrush))
+                opt.palette.setBrush(QPalette.Window, QBrush(backgroundBrush))
+
+        def cellSize(self, leafIndex: QModelIndex, hv: QHeaderView, styleOptions: QStyleOptionHeader) -> QSize:
+            res = QSize()
+            variant = leafIndex.data(Qt.SizeHintRole)
+            if variant:
+                res = variant
+            fnt = QFont(hv.font())
+            var = leafIndex.data(Qt.FontRole)
+            if var:
+                fnt = var
+            fnt.setBold(True)
+            fm = QFontMetrics(fnt)
+            size = QSize(fm.size(0, leafIndex.data(Qt.DisplayRole)) + QSize(4, 0))  # WA: add more horizontal size (4px)
+            if leafIndex.data(Qt.UserRole):
+                size.transpose()
+            decorationsSize = QSize(hv.style().sizeFromContents(QStyle.CT_HeaderSection, styleOptions, QSize(), hv))
+            emptyTextSize = QSize(fm.size(0, ""))
+            return res.expandedTo(size + decorationsSize - emptyTextSize)
+
+        def currentCellWidth(self, searchedIndex: QModelIndex, leafIndex: QModelIndex, sectionIndex: int,
+                             hv: QHeaderView) -> int:
+            leafsList = QModelIndexList(self.leafs(searchedIndex))
+            if len(leafsList)==0:
+                return hv.sectionSize(sectionIndex)
+            width = 0
+            firstLeafSectionIndex = sectionIndex - leafsList.indexOf(leafIndex)
+            for i in range(len(leafsList)):
+                width += hv.sectionSize(firstLeafSectionIndex + i)
+            return width
+
+        def currentCellLeft(self, searchedIndex: QModelIndex, leafIndex: QModelIndex, sectionIndex: int, left: int,
+                            hv: QHeaderView) -> int:
+            leafsList = QModelIndexList(self.leafs(searchedIndex))
+            if not len(leafsList)==0:
+                n = leafsList.indexOf(leafIndex)
+                firstLeafSectionIndex = sectionIndex - n
+                n -= 1
+                for n in range(n, 0 - 1, -1):
+                    left -= hv.sectionSize(firstLeafSectionIndex + n)
+            return left
+
+        def paintHorizontalCell(self, painter: QPainter, hv: QHeaderView, cellIndex: QModelIndex,
+                                leafIndex: QModelIndex, logicalLeafIndex: int, styleOptions: QStyleOptionHeader,
+                                sectionRect: QRect, top: int):
+            uniopt = QStyleOptionHeader(styleOptions)
+            self.setForegroundBrush(uniopt, cellIndex)
+            self.setBackgroundBrush(uniopt, cellIndex)
+            height = self.cellSize(cellIndex, hv, uniopt).height()
+            if cellIndex == leafIndex:
+                height = sectionRect.height() - top
+            left = self.currentCellLeft(cellIndex, leafIndex, logicalLeafIndex, sectionRect.left(), hv)
+            width = self.currentCellWidth(cellIndex, leafIndex, logicalLeafIndex, hv)
+            r = QRect(left, top, width, height)
+            uniopt.text = cellIndex.data(Qt.DisplayRole)
+            painter.save()
+            uniopt.rect = r
+            if cellIndex.data(Qt.UserRole):
+                hv.style().drawControl(QStyle.CE_HeaderSection, uniopt, painter, hv)
+                m = QTransform()
+                m.rotate(-90)
+                painter.setWorldMatrix(m, True)
+                new_r = QRect(0, 0, r.height(), r.width())
+                new_r.moveCenter(QPoint(-r.center().y(), r.center().x()))
+                uniopt.rect = new_r
+                hv.style().drawControl(QStyle.CE_HeaderLabel, uniopt, painter, hv)
+            else:
+                hv.style().drawControl(QStyle.CE_Header, uniopt, painter, hv)
+            painter.restore()
+            return top + height
+
+        def paintHorizontalSection(self, painter: QPainter, sectionRect: QRect,
+                                   logicalLeafIndex: int, hv: QHeaderView,
+                                   styleOptions: QStyleOptionHeader, leafIndex: QModelIndex):
+            #            print(logicalLeafIndex)
+            oldBO = painter.brushOrigin()
+            top = sectionRect.y()
+            indexes = QModelIndexList(self.parentIndexes(leafIndex))
+            for i in range(len(indexes)):
+                realStyleOptions = QStyleOptionHeader(styleOptions)
+                if i < len(indexes) - 1 and (
+                        realStyleOptions.state & QStyle.State_Sunken or realStyleOptions.state & QStyle.State_On):
+                    t = QStyle.State(QStyle.State_Sunken | QStyle.State_On)
+                    realStyleOptions.state = realStyleOptions.state & ~t  # FIXME: parent items are not highlighted
+                if i < len(indexes) - 1:  # Use sortIndicator for inner level only
+                    realStyleOptions.sortIndicator = False
+                #                if i==0:
+                #                    print(self.leafs(indexes[i]), leafIndex)
+                top = self.paintHorizontalCell(painter, hv, indexes[i], leafIndex, logicalLeafIndex, realStyleOptions,
+                                               sectionRect, top)
+            painter.setBrushOrigin(oldBO)
+
+        def paintVerticalCell(self, painter: QPainter, hv: QHeaderView, cellIndex: QModelIndex, leafIndex: QModelIndex,
+                              logicalLeafIndex: int, styleOptions: QStyleOptionHeader, sectionRect: QRect, left: int):
+            uniopt = QStyleOptionHeader(styleOptions)
+            self.setForegroundBrush(uniopt, cellIndex)
+            self.setBackgroundBrush(uniopt, cellIndex)
+            width = self.cellSize(cellIndex, hv, uniopt).width()
+            if cellIndex == leafIndex:
+                width = sectionRect.width() - left
+            top = self.currentCellLeft(cellIndex, leafIndex, logicalLeafIndex, sectionRect.top(), hv)
+            height = self.currentCellWidth(cellIndex, leafIndex, logicalLeafIndex, hv)
+            r = QRect(left, top, width, height)
+            uniopt.text = cellIndex.data(Qt.DisplayRole)
+            painter.save()
+            uniopt.rect = r
+            if cellIndex.data(Qt.UserRole):
+                hv.style().drawControl(QStyle.CE_HeaderSection, uniopt, painter, hv)
+                m = QTransform()
+                m.rotate(-90)
+                painter.setWorldMatrix(m, True)
+                new_r = QRect(0, 0, r.height(), r.width())
+                new_r.moveCenter(QPoint(-r.center().y(), r.center().x()))
+                uniopt.rect = new_r
+                hv.style().drawControl(QStyle.CE_HeaderLabel, uniopt, painter, hv)
+            else:
+                hv.style().drawControl(QStyle.CE_Header, uniopt, painter, hv)
+            painter.restore()
+            return left + width
+
+        def paintVerticalSection(self, painter: QPainter, sectionRect: QRect, logicalLeafIndex: int, hv: QHeaderView,
+                                 styleOptions: QStyleOptionHeader, leafIndex: QModelIndex):
+            oldBO = painter.brushOrigin()
+            left = sectionRect.x()
+            indexes = QModelIndexList(self.parentIndexes(leafIndex))
+            for i in range(len(indexes)):
+                realStyleOptions = QStyleOptionHeader(styleOptions)
+                if i < len(indexes) - 1 and (
+                        realStyleOptions.state & QStyle.State_Sunken or realStyleOptions.state & QStyle.State_On):
+                    t = QStyle.State(QStyle.State_Sunken | QStyle.State_On)
+                    realStyleOptions.state = realStyleOptions.state & ~t  # FIXME: parent items are not highlighted
+                left = self.paintVerticalCell(painter, hv, indexes[i], leafIndex, logicalLeafIndex, realStyleOptions,
+                                              sectionRect, left)
+            painter.setBrushOrigin(oldBO)
 
 
 class DataFrameModel(QtCore.QAbstractTableModel):
@@ -757,12 +759,13 @@ def main():
         data = pd.np.random.randint(0, 10, (10, 3)).astype(float)
         data[0][0] = pd.np.nan
         df = pd.DataFrame(data, columns=['col1', 'col2', 'col3'])
+    if test_case == 6:
+        df = pd.read_csv('sample_data/1500000 Sales Records.csv', nrows=5000)
 
     print("DataFrame:\n%s" % df)
 
     app = QtWidgets.QApplication(sys.argv)
 
-    df = pd.read_csv('sample_data/1500000 Sales Records.csv', nrows=10000)
     print("Opening GUI")
     # Build GUI
     view = DataFrameView()
