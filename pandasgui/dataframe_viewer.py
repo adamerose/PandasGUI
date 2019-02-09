@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import QStyleOptionHeader, QHeaderView, QWidget, QStyle, QA
 import pandas as pd
 import datetime
 import sys
+
 try:
     import pyqt_fix
 except:
@@ -34,7 +35,6 @@ class HierarchicalHeaderView(QHeaderView):
     This class is a Python port of
     http://qt-apps.org/content/show.php/HierarchicalHeaderView?content=103154
     """
-    options = {"highlightSections": True, "clickable": True}
 
     class private_data:
         headerModel = None
@@ -244,17 +244,22 @@ class HierarchicalHeaderView(QHeaderView):
     def __init__(self, orientation: Qt.Orientation, parent: QWidget):
         super().__init__(orientation, parent)
         self._pd = self.private_data()
-        self.sectionResized.connect(self.on_sectionResized)
-        self.setHighlightSections(self.options.get("highlightSections"))
-        self.setSectionsClickable(self.options.get("clickable"))
-        self.show()  # force to be visible
-        getattr(parent, "set%sHeader" % ("Horizontal", "Vertical")[orientation != Qt.Horizontal])(self)
+
+        # QHeaderView Options
+        self.setHighlightSections(True)
+        self.setSectionsClickable(True)
+
+        # Signals
         self.sectionMoved.connect(self.on_sectionMoved)
+        self.sectionResized.connect(self.on_sectionResized)
+
+        self.show()
 
     def on_sectionMoved(self, logicalIndex, oldVisualIndex, newVisualIndex):
         view, model = self.parent(), self.parent().model()
         if not hasattr(model, "reorder"):
-            return  # reorder underlying data of models with /reorder/ def only
+            print("Model requires reorder method")
+            return
         if getattr(self, "manual_move", False):
             self.manual_move = False
             return
@@ -278,6 +283,8 @@ class HierarchicalHeaderView(QHeaderView):
                     self.setSortIndicator(sortIndIndex + rng[0],
                                           self.sortIndicatorOrder())  # FIXME: does unnecessary sorting
             model.layoutChanged.emit()  # update view
+        else:
+            print("Model reorder failed!")
 
     def styleOptionForCell(self, logicalInd: int) -> QStyleOptionHeader:
         opt = QStyleOptionHeader()
@@ -659,8 +666,8 @@ class DataFrameModel(QtCore.QAbstractTableModel):
 class DataFrameView(QtWidgets.QTableView):
     def __init__(self):
         super().__init__()
-        HierarchicalHeaderView(orientation=Qt.Horizontal, parent=self)
-        HierarchicalHeaderView(orientation=Qt.Vertical, parent=self)
+        self.setHorizontalHeader(HierarchicalHeaderView(orientation=Qt.Horizontal, parent=self))
+        self.setVerticalHeader(HierarchicalHeaderView(orientation=Qt.Vertical, parent=self))
 
         self.horizontalHeader().setSectionsMovable(True)
         self.verticalHeader().setSectionsMovable(True)
@@ -673,9 +680,11 @@ class DataFrameView(QtWidgets.QTableView):
 
     def setModel(self, model):
         super().setModel(model)
+        self.fixSize()
 
+    def fixSize(self):
         # Fit columns to contents
-        # self.resizeColumnsToContents()
+        self.resizeColumnsToContents()
 
         # Add some cell padding
         cols = self.model().columnCount(None)
@@ -711,7 +720,7 @@ class DataFrameView(QtWidgets.QTableView):
         return QSize(width, height)
 
 
-if __name__ == "__main__":
+def main():
     test_case = 1
 
     if test_case == 1:
@@ -753,14 +762,15 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication(sys.argv)
 
+    df = pd.read_csv('sample_data/1500000 Sales Records.csv', nrows=10000)
+    print("Opening GUI")
     # Build GUI
-    window = QtWidgets.QWidget()
     view = DataFrameView()
     view.setModel(DataFrameModel(df))
-    QtWidgets.QVBoxLayout(window).addWidget(view)
-    window.show()
-
-    # Settings & appearance
-    window.adjustSize()
+    view.show()
 
     app.exec()
+
+
+if __name__ == "__main__":
+    main()
