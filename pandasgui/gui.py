@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from PyQt5 import QtCore, QtGui, QtWidgets
-from pandasgui.dataframe_viewer import DataFrameModel, DataFrameView
+from pandasgui.dataframe_viewer import DataFrameView
 
 # This fixes lack of stack trace on PyQt exceptions
 try:
@@ -193,13 +193,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout()
 
-        df_model = DataFrameModel(df)
-        view = DataFrameView()
-        view.setModel(df_model)
-
-        # Allows column highlighting detection.
-        view.horizontalHeader().sectionClicked.connect(self.header_clicked)
-        self.headers_highlighted = []
+        view = DataFrameView(df)
 
         layout.addWidget(view)
         tab.setLayout(layout)
@@ -215,9 +209,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         tab_df = df.describe(include='all').T
         tab_df.insert(loc=0, column='Type', value=df.dtypes)
 
-        model = DataFrameModel(tab_df)
-        view = DataFrameView()
-        view.setModel(model)
+        view = DataFrameView(df)
 
         layout.addWidget(view)
 
@@ -542,9 +534,8 @@ if __name__ == '__main__':
               ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')]
     index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
     multidf = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
-
-    big = pd.read_csv('sample_data/1500000 Sales Records.csv')
-    show(big)
-    # show(pokemon)
+    # big = pd.read_csv('sample_data/1500000 Sales Records.csv')
+    # show(big)
+    show(pokemon, sample, multidf)
     # show(sample)
     # show(sample, multidf=multidf, pokemon=pokemon)

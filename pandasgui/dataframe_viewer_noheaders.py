@@ -12,23 +12,88 @@ try:
 except:
     pass
 
+import pyqt_fix
+
+
+class DataFrameTableModel(QtCore.QAbstractTableModel):
+    def __init__(self, df, parent=None):
+        super().__init__(parent)
+        self.df = df
+
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int):
+        if role == QtCore.Qt.DisplayRole:
+            if orientation == Qt.Horizontal:
+                return self.df.columns[section]
+            else:
+                return self.df.index[section]
+        if role == QtCore.Qt.ToolTipRole:
+            if orientation == Qt.Horizontal:
+                return str(self.df.columns[section])
+            else:
+                return str(self.df.index[section])
+
+    # Required for table
+    def columnCount(self, parent=None):
+        return len(self.df.columns)
+
+    # Required
+    def rowCount(self, parent=None):
+        return len(self.df)
+
+    # Required
+    def data(self, index: QModelIndex, role: int):
+        if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole or role == QtCore.Qt.ToolTipRole:
+            row = index.row()
+            col = index.column()
+            return str(self.df.iloc[row, col])
+
+        if role == QtCore.Qt.DecorationRole:
+            row = index.row()
+
+            color = [QtGui.QColor('red'), QtGui.QColor('green'), QtGui.QColor('blue')][row % 3]
+            pixmap = QtGui.QPixmap(26, 26)
+            pixmap.fill(color)
+            return None
+
+    # Optional
+    def flags(self, index):
+        return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+
+    # Required if item is editable
+    def setData(self, index, value, role):
+        if role == QtCore.Qt.EditRole:
+            row = index.row()
+            col = index.column()
+            try:
+                self.df.iat[row, col] = value
+            except ValueError as e:
+                return False
+            self.dataChanged.emit(index, index)
+
+            return True
+        return False
+
 
 class DataFrameView(QtWidgets.QWidget):
-    """
-    This is a container for the DataFrameTableView and two DataFrameHeaderViews in a QGridLayout
-    """
+    def func(self):
+        print(self.horzHeader.size())
 
     def __init__(self, df):
         super().__init__()
-
         df = df.copy()
 
         # Set up DataFrame TableView and Model
         self.tableView = DataFrameTableView(df)
+        model = DataFrameTableModel(df)
+        self.tableView.setModel(model)
 
         # Create headers
         self.horzHeader = DataFrameHeaderView(table=self.tableView, df=df, orientation=Qt.Horizontal)
         self.vertHeader = DataFrameHeaderView(table=self.tableView, df=df, orientation=Qt.Vertical)
+
+        # Create scrollbars
+        # self.horzScrollBar = QtWidgets.QScrollBar(orientation=Qt.Horizontal)
+        # self.vertScrollBar = QtWidgets.QScrollBar(orientation=Qt.Vertical)
 
         # Set up layout
         self.gridLayout = QtWidgets.QGridLayout()
@@ -51,122 +116,40 @@ class DataFrameView(QtWidgets.QWidget):
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.gridLayout.setSpacing(0)
 
-        # corner_box = QtWidgets.QLabel("X")
-        # corner_box.resize(QSize(50, 50))
-        # self.gridLayout.addWidget(corner_box, 0, 0, 1, 2)
-
-        # Toggle MultiHeader level names
-        if not any(df.columns.names):
-            self.vertHeader.horizontalHeader().setFixedHeight(1)
-            self.horzHeader.verticalHeader().setFixedWidth(1)
-
-        # Set up space left of horzHeader to align it with the data table edge
-        horzHeaderLayout = QtWidgets.QHBoxLayout()
-        width = self.vertHeader.width() - self.horzHeader.verticalHeader().width()
-        print(width)
-        horzSpacer = QtWidgets.QSpacerItem(width, 20, QSizePolicy.Fixed, QSizePolicy.Fixed)
-        horzHeaderLayout.addItem(horzSpacer)
-        horzHeaderLayout.addWidget(self.horzHeader)
-
-        # Set up space above data table to make room for vertHeader level names
-        tableViewLayout = QtWidgets.QVBoxLayout()
-        height = self.vertHeader.horizontalHeader().height()
-        verticalSpacer = QtWidgets.QSpacerItem(20, height, QSizePolicy.Fixed, QSizePolicy.Fixed)
-        tableViewLayout.addItem(verticalSpacer)
-        tableViewLayout.addWidget(self.tableView)
-
-        self.tableView.setSizePolicy(QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum))
-
         # Add items to layout
-        self.gridLayout.addLayout(horzHeaderLayout, 0, 0, 1, 2)
+        self.gridLayout.addWidget(self.horzHeader, 0, 1)
         self.gridLayout.addWidget(self.vertHeader, 1, 0)
-        self.gridLayout.addLayout(tableViewLayout, 1, 1, alignment=Qt.AlignLeft | Qt.AlignTop)
-        self.gridLayout.addWidget(self.tableView.horizontalScrollBar(), 2, 1, 2, 1, alignment=Qt.AlignTop)
+        self.gridLayout.addWidget(self.tableView, 1, 1, alignment=Qt.AlignLeft | Qt.AlignTop)
+        self.gridLayout.addWidget(self.tableView.horizontalScrollBar(), 2, 1, 2, 1, alignment= Qt.AlignTop)
         self.gridLayout.addWidget(self.tableView.verticalScrollBar(), 1, 2, 1, 2, alignment=Qt.AlignLeft)
 
-        # self.setStyleSheet("background-color: white")
-        print(self.vertHeader.size())
-        print(self.horzHeader.size())
-
-        for item in [self.tableView, self.horzHeader, self.vertHeader, self.tableView.horizontalScrollBar(),
-                     self.tableView.verticalScrollBar()]:
+        for item in [self.tableView, self.horzHeader, self.vertHeader, self.tableView.horizontalScrollBar(), self.tableView.verticalScrollBar()]:
             item.setContentsMargins(0, 0, 0, 0)
             # item.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed))
             # item.setStyleSheet("border: 1px solid red;")
             item.show()
 
 
-class DataFrameTableModel(QtCore.QAbstractTableModel):
-    """
-    Model for DataFrameTableView to connect for DataFrame data
-    """
-
-    def __init__(self, df, parent=None):
-        super().__init__(parent)
-        self.df = df
-
-    def headerData(self, section, orientation, role=None):
-        # Headers for DataFrameTableView are hidden. Header data is shown in DataFrameHeaderView
-        pass
-
-    def columnCount(self, parent=None):
-        return len(self.df.columns)
-
-    def rowCount(self, parent=None):
-        return len(self.df)
-
-    # Returns the data from the DataFrame
-    def data(self, index, role=None):
-        if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole or role == QtCore.Qt.ToolTipRole:
-            row = index.row()
-            col = index.column()
-            return str(self.df.iloc[row, col])
-
-    def flags(self, index):
-        # Set the table to be editable
-        return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
-
-    # Set data in the DataFrame. Required if table is editable
-    def setData(self, index, value, role=None):
-        if role == QtCore.Qt.EditRole:
-            row = index.row()
-            col = index.column()
-            try:
-                self.df.iat[row, col] = value
-            except Exception as e:
-                print(e)
-                return False
-            self.dataChanged.emit(index, index)
-
-            return True
-
-
 class DataFrameTableView(QtWidgets.QTableView):
-    """
-    Displays the DataFrame contents as a table
-    """
-
     def __init__(self, df):
         super().__init__()
 
-        # Create and set model
-        model = DataFrameTableModel(df)
-        self.setModel(model)
-
-        # Hide the headers. The DataFrame headers (index & columns) will be displayed in the DataFrameHeaderViews
+        # Hide headers
         self.horizontalHeader().hide()
         self.verticalHeader().hide()
 
     def sizeHint(self):
-        # Set width and height based on number of columns in model
+        if not self.model():
+            return QSize(640, 480)
+
         # Width
-        width = 4  # To account for 1px borders
+        width = 2
         width += self.verticalHeader().width()
         for i in range(self.model().columnCount()):
             width += self.columnWidth(i)
 
         # Height
-        height = 4
+        height = 2
         height += self.horizontalHeader().height()
         for i in range(self.model().rowCount()):
             height += self.rowHeight(i)
@@ -174,15 +157,77 @@ class DataFrameTableView(QtWidgets.QTableView):
         return QSize(width, height)
 
 
-class DataFrameHeaderModel(QtCore.QAbstractTableModel):
-    """
-    Model for DataFrameHeaderView
-    """
+class DataFrameHeader1(QtWidgets.QHeaderView):
+    def __init__(self, orientation, parent):
+        super().__init__(orientation, parent)
+        # Settings
+        self.setSectionsClickable(True)
+        self.setHighlightSections(True)
 
+    def paintSection(self, painter: QPainter, rect: QRect, logicalIndex: int):
+        if rect.isValid():
+            vals = self.model().headerData(logicalIndex, self.orientation(), QtCore.Qt.DisplayRole)
+
+            if type(vals) == str:
+                super().paintSection(painter, rect, logicalIndex)
+            elif type(vals) == tuple:
+                if self.orientation() == Qt.Horizontal:
+                    for i, val in enumerate(vals):
+                        h = rect.height() / len(vals)
+                        subrect = QRect(rect.left(), int(rect.top() + i * h), rect.width(), int(h))
+
+                        painter.save()
+                        super().paintSection(painter, subrect, logicalIndex)
+                        painter.restore()
+                        painter.drawText(subrect, Qt.AlignCenter, val)
+                else:
+                    for i, val in enumerate(vals):
+                        w = rect.width() / len(vals)
+                        subrect = QRect(int(rect.left() + i * w), rect.top(), int(w), rect.height())
+
+                        painter.save()
+                        super().paintSection(painter, subrect, logicalIndex)
+                        painter.restore()
+                        painter.drawText(subrect, Qt.AlignCenter, val)
+
+    def sizeHint(self):
+
+        baseSize = self.parent().sizeHint()
+
+        if self.orientation() == Qt.Horizontal:
+            vals = self.model().headerData(0, self.orientation(), QtCore.Qt.DisplayRole)
+            h = 0
+            for val in vals:
+                h += QFontMetrics(QtGui.QFont(val)).height()
+            baseSize.setHeight(h)
+        else:
+            vals = self.model().headerData(0, self.orientation(), QtCore.Qt.DisplayRole)
+            w = 0
+            for val in vals:
+                label = QtWidgets.QLabel(val)
+                w += label.fontMetrics().boundingRect(label.text()).width() * 1.5
+                w = 100
+            baseSize.setWidth(w)
+
+        return baseSize
+
+
+class DataFrameHeaderModel(QtCore.QAbstractTableModel):
     def __init__(self, df, orientation, parent=None):
         super().__init__(parent)
         self.df = df
         self.orientation = orientation
+
+    # Optional for table
+    def headerData(self, section: int, orientation: Qt.Orientation, role: int):
+        if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.ToolTipRole:
+            try:
+                if orientation == Qt.Horizontal:
+                    return str(self.df.columns.names[section])
+                else:
+                    return str(self.df.index.names[section])
+            except IndexError:
+                return False
 
     # Required for table
     def columnCount(self, parent=None):
@@ -237,93 +282,57 @@ class DataFrameHeaderModel(QtCore.QAbstractTableModel):
                     row = index.row()
                     return str(self.df.index.values[row])
 
-    # The headers of this table will show the level names of the MultiIndex
-    def headerData(self, section, orientation, role=None):
-        if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.ToolTipRole:
 
-            # self.orientation says which DataFrameHeaderView this is and orientation says which of its headers this is
-            if orientation == Qt.Horizontal and self.orientation == Qt.Vertical:
-                return str(self.df.columns.names[section])
-            elif orientation == Qt.Vertical and self.orientation == Qt.Horizontal:
-                return str(self.df.index.names[section])
-            else:
-                # These cells should be hidden anyways
-                return None
-
-
+# This table view shows the dataframe multindex values
 class DataFrameHeaderView(QtWidgets.QTableView):
-    """
-    Displays the DataFrame index or columns depending on orientation
-    """
-
     def __init__(self, table: DataFrameTableView, df, orientation):
         super().__init__()
 
         # Setup
         self.orientation = orientation
         self.df = df
-        self.table = table  # This is the DataFrameTableView that this is a header for
+        self.table = table
         self.setModel(DataFrameHeaderModel(df, orientation))
         self.setSpans()
+        # self.setSpan(1, 1, 2, 2)
 
         # Settings
+        self.horizontalHeader().hide()
+        self.verticalHeader().hide()
         self.setSizePolicy(QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum))
-        self.setSelectionMode(self.NoSelection)
+        # self.setSelectionMode(QAbstractItemView.NoSelection)
 
-        # Orientation specific settings
+        # self.setSelectionMode(self.SingleSelection)
+
         if orientation == Qt.Horizontal:
-            self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)  # Scrollbar is replaced in DataFrameView
+            self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            # self.setSelectionBehavior(self.SelectColumns)
             self.horizontalHeader().hide()
-            self.verticalHeader().setDisabled(True)
-            self.setStyleSheet("background-color: #F8F8F8;"
-                               "border: 0px solid black;")
-
-            self.expandColumnsToContents()
+            self.setStyleSheet("background-color: #F0F0F0;"
+                               "border: 1px solid black;"
+                               "border-bottom: 0px solid black;")
         else:
-            self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-            self.verticalHeader().hide()
-            self.horizontalHeader().setDisabled(True)
-            self.setStyleSheet("background-color: #F8F8F8;"
-                               "border: 0px solid black;")
-
             self.resizeColumnsToContents()
 
-        # Set initial size
-        self.resize(self.sizeHint())
+            self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            # self.setSelectionBehavior(self.SelectRows)
+            self.verticalHeader().hide()
+            self.setStyleSheet("background-color: #F0F0F0;"
+                               "border: 1px solid black;"
+                               "border-right: 0px solid black;")
 
-    # Fits columns to contents but with a minimum width and added padding
-    def expandColumnsToContents(self):
-        min_size = 125
-        padding = 20
-        self.resizeColumnsToContents()
-
-        for col in range(self.model().columnCount()):
-            width = self.columnWidth(col)
-            if width + padding < min_size:
-                new_width = 125
-            else:
-                new_width = width + padding
-
-            self.setColumnWidth(col, new_width)
-            self.table.setColumnWidth(col, new_width)
-
-
-    # This sets spans to group together adjacent cells with the same values
     def setSpans(self):
         df = self.model().df
 
-        # Find spans for horizontal DataFrameHeaderView
         if self.orientation == Qt.Horizontal:
 
-            # Find how many levels the MultiIndex has
             if type(df.columns) == pd.MultiIndex:
                 N = len(df.columns[0])
             else:
                 N = 1
+            print(N)
+            for level in range(N):  # Iterates over header sections
 
-            for level in range(N):  # Iterates over the levels
-
-                # Find how many segments the MultiIndex has
                 if type(df.columns) == pd.MultiIndex:
                     arr = [df.columns[i][level] for i in range(len(df.columns))]
                 else:
@@ -349,19 +358,14 @@ class DataFrameHeaderView(QtWidgets.QTableView):
                             span_size = match_end - match_start + 1
                             self.setSpan(level, match_start, 1, span_size)
                             match_start = None
-
-        # Find spans for vertical DataFrameHeaderView
         else:
-
-            # Find how many levels the MultiIndex has
             if type(df.index) == pd.MultiIndex:
                 N = len(df.index[0])
             else:
                 N = 1
 
-            for level in range(N):  # Iterates over the levels
+            for level in range(N):  # Iterates over the vertical header columns
 
-                # Find how many segments the MultiIndex has
                 if type(df.index) == pd.MultiIndex:
                     arr = [df.index[i][level] for i in range(len(df.index))]
                 else:
@@ -371,9 +375,9 @@ class DataFrameHeaderView(QtWidgets.QTableView):
                 # None means it is not currently in a range of equal values.
                 match_start = None
 
-                for row in range(1, len(arr)):  # Iterates over cells in column
+                for row in range(1, len(arr)):  # Iterates over cells in col
 
-                    # Check if cell matches cell above
+                    # Check if cell matches cell to its left
                     if arr[row] == arr[row - 1]:
                         if match_start is None:
                             match_start = row - 1
@@ -389,19 +393,14 @@ class DataFrameHeaderView(QtWidgets.QTableView):
                             self.setSpan(match_start, level, span_size, 1)
                             match_start = None
 
-    # Return the size of the header needed to match the corresponding DataFrameTableView
     def sizeHint(self):
-        # Horizontal DataFrameHeaderView
         if self.orientation == Qt.Horizontal:
-            # Width of DataFrameTableView
             width = self.table.sizeHint().width() + self.verticalHeader().width()
             # Height
             height = 2
             for i in range(self.model().rowCount()):
                 height += self.rowHeight(i)
-        # Vertical DataFrameHeaderView
         else:
-            # Height of DataFrameTableView
             height = self.table.sizeHint().height() + self.horizontalHeader().height()
             # Width
             width = 2
@@ -409,7 +408,7 @@ class DataFrameHeaderView(QtWidgets.QTableView):
                 width += self.columnWidth(i)
         return QSize(width, height)
 
-    # This is needed because otherwise when the horizontal header is a single row it will add whitespace to be bigger
+    # This is needed because otherwise when the horizontal header is a single row it will be made bigger with whitespace
     def minimumSizeHint(self):
         if self.orientation == Qt.Horizontal:
             height = self.sizeHint().height()
@@ -420,7 +419,6 @@ class DataFrameHeaderView(QtWidgets.QTableView):
         return QSize(width, height)
 
 
-# Examples
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     app.setStyle('Windows XP')
@@ -428,7 +426,7 @@ if __name__ == '__main__':
 
     # Prepare sample data with 3 index levels all unique
     tuples = [('WW1', 'A', '1'), ('WW1', 'A', '2'), ('WW1', 'B', '3'), ('WW1', 'B', '4'),
-              ('WW2', 'B', '5'), ('WW2', 'C', '6'), ('WW2', 'D', '7'), ('WW2', 'D', '8')]
+              ('WW2', 'C', '5'), ('WW2', 'C', '6'), ('WW2', 'D', '7'), ('WW2', 'D', '8')]
     index = pd.MultiIndex.from_tuples(tuples, names=['week', 'letter', 'level'])
     df = pd.DataFrame(pd.np.random.randint(0, 10, (8, 8)), index=index[:8], columns=index[:8])
 
@@ -442,11 +440,8 @@ if __name__ == '__main__':
     df3 = pd.DataFrame(pd.np.random.randint(0, 10, (4, 8)), index=singles[0:4], columns=singles[0:8])
 
     df4 = pd.read_csv("sample_data/pokemon.csv")
-
-    n=60
-    df5 = pd.DataFrame([[1 for i in range(n)]],columns=["x"*i for i in range(n,0,-1)])
-    print(df)
-    view = DataFrameView(df)
+    print(type(df.describe().T))
+    view = DataFrameView(df.describe().T)
     view.show()
 
     # view2 = DataFrameTableView(df)
