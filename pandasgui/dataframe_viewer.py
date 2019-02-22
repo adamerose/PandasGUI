@@ -63,7 +63,7 @@ class DataFrameView(QtWidgets.QWidget):
         # Set up space left of horzHeader to align it with the data table edge
         horzHeaderLayout = QtWidgets.QHBoxLayout()
         width = self.vertHeader.width() - self.horzHeader.verticalHeader().width()
-        print(width)
+
         horzSpacer = QtWidgets.QSpacerItem(width, 20, QSizePolicy.Fixed, QSizePolicy.Fixed)
         horzHeaderLayout.addItem(horzSpacer)
         horzHeaderLayout.addWidget(self.horzHeader)
@@ -78,15 +78,13 @@ class DataFrameView(QtWidgets.QWidget):
         self.tableView.setSizePolicy(QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum))
 
         # Add items to layout
-        self.gridLayout.addLayout(horzHeaderLayout, 0, 0, 1, 2)
-        self.gridLayout.addWidget(self.vertHeader, 1, 0)
+        self.gridLayout.addLayout(horzHeaderLayout, 0, 0, 1, 2, alignment=Qt.AlignLeft)
+        self.gridLayout.addWidget(self.vertHeader, 1, 0, alignment=Qt.AlignTop)
         self.gridLayout.addLayout(tableViewLayout, 1, 1, alignment=Qt.AlignLeft | Qt.AlignTop)
         self.gridLayout.addWidget(self.tableView.horizontalScrollBar(), 2, 1, 2, 1, alignment=Qt.AlignTop)
-        self.gridLayout.addWidget(self.tableView.verticalScrollBar(), 1, 2, 1, 2, alignment=Qt.AlignLeft)
+        self.gridLayout.addWidget(self.tableView.verticalScrollBar(), 1, 2, 1, 1, alignment=Qt.AlignLeft)
 
         # self.setStyleSheet("background-color: white")
-        print(self.vertHeader.size())
-        print(self.horzHeader.size())
 
         for item in [self.tableView, self.horzHeader, self.vertHeader, self.tableView.horizontalScrollBar(),
                      self.tableView.verticalScrollBar()]:
@@ -160,13 +158,13 @@ class DataFrameTableView(QtWidgets.QTableView):
     def sizeHint(self):
         # Set width and height based on number of columns in model
         # Width
-        width = 4  # To account for 1px borders
+        width = 4  # To account for borders
         width += self.verticalHeader().width()
         for i in range(self.model().columnCount()):
             width += self.columnWidth(i)
 
         # Height
-        height = 4
+        height = 0
         height += self.horizontalHeader().height()
         for i in range(self.model().rowCount()):
             height += self.rowHeight(i)
@@ -203,6 +201,7 @@ class DataFrameHeaderModel(QtCore.QAbstractTableModel):
 
     # Required
     def rowCount(self, parent=None):
+        # Horizontal
         if self.orientation == Qt.Horizontal:
             if type(self.df.columns) == pd.MultiIndex:
                 if type(self.df.columns.values[0]) == tuple:
@@ -240,11 +239,10 @@ class DataFrameHeaderModel(QtCore.QAbstractTableModel):
     # The headers of this table will show the level names of the MultiIndex
     def headerData(self, section, orientation, role=None):
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.ToolTipRole:
-
             # self.orientation says which DataFrameHeaderView this is and orientation says which of its headers this is
-            if orientation == Qt.Horizontal and self.orientation == Qt.Vertical:
+            if self.orientation == Qt.Horizontal and orientation == Qt.Vertical:
                 return str(self.df.columns.names[section])
-            elif orientation == Qt.Vertical and self.orientation == Qt.Horizontal:
+            elif self.orientation == Qt.Vertical and orientation == Qt.Horizontal:
                 return str(self.df.index.names[section])
             else:
                 # These cells should be hidden anyways
@@ -278,7 +276,7 @@ class DataFrameHeaderView(QtWidgets.QTableView):
             self.setStyleSheet("background-color: #F8F8F8;"
                                "border: 0px solid black;")
 
-            self.expandColumnsToContents()
+            self.resizeHorzHeader()
         else:
             self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             self.verticalHeader().hide()
@@ -286,13 +284,13 @@ class DataFrameHeaderView(QtWidgets.QTableView):
             self.setStyleSheet("background-color: #F8F8F8;"
                                "border: 0px solid black;")
 
-            self.resizeColumnsToContents()
+            self.resizeVertHeader()
 
         # Set initial size
         self.resize(self.sizeHint())
 
     # Fits columns to contents but with a minimum width and added padding
-    def expandColumnsToContents(self):
+    def resizeHorzHeader(self):
         min_size = 125
         padding = 20
         self.resizeColumnsToContents()
@@ -306,6 +304,16 @@ class DataFrameHeaderView(QtWidgets.QTableView):
 
             self.setColumnWidth(col, new_width)
             self.table.setColumnWidth(col, new_width)
+
+    # Fits columns to contents but with a minimum width and added padding
+    def resizeVertHeader(self):
+        max_size = 250
+        self.resizeColumnsToContents()
+
+        for col in range(self.model().columnCount()):
+            width = self.columnWidth(col)
+            if width > max_size:
+                self.setColumnWidth(col, max_size)
 
 
     # This sets spans to group together adjacent cells with the same values
@@ -441,12 +449,21 @@ if __name__ == '__main__':
                ('E'), ('F'), ('F'), ('H')]
     df3 = pd.DataFrame(pd.np.random.randint(0, 10, (4, 8)), index=singles[0:4], columns=singles[0:8])
 
-    df4 = pd.read_csv("sample_data/pokemon.csv")
-
     n=60
-    df5 = pd.DataFrame([[1 for i in range(n)]],columns=["x"*i for i in range(n,0,-1)])
-    print(df)
-    view = DataFrameView(df)
+    df6 = pd.DataFrame([[1 for i in range(n)]],columns=["x"*i for i in range(n,0,-1)])
+
+    pokemon = pd.read_csv(r'C:\_MyFiles\Programming\Python Projects\pandasgui\pandasgui\sample_data\pokemon.csv')
+    # sample = pd.read_csv('sample_data/sample.csv')
+
+    tuples = [('A', 'one', 'x'), ('A', 'one', 'y'), ('A', 'two', 'x'), ('A', 'two', 'y'),
+              ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')]
+    index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
+    multidf = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
+
+    tab_df = multidf.describe(include='all').T
+    tab_df.insert(loc=0, column='Type', value=multidf.dtypes)
+
+    view = DataFrameView(tab_df)
     view.show()
 
     # view2 = DataFrameTableView(df)

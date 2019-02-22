@@ -1,6 +1,12 @@
 import pandas as pd
 import numpy as np
 
+# %% Reshaping
+
+def pivot(df, keys, categories, data):
+    return pivoted_df
+
+# %%
 def save_figs_to_ppt(figs, filename):
     from pptx import Presentation
 
@@ -15,8 +21,6 @@ def save_figs_to_ppt(figs, filename):
 
     prs.save('test.pptx')
 
-def pivot(df, keys, categories, data):
-    return pivoted_df
 
 def flatten_multiindex(mi, sep=' - ', format=None):
     if type(mi) == pd.core.indexes.base.Index:
