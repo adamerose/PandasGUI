@@ -1,4 +1,7 @@
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import QtCore, QtWidgets, QtGui
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QTreeWidgetItem
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
@@ -6,7 +9,7 @@ import pandas as pd
 from pandasgui.functions import flatten_multiindex
 import sys
 
-class baseDialog(QtWidgets.QDialog):
+class BaseDialog(QtWidgets.QDialog):
     def __init__(self, dataframes, parent=None):
         super().__init__(parent)
 
@@ -22,7 +25,7 @@ class baseDialog(QtWidgets.QDialog):
         self.dataframePicker.currentIndexChanged.connect(self.initColumnPicker)
 
         # Build column picker
-        self.columnPicker = columnPicker([])
+        self.columnPicker = ColumnPicker([])
         self.initColumnPicker()
 
         # Add button
@@ -53,7 +56,6 @@ class baseDialog(QtWidgets.QDialog):
 
         self.columnPicker.resetValues(column_names)
 
-
     def finish(self):
         dict = self.columnPicker.getDestinationItems()
         x = dict['X Variable'][0]
@@ -69,73 +71,58 @@ class baseDialog(QtWidgets.QDialog):
         sns.scatterplot(x,y,c,data=df)
         plt.show()
 
-class pivotDialog(baseDialog):
-    def __init__(self):
-        pass
-
-
-class columnPicker(QtWidgets.QWidget):
+class ColumnPicker(QtWidgets.QWidget):
     def __init__(self, column_names, categories=None):
         super().__init__()
+
+        # Set up widgets and layout
         layout = QtWidgets.QHBoxLayout()
         self.setLayout(layout)
-
-        self.columnSource = QtWidgets.QListWidget()
-        self.columnDestination = QtWidgets.QTreeWidget()
+        self.columnSource = SourceList(column_names)
+        self.destinations = []
+        self.destinations.append(DestTree("X Variable"))
+        self.destinations.append(DestTree("Y Variable"))
+        self.destinations.append(DestTree("Color By"))
 
         # Add buttons
-        btnLayout = QtWidgets.QVBoxLayout()
-        btnMoveRight = QtWidgets.QPushButton(">")
-        btnMoveRight.clicked.connect(self.moveRight)
-        btnMoveLeft = QtWidgets.QPushButton("<")
-        btnLayout.addWidget(btnMoveRight)
-        btnLayout.addWidget(btnMoveLeft)
+        self.btnMoveRight = QtWidgets.QPushButton(">")
+        self.btnMoveLeft = QtWidgets.QPushButton("<")
+        # Make button vertical layout
+        self.btnLayout = QtWidgets.QVBoxLayout()
+        self.btnLayout.addWidget(self.btnMoveRight)
+        self.btnLayout.addWidget(self.btnMoveLeft)
+        # Connect buttons
+        self.btnMoveRight.clicked.connect(self.moveSelectedRight)
+        self.btnMoveLeft.clicked.connect(self.moveSelectedLeft)
+
+        # Add column names to source list
+        self.columnSource.resetItems()
 
         # List settings
         self.columnSource.setDragDropMode(QtWidgets.QListWidget.DragDrop)
-        # Add column names
-        for name in column_names:
-            self.columnSource.addItem(name)
+        self.columnSource.setDefaultDropAction(QtCore.Qt.MoveAction)
 
-        # Tree settings
-        self.columnDestination.setHeaderLabels(['Column Name'])
-        self.columnDestination.setDragDropMode(QtWidgets.QTreeWidget.InternalMove)
-        root = self.columnDestination.invisibleRootItem()
-        root.setFlags(root.flags() & ~QtCore.Qt.ItemIsDropEnabled)
-
-        # Add tree sections
-        sections = ['X Variable', 'Y Variable', 'Color By']
-        for name in sections:
-            treeItem = QtWidgets.QTreeWidgetItem(self.columnDestination, [name])
-            treeItem.setFlags(treeItem.flags() & ~QtCore.Qt.ItemIsDragEnabled)
-            treeItem.setExpanded(True)
-            # This doesn't work. https://bugreports.qt.io/browse/QTBUG-59354
-            # treeItem.setChildIndicatorPolicy(QtWidgets.QTreeWidgetItem.DontShowIndicator)
 
         # Add items to layout
+        self.destLayout = QtWidgets.QVBoxLayout()
+        for dest in self.destinations:
+            self.destLayout.addWidget(dest)
         layout.addWidget(self.columnSource)
-        layout.addLayout(btnLayout)
-        layout.addWidget(self.columnDestination)
+        layout.addLayout(self.btnLayout)
+        layout.addLayout(self.destLayout)
 
-        # Select first section
-        self.columnDestination.setCurrentItem(self.columnDestination.topLevelItem(0))
 
     def resetValues(self, column_names):
 
         # Clear list
-        self.columnSource.clear()
-
-        # Add column names
-        for name in column_names:
-            self.columnSource.addItem(name)
+        self.columnSource.columnNames = column_names
+        self.columnSource.resetItems()
 
         # Clear tree
-        for i in range(self.columnDestination.topLevelItemCount()):
-            section = self.columnDestination.topLevelItem(i)
-            for j in reversed(range(section.childCount())):
-                section.removeChild(section.child(j))
+        for dest in self.destinations:
+            dest.clear()
 
-    def moveRight(self):
+    def moveSelectedRight(self, index):
         sourceItems = self.columnSource.selectedItems()
 
         for item in sourceItems:
@@ -143,6 +130,12 @@ class columnPicker(QtWidgets.QWidget):
 
             # Remove from list
             self.columnSource.removeItemWidget(item)
+
+    # Takes a list of QTreeWidgetItem items and adds them to the QListWidget
+    def moveSelectedLeft(self):
+
+        items = self.columnDestination.selectedItems()
+
 
     def addTreeItem(self, label):
         # Add to tree
@@ -153,8 +146,10 @@ class columnPicker(QtWidgets.QWidget):
 
         print(self.getDestinationItems())
 
-    def removeTreeItem(self, section, label):
-        pass
+    # Takes a list of QTreeWidgetItem items and removes them from the tree
+    def removeTreeItems(self, items):
+        for item in items:
+            item.parent().removeChild(item)
 
     def addListItem(self, label):
         pass
@@ -162,19 +157,83 @@ class columnPicker(QtWidgets.QWidget):
     def removeListItem(self, label):
         pass
 
+    # Return a dict of the items in the destination tree
     def getDestinationItems(self):
         items = {}
 
-        for i in range(self.columnDestination.topLevelItemCount()):
-            section = self.columnDestination.topLevelItem(i)
-            section_name = section.text(0)
-            items[section_name] = []
-            for j in range(section.childCount()):
-                child = section.child(j)
-                child_name = child.text(0)
-                items[section_name].append(child_name)
+        for dest in self.destinations:
+            items[dest.title] = dest.getItems()
         return items
 
+
+class DestTree(QtWidgets.QTreeWidget):
+    def __init__(self, title='Variable', parent=None):
+        super().__init__(parent)
+        self.title = title
+
+        # Tree settings
+        self.setHeaderLabels([title])
+        # self.columnDestination.setSelectionBehavior(self.columnDestination.SelectRows)
+
+        self.setDragDropMode(self.DragDrop)
+        self.setSelectionMode(self.ExtendedSelection)
+        self.setDefaultDropAction(QtCore.Qt.MoveAction)
+        self.setAcceptDrops(True)
+
+        self.doubleClicked.connect(self.removeSelectedItems)
+
+    def removeSelectedItems(self):
+        for item in self.selectedItems():
+            self.invisibleRootItem().removeChild(item)
+
+    def dropEvent(self, event):
+        QtWidgets.QTreeWidget.dropEvent(self, event)
+
+        # Loop over tree items
+        for i in range(self.topLevelItemCount()):
+            # Don't allow dropping items inside other items
+            treeItem = self.topLevelItem(i)
+            treeItem.setFlags(treeItem.flags() & ~QtCore.Qt.ItemIsDropEnabled)
+
+            # Set 2nd column
+            treeItem.setData(1,Qt.DisplayRole,"test")
+
+        if type(event.source())==SourceList:
+            event.source().resetItems()
+
+        print(self.getItems())
+
+    # Return a list of strings of the items in the tree
+    def getItems(self):
+        items = []
+        for i in range(self.topLevelItemCount()):
+            treeItem = self.topLevelItem(i)
+            items.append(treeItem.text(0))
+        return items
+
+class SourceList(QtWidgets.QListWidget):
+    def __init__(self, columnNames=[], parent=None):
+        super().__init__(parent)
+        self.columnNames = columnNames
+
+        self.resetItems()
+
+        # Settings
+        self.setDragDropMode(self.DragDrop)
+        self.setSelectionMode(self.ExtendedSelection)
+        self.setDefaultDropAction(QtCore.Qt.MoveAction)
+        self.setAcceptDrops(True)
+
+    def dropEvent(self, event):
+        print('asf')
+        QtWidgets.QListWidget.dropEvent(self, event)
+
+        self.resetItems()
+
+    def resetItems(self):
+        self.clear()
+        for name in self.columnNames:
+            self.addItem(name)
 
 if __name__=='__main__':
 
@@ -191,8 +250,7 @@ if __name__=='__main__':
     ## PyQt
     app = QtWidgets.QApplication(sys.argv)
 
-    # win = baseDialog(dataframes)
-    win = columnPicker(list(pokemon.columns))
-
+    win = BaseDialog(dataframes)
+    # win = Tree()
     win.show()
     app.exec_()

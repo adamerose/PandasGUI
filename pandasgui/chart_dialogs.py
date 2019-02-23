@@ -167,6 +167,7 @@ class columnPicker(QtWidgets.QWidget):
                 child = section.child(j)
                 child_name = child.text(0)
                 items[section_name].append(child_name)
+        print(items)
         return items
 
 

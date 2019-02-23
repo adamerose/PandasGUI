@@ -131,11 +131,10 @@ class PandasGUI(QtWidgets.QMainWindow):
         styleMenu = menubar.addMenu('&Set Style')
         styleGroup = QtWidgets.QActionGroup(styleMenu, exclusive=True)
 
-        # Iterate over all GUI Styles that exist for the user's system
+        # Add an option to the menu for each GUI style that exist for the user's system
         for style in QtWidgets.QStyleFactory.keys():
             styleAction = QtWidgets.QAction(f'&{style}', self, checkable=True)
-            styleAction.triggered.connect(lambda state,
-                                                 style=style: self.set_style(style))
+            styleAction.triggered.connect(lambda state, style=style: self.app.setStyle(style))
             styleGroup.addAction(styleAction)
             styleMenu.addAction(styleAction)
         # Set the default style
@@ -152,9 +151,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         pivotDialogAction.triggered.connect(self.pivot_dialog)
         chartMenu.addAction(pivotDialogAction)
 
-    def set_style(self, style):
-        print("Setting style to", style)
-        self.app.setStyle(style)
 
     ####################
     # Tab widget functions
