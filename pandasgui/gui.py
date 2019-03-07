@@ -144,10 +144,14 @@ class PandasGUI(QtWidgets.QMainWindow):
         chartMenu = menubar.addMenu('&Plot Charts')
         # chartGroup = QtWidgets.QActionGroup(chartMenu)
 
+        scatterDialogAction = QtWidgets.QAction('&Scatter Dialog', self)
+        scatterDialogAction.triggered.connect(self.scatter_dialog)
+        chartMenu.addAction(scatterDialogAction)
+
         # Creates a reshaping menu.
         chartMenu = menubar.addMenu('&Reshape Data')
 
-        pivotDialogAction = QtWidgets.QAction('&Scatter Dialog', self)
+        pivotDialogAction = QtWidgets.QAction('&Pivot Dialog', self)
         pivotDialogAction.triggered.connect(self.pivot_dialog)
         chartMenu.addAction(pivotDialogAction)
 
@@ -289,9 +293,12 @@ class PandasGUI(QtWidgets.QMainWindow):
     # Reshape functions.
 
     def pivot_dialog(self):
-        from pandasgui.chart_dialogs import scatterDialog
-        win = scatterDialog(self.df_dicts, parent=self)
+        from pandasgui.pivot_dialog import PivotDialog
+        win = PivotDialog(self.df_dicts, parent=self)
 
+    def scatter_dialog(self):
+        from pandasgui.chart_dialogs import ScatterDialog
+        win = ScatterDialog(self.df_dicts, parent=self)
 
 def show(*args, nonblocking=False, **kwargs):
     # Get the variable names in the scope show() was called from

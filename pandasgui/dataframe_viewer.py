@@ -55,10 +55,11 @@ class DataFrameView(QtWidgets.QWidget):
         # corner_box.resize(QSize(50, 50))
         # self.gridLayout.addWidget(corner_box, 0, 0, 1, 2)
 
-        # Toggle MultiHeader level names
-        if not any(df.columns.names):
-            self.vertHeader.horizontalHeader().setFixedHeight(1)
+        # Toggle level names
+        if not (any(df.columns.names) or df.columns.name):
             self.horzHeader.verticalHeader().setFixedWidth(1)
+        if not (any(df.index.names) or df.index.name):
+            self.vertHeader.horizontalHeader().setFixedHeight(1)
 
         # Set up space left of horzHeader to align it with the data table edge
         horzHeaderLayout = QtWidgets.QHBoxLayout()
@@ -78,11 +79,13 @@ class DataFrameView(QtWidgets.QWidget):
         self.tableView.setSizePolicy(QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum))
 
         # Add items to layout
-        self.gridLayout.addLayout(horzHeaderLayout, 0, 0, 1, 2, alignment=Qt.AlignLeft)
-        self.gridLayout.addWidget(self.vertHeader, 1, 0, alignment=Qt.AlignTop)
-        self.gridLayout.addLayout(tableViewLayout, 1, 1, alignment=Qt.AlignLeft | Qt.AlignTop)
-        self.gridLayout.addWidget(self.tableView.horizontalScrollBar(), 2, 1, 2, 1, alignment=Qt.AlignTop)
-        self.gridLayout.addWidget(self.tableView.verticalScrollBar(), 1, 2, 1, 1, alignment=Qt.AlignLeft)
+        self.gridLayout.addLayout(horzHeaderLayout, 0, 0, 1, 2)
+        self.gridLayout.addWidget(self.vertHeader, 1, 0)
+        self.gridLayout.addLayout(tableViewLayout, 1, 1)
+        self.gridLayout.addWidget(self.tableView.horizontalScrollBar(), 2, 1, 2, 1)
+        self.gridLayout.addWidget(self.tableView.verticalScrollBar(), 1, 2, 1, 1)
+        self.gridLayout.setColumnStretch(3, 1)
+        self.gridLayout.setRowStretch(4, 1)
 
         # self.setStyleSheet("background-color: white")
 
@@ -241,9 +244,16 @@ class DataFrameHeaderModel(QtCore.QAbstractTableModel):
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.ToolTipRole:
             # self.orientation says which DataFrameHeaderView this is and orientation says which of its headers this is
             if self.orientation == Qt.Horizontal and orientation == Qt.Vertical:
-                return str(self.df.columns.names[section])
+                if type(self.df.columns) == pd.MultiIndex:
+                    return str(self.df.columns.names[section])
+                else:
+                    return str(self.df.columns.name)
             elif self.orientation == Qt.Vertical and orientation == Qt.Horizontal:
-                return str(self.df.index.names[section])
+                if type(self.df.columns) == pd.MultiIndex:
+                    return str(self.df.index.names[section])
+                else:
+                    return str(self.df.index.name)
+
             else:
                 # These cells should be hidden anyways
                 return None
@@ -463,7 +473,10 @@ if __name__ == '__main__':
     tab_df = multidf.describe(include='all').T
     tab_df.insert(loc=0, column='Type', value=multidf.dtypes)
 
-    view = DataFrameView(tab_df)
+    pivot_table = pokemon.pivot_table(values='HP', index='Generation')
+    print(pivot_table)
+
+    view = DataFrameView(pivot_table)
     view.show()
 
     # view2 = DataFrameTableView(df)

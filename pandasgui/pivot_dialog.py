@@ -9,8 +9,39 @@ import pandas as pd
 from pandasgui.functions import flatten_multiindex
 import sys
 
-class BaseDialog(QtWidgets.QDialog):
+class PivotDialog(QtWidgets.QDialog):
     def __init__(self, dataframes, parent=None):
+        super().__init__(parent)
+        self.core = DialogCore(dataframes, destination_names=['index','columns','values'], parent=self)
+
+        self.show()
+
+    def finish(self):
+        dict = self.core.getChoices()
+        df = self.core.getDataFrame()
+
+
+
+
+        try:
+            index = dict['index']
+            columns = dict['columns']
+            values = dict['values']
+
+
+            from pandasgui import show
+            pivot_table = df.pivot_table(values, index, columns)
+            print(pivot_table)
+            show(pivot_table, nonblocking=True)
+        except Exception as e:
+            print(e)
+
+
+
+
+
+class DialogCore(QtWidgets.QWidget):
+    def __init__(self, dataframes, destination_names=['Default'], parent=None):
         super().__init__(parent)
 
         self.dataframes = dataframes
@@ -25,11 +56,11 @@ class BaseDialog(QtWidgets.QDialog):
         self.dataframePicker.currentIndexChanged.connect(self.initColumnPicker)
 
         # Build column picker
-        self.columnPicker = ColumnPicker([])
+        self.columnPicker = ColumnPicker([],destination_names=destination_names)
         self.initColumnPicker()
 
         # Add button
-        btnFinish = QtWidgets.QPushButton("Plot")
+        btnFinish = QtWidgets.QPushButton("Finish")
         btnFinish.clicked.connect(self.finish)
         btnReset = QtWidgets.QPushButton("Reset")
         btnReset.clicked.connect(self.initColumnPicker)
@@ -47,6 +78,9 @@ class BaseDialog(QtWidgets.QDialog):
 
         self.show()
 
+    def finish(self):
+        self.parent().finish()
+
     def initColumnPicker(self):
         selected_dataframe = self.dataframePicker.itemText(self.dataframePicker.currentIndex())
 
@@ -56,23 +90,15 @@ class BaseDialog(QtWidgets.QDialog):
 
         self.columnPicker.resetValues(column_names)
 
-    def finish(self):
-        dict = self.columnPicker.getDestinationItems()
-        x = dict['X Variable'][0]
-        y = dict['Y Variable'][0]
-        try:
-            c = dict['Color By'][0]
-        except IndexError:
-            c = None
+    def getChoices(self):
+        return self.columnPicker.getDestinationItems()
 
-        print(x,y,c)
-
-        df = pd.read_csv('sample_data/pokemon.csv')
-        sns.scatterplot(x,y,c,data=df)
-        plt.show()
+    def getDataFrame(self):
+        df_name = self.dataframePicker.itemText(self.dataframePicker.currentIndex())
+        return self.dataframes[df_name]['dataframe']
 
 class ColumnPicker(QtWidgets.QWidget):
-    def __init__(self, column_names, categories=None):
+    def __init__(self, column_names, destination_names=['Default']):
         super().__init__()
 
         # Set up widgets and layout
@@ -80,27 +106,8 @@ class ColumnPicker(QtWidgets.QWidget):
         self.setLayout(layout)
         self.columnSource = SourceList(column_names)
         self.destinations = []
-        self.destinations.append(DestTree("X Variable"))
-        self.destinations.append(DestTree("Y Variable"))
-        self.destinations.append(DestTree("Color By"))
-
-        # Add buttons
-        self.btnMoveRight = QtWidgets.QPushButton(">")
-        self.btnMoveLeft = QtWidgets.QPushButton("<")
-        # Make button vertical layout
-        self.btnLayout = QtWidgets.QVBoxLayout()
-        self.btnLayout.addWidget(self.btnMoveRight)
-        self.btnLayout.addWidget(self.btnMoveLeft)
-        # Connect buttons
-        self.btnMoveRight.clicked.connect(self.moveSelectedRight)
-        self.btnMoveLeft.clicked.connect(self.moveSelectedLeft)
-
-        # Add column names to source list
-        self.columnSource.resetItems()
-
-        # List settings
-        self.columnSource.setDragDropMode(QtWidgets.QListWidget.DragDrop)
-        self.columnSource.setDefaultDropAction(QtCore.Qt.MoveAction)
+        for name in destination_names:
+            self.destinations.append(DestTree(name))
 
 
         # Add items to layout
@@ -108,9 +115,7 @@ class ColumnPicker(QtWidgets.QWidget):
         for dest in self.destinations:
             self.destLayout.addWidget(dest)
         layout.addWidget(self.columnSource)
-        layout.addLayout(self.btnLayout)
         layout.addLayout(self.destLayout)
-
 
     def resetValues(self, column_names):
 
@@ -250,7 +255,7 @@ if __name__=='__main__':
     ## PyQt
     app = QtWidgets.QApplication(sys.argv)
 
-    win = BaseDialog(dataframes)
+    win = PivotDialog(dataframes)
     # win = Tree()
     win.show()
     app.exec_()
