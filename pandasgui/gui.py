@@ -122,6 +122,25 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         self.setCentralWidget(self.main_widget)
 
+    def import_dataframe(self, path):
+
+        df_name = os.path.split(path)[1]
+        df_object = pd.read_csv(path)
+
+        self.add_dataframe(df_name,df_object)
+
+    def add_dataframe(self, df_name, df_object):
+        self.df_dicts[df_name] = {}
+        self.df_dicts[df_name]['dataframe'] = df_object
+
+        # Make tab widget
+        tab_widget = self.make_tab_widget(df_name)
+        self.df_dicts[df_name]['tab_widget'] = tab_widget
+        self.tabs_stacked_widget.addWidget(tab_widget)
+
+        # Add it to the nav
+        self.add_df_to_nav(df_name)
+
     ####################
     # Menu bar functions
 
@@ -216,8 +235,8 @@ class PandasGUI(QtWidgets.QMainWindow):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout()
 
-        button = QtWidgets.QPushButton("Print DF")
-        # button.clicked.connect(self.printdf)
+        button = QtWidgets.QPushButton("Test")
+        button.clicked.connect(self.test)
 
         layout.addWidget(button)
         tab.setLayout(layout)
@@ -226,27 +245,60 @@ class PandasGUI(QtWidgets.QMainWindow):
     ####################
     # Nav bar functions
 
+    class NavWidget(QtWidgets.QTreeWidget):
+        def __init__(self, gui):
+            super().__init__()
+            self.gui = gui
+            self.setHeaderLabels(['HeaderLabel'])
+
+            self.setAcceptDrops(True)
+
+        def dragEnterEvent(self, e):
+            if e.mimeData().hasUrls:
+                e.accept()
+            else:
+                e.ignore()
+
+        def dragMoveEvent(self, e):
+            if e.mimeData().hasUrls:
+                e.accept()
+            else:
+                e.ignore()
+
+        def dropEvent(self, e):
+            if e.mimeData().hasUrls:
+                e.setDropAction(QtCore.Qt.CopyAction)
+                e.accept()
+                fpath_list = []
+                for url in e.mimeData().urls():
+                    fpath_list.append(str(url.toLocalFile()))
+
+                for fpath in fpath_list:
+                    self.gui.import_dataframe(fpath)
+            else:
+                e.ignore()
+
     def make_nav(self):
         # Create the navigation pane
         df_names = list(self.df_dicts.keys())
-        self.nav_tree = QtWidgets.QTreeWidget()
+        self.nav_tree = self.NavWidget(self)
 
         # Creates the headers.
         self.nav_tree.setHeaderLabels(['Name','Shape'])
 
         for df_name in df_names:
-            self.add_dataframe(df_name)
+            self.add_df_to_nav(df_name)
 
         self.nav_tree.itemClicked.connect(self.nav_clicked)
 
-    def add_dataframe(self, df_name):
+    def test(self, x):
+        print(self.df_dicts)
 
+    def add_df_to_nav(self, df_name):
+        '''Add DataFrame to nav from df_dicts'''
         # Calculate and format the shape of the DataFrame
         shape = self.df_dicts[df_name]['dataframe'].shape
         shape = str(shape[0]) + ' X ' + str(shape[1])
-
-        df_name_label = QtGui.QStandardItem(df_name)
-        shape_label = QtGui.QStandardItem(shape)
 
         QtWidgets.QTreeWidgetItem(self.nav_tree, [df_name, shape])
 
