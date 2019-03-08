@@ -6,3 +6,6 @@ test.py
 1500000 Sales Records.csv
 *.pyc
 qtdesigner
+build/
+dist/
+*.spec

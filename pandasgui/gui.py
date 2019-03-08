@@ -1,10 +1,12 @@
 import inspect
 import traceback
 import sys
+import os
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import Qt
 from pandasgui.dataframe_viewer import DataFrameView
 
 # This fixes lack of stack trace on PyQt exceptions
@@ -47,7 +49,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.main_widget = None
 
         # Nav bar class variable initialization.
-        self.nav_view = None
+        self.nav_tree = None
 
         # Tab widget class variable initialization.
         self.headers_highlighted = None
@@ -110,7 +112,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         # Adds navigation section to splitter.
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
-        self.splitter.addWidget(self.nav_view)
+        self.splitter.addWidget(self.nav_tree)
         self.splitter.addWidget(self.tabs_stacked_widget)
 
         # Combines navigation section and main section.
@@ -227,42 +229,28 @@ class PandasGUI(QtWidgets.QMainWindow):
     def make_nav(self):
         # Create the navigation pane
         df_names = list(self.df_dicts.keys())
-        self.nav_view = QtWidgets.QTreeView()
+        self.nav_tree = QtWidgets.QTreeWidget()
 
         # Creates the headers.
-        model = QtGui.QStandardItemModel(0, 2, self)
-        model.setHeaderData(0, QtCore.Qt.Horizontal, 'Name')
-        model.setHeaderData(1, QtCore.Qt.Horizontal, 'Shape')
-        root_node = model.invisibleRootItem()
+        self.nav_tree.setHeaderLabels(['Name','Shape'])
 
-        # Adds a dataframe to the navigation sidebar
-        main_nav_branch = QtGui.QStandardItem('Master')
         for df_name in df_names:
-            # Calculate and format the shape of the DataFrame
-            shape = self.df_dicts[df_name]['dataframe'].shape
-            shape = str(shape[0]) + ' X ' + str(shape[1])
+            self.add_dataframe(df_name)
 
-            df_name_label = QtGui.QStandardItem(df_name)
-            shape_label = QtGui.QStandardItem(shape)
+        self.nav_tree.itemClicked.connect(self.nav_clicked)
 
-            # Disables dropping dataframes on other dataframes in nav pane.
-            df_name_label.setFlags(df_name_label.flags() &
-                                   ~QtCore.Qt.ItemIsDropEnabled)
-            shape_label.setFlags(shape_label.flags() &
-                                 ~QtCore.Qt.ItemIsDropEnabled)
+    def add_dataframe(self, df_name):
 
-            # Disables editing the names of the dataframes.
-            df_name_label.setEditable(False)
-            shape_label.setEditable(False)
+        # Calculate and format the shape of the DataFrame
+        shape = self.df_dicts[df_name]['dataframe'].shape
+        shape = str(shape[0]) + ' X ' + str(shape[1])
 
-            main_nav_branch.appendRow([df_name_label, shape_label])
+        df_name_label = QtGui.QStandardItem(df_name)
+        shape_label = QtGui.QStandardItem(shape)
 
-        root_node.appendRow([main_nav_branch, None])
-        self.nav_view.setModel(model)
-        self.nav_view.expandAll()
-        self.nav_view.clicked.connect(self.select_dataframe)
+        QtWidgets.QTreeWidgetItem(self.nav_tree, [df_name, shape])
 
-    def select_dataframe(self, location_clicked):
+    def nav_clicked(self, item, column):
         """
         Examines navbar row pressed by user
         and then changes the dataframe shown.
@@ -274,13 +262,7 @@ class PandasGUI(QtWidgets.QMainWindow):
                               accessible with methods such as row() or data().
         """
 
-        df_parent_folder_index = location_clicked.parent().row()
-        df_clicked_row_index = location_clicked.row()
-
-        # Gets name of dataframe by using index of the row clicked.
-        nav_pane = self.nav_view.model()
-        df_parent_folder_name = nav_pane.index(df_parent_folder_index, 0)
-        df_name = df_parent_folder_name.child(df_clicked_row_index, 0).data()
+        df_name = item.data(column,Qt.DisplayRole)
         df_properties = self.df_dicts.get(df_name)
 
         # If the dataframe exists, change the tab widget shown.
@@ -335,16 +317,34 @@ def show(*args, nonblocking=False, **kwargs):
     app.exec_()
 
 
+print("argv1",sys.argv)
 if __name__ == '__main__':
-    pokemon = pd.read_csv('sample_data/pokemon.csv')
-    sample = pd.read_csv('sample_data/sample.csv')
+    try:
+        file_paths = sys.argv[1:]
+        file_dataframes = {}
+        for path in file_paths:
+            df = pd.read_csv(path)
+            filename = os.path.split(path)[1]
+            file_dataframes[filename]=df
 
-    tuples = [('A', 'one', 'x'), ('A', 'one', 'y'), ('A', 'two', 'x'), ('A', 'two', 'y'),
-              ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')]
-    index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
-    multidf = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
-    # big = pd.read_csv('sample_data/1500000 Sales Records.csv')
-    # show(big)
-    show(pokemon, sample, multidf)
-    # show(sample)
-    # show(sample, multidf=multidf, pokemon=pokemon)
+        pokemon = pd.read_csv('sample_data/pokemon.csv')
+        sample = pd.read_csv('sample_data/sample.csv')
+
+        tuples = [('A', 'one', 'x'), ('A', 'one', 'y'), ('A', 'two', 'x'), ('A', 'two', 'y'),
+                  ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')]
+        index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
+        multidf = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
+        # big = pd.read_csv('sample_data/1500000 Sales Records.csv')
+        # show(big)
+
+        if file_dataframes:
+            show(**file_dataframes)
+        else:
+            show(sample, multidf=multidf, pokemon=pokemon)
+    except Exception as e:
+        print(e)
+        import traceback
+
+        traceback.print_exc()
+
+        input()

@@ -121,7 +121,11 @@ class DataFrameTableModel(QtCore.QAbstractTableModel):
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole or role == QtCore.Qt.ToolTipRole:
             row = index.row()
             col = index.column()
-            return str(self.df.iloc[row, col])
+            cell = self.df.iloc[row, col]
+            if isinstance(cell, np.floating):
+                return "{:.4f}".format(cell)
+
+            return str(cell)
 
     def flags(self, index):
         # Set the table to be editable
