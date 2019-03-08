@@ -10,18 +10,16 @@ from pandasgui.functions import flatten_multiindex
 import sys
 
 class PivotDialog(QtWidgets.QDialog):
-    def __init__(self, dataframes, parent=None):
-        super().__init__(parent)
-        self.core = DialogCore(dataframes, destination_names=['index','columns','values'], parent=self)
+    def __init__(self, dataframes, gui=None, default=None):
+        super().__init__(gui)
+        self.core = DialogCore(dataframes, destination_names=['index','columns','values'], parent=self, default=default)
 
         self.show()
 
     def finish(self):
         dict = self.core.getChoices()
         df = self.core.getDataFrame()
-
-
-
+        df_name = self.core.getDataFrameName()
 
         try:
             index = dict['index']
@@ -31,17 +29,14 @@ class PivotDialog(QtWidgets.QDialog):
 
             from pandasgui import show
             pivot_table = df.pivot_table(values, index, columns)
-            print(pivot_table)
-            show(pivot_table, nonblocking=True)
+
+            self.gui.add_dataframe(df_name+"_pivot", pivot_table, parent_name = df_name)
+
         except Exception as e:
             print(e)
 
-
-
-
-
 class DialogCore(QtWidgets.QWidget):
-    def __init__(self, dataframes, destination_names=['Default'], parent=None):
+    def __init__(self, dataframes, destination_names=['Default'], parent=None, default=None):
         super().__init__(parent)
 
         self.dataframes = dataframes
@@ -53,6 +48,11 @@ class DialogCore(QtWidgets.QWidget):
         self.dataframePicker = QtWidgets.QComboBox()
         for df_name in dataframes.keys():
             self.dataframePicker.addItem(df_name)
+        # Set default selection
+        index = self.dataframePicker.findText(default)
+        if index!=-1:
+            self.dataframePicker.setCurrentIndex(index)
+        # Connect signal
         self.dataframePicker.currentIndexChanged.connect(self.initColumnPicker)
 
         # Build column picker
@@ -83,7 +83,7 @@ class DialogCore(QtWidgets.QWidget):
 
     def initColumnPicker(self):
         selected_dataframe = self.dataframePicker.itemText(self.dataframePicker.currentIndex())
-
+        print(selected_dataframe)
         self.dataframe = self.dataframes[selected_dataframe]['dataframe'].copy()
         self.dataframe.columns = flatten_multiindex(self.dataframe.columns)
         column_names = self.dataframe.columns
@@ -93,10 +93,14 @@ class DialogCore(QtWidgets.QWidget):
     def getChoices(self):
         return self.columnPicker.getDestinationItems()
 
+    def getDataFrameName(self):
+        return self.dataframePicker.itemText(self.dataframePicker.currentIndex())
+
     def getDataFrame(self):
         df_name = self.dataframePicker.itemText(self.dataframePicker.currentIndex())
         return self.dataframes[df_name]['dataframe']
 
+# List of column names and multiple lists (as QTreeWidgets) to drag them to
 class ColumnPicker(QtWidgets.QWidget):
     def __init__(self, column_names, destination_names=['Default']):
         super().__init__()

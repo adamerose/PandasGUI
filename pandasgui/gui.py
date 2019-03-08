@@ -8,7 +8,8 @@ import seaborn as sns
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 from pandasgui.dataframe_viewer import DataFrameView
-
+import qdarkstyle
+qdarkstyle.load_stylesheet_pyqt5()
 # This fixes lack of stack trace on PyQt exceptions
 try:
     import pyqt_fix
@@ -76,7 +77,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         # Create main Widget
         self.show()
-
+        # self.resize()
         # Center window on screen
         screen = QtWidgets.QDesktopWidget().screenGeometry()
         size = self.geometry()
@@ -123,13 +124,24 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.setCentralWidget(self.main_widget)
 
     def import_dataframe(self, path):
+        print(path)
+        if os.path.isfile(path) and path.endswith('.csv'):
+            df_name = os.path.split(path)[1]
+            df_object = pd.read_csv(path)
+            self.add_dataframe(df_name,df_object)
+        else:
+            print("Invalid file! \n", path)
 
-        df_name = os.path.split(path)[1]
-        df_object = pd.read_csv(path)
+    def add_dataframe(self, df_name, df_object, parent_name=None):
+        '''
 
-        self.add_dataframe(df_name,df_object)
+        :param df_name:
+        :param df_object:
+        :param parent_name: Name of the parent this should be under in the navbar
+        :return:
+        '''
 
-    def add_dataframe(self, df_name, df_object):
+        self.df_dicts[df_name] = {}
         self.df_dicts[df_name] = {}
         self.df_dicts[df_name]['dataframe'] = df_object
 
@@ -139,7 +151,11 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.tabs_stacked_widget.addWidget(tab_widget)
 
         # Add it to the nav
-        self.add_df_to_nav(df_name)
+        parent = None
+        for item in self.nav_tree.findItems(parent_name, Qt.MatchExactly, column=0):
+            parent = item
+
+        self.add_df_to_nav(df_name, parent)
 
     ####################
     # Menu bar functions
@@ -155,11 +171,16 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Add an option to the menu for each GUI style that exist for the user's system
         for style in QtWidgets.QStyleFactory.keys():
             styleAction = QtWidgets.QAction(f'&{style}', self, checkable=True)
-            styleAction.triggered.connect(lambda state, style=style: self.app.setStyle(style))
+            styleAction.triggered.connect(lambda state, style=style: self.app.setStyle(style) and self.app.setStyleSheet(""))
             styleGroup.addAction(styleAction)
             styleMenu.addAction(styleAction)
         # Set the default style
         styleAction.trigger()
+        # Add option for dark theme
+        styleAction = QtWidgets.QAction('&Dark', self, checkable=True)
+        styleAction.triggered.connect(lambda state, style=style: self.app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5()))
+        styleGroup.addAction(styleAction)
+        styleMenu.addAction(styleAction)
 
         # Creates a chart menu.
         chartMenu = menubar.addMenu('&Plot Charts')
@@ -192,7 +213,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Adds them to the tab_view
         tab_widget.addTab(dataframe_tab, "Dataframe")
         tab_widget.addTab(statistics_tab, "Statistics")
-        tab_widget.addTab(chart_tab, "Charts")
+        tab_widget.addTab(chart_tab, "Test")
 
         return tab_widget
 
@@ -250,8 +271,20 @@ class PandasGUI(QtWidgets.QMainWindow):
             super().__init__()
             self.gui = gui
             self.setHeaderLabels(['HeaderLabel'])
-
+            self.expandAll()
             self.setAcceptDrops(True)
+            self.setColumnWidth(0,200)
+
+        def rowsInserted(self, parent: QtCore.QModelIndex, start: int, end: int):
+            super().rowsInserted(parent,start,end)
+            self.expandAll()
+
+        def sizeHint(self):
+            # Width
+            width = 10
+            for i in range(self.columnCount()):
+                width += self.columnWidth(i)
+            return QtCore.QSize(width,500)
 
         def dragEnterEvent(self, e):
             if e.mimeData().hasUrls:
@@ -294,13 +327,18 @@ class PandasGUI(QtWidgets.QMainWindow):
     def test(self, x):
         print(self.df_dicts)
 
-    def add_df_to_nav(self, df_name):
+    def add_df_to_nav(self, df_name, parent=None):
         '''Add DataFrame to nav from df_dicts'''
+        if parent is None:
+            parent = self.nav_tree
+
         # Calculate and format the shape of the DataFrame
         shape = self.df_dicts[df_name]['dataframe'].shape
         shape = str(shape[0]) + ' X ' + str(shape[1])
 
-        QtWidgets.QTreeWidgetItem(self.nav_tree, [df_name, shape])
+        item = QtWidgets.QTreeWidgetItem(parent, [df_name, shape])
+        self.nav_tree.itemClicked.emit(item, 0)
+        self.nav_tree.setCurrentItem(item)
 
     def nav_clicked(self, item, column):
         """
@@ -314,7 +352,7 @@ class PandasGUI(QtWidgets.QMainWindow):
                               accessible with methods such as row() or data().
         """
 
-        df_name = item.data(column,Qt.DisplayRole)
+        df_name = item.data(0,Qt.DisplayRole)
         df_properties = self.df_dicts.get(df_name)
 
         # If the dataframe exists, change the tab widget shown.
@@ -328,7 +366,8 @@ class PandasGUI(QtWidgets.QMainWindow):
 
     def pivot_dialog(self):
         from pandasgui.pivot_dialog import PivotDialog
-        win = PivotDialog(self.df_dicts, parent=self)
+        default = self.nav_tree.currentItem().data(0,Qt.DisplayRole)
+        win = PivotDialog(self.df_dicts, default=default, gui=self)
 
     def scatter_dialog(self):
         from pandasgui.chart_dialogs import ScatterDialog
@@ -375,9 +414,10 @@ if __name__ == '__main__':
         file_paths = sys.argv[1:]
         file_dataframes = {}
         for path in file_paths:
-            df = pd.read_csv(path)
-            filename = os.path.split(path)[1]
-            file_dataframes[filename]=df
+            if os.path.isfile(path) and path.endswith('.csv'):
+                df = pd.read_csv(path)
+                filename = os.path.split(path)[1]
+                file_dataframes[filename]=df
 
         pokemon = pd.read_csv('sample_data/pokemon.csv')
         sample = pd.read_csv('sample_data/sample.csv')
@@ -392,7 +432,7 @@ if __name__ == '__main__':
         if file_dataframes:
             show(**file_dataframes)
         else:
-            show(sample, multidf=multidf, pokemon=pokemon)
+            show(pokemon, sample, multidf=multidf)
     except Exception as e:
         print(e)
         import traceback

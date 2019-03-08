@@ -122,6 +122,12 @@ class DataFrameTableModel(QtCore.QAbstractTableModel):
             row = index.row()
             col = index.column()
             cell = self.df.iloc[row, col]
+
+            if isinstance(cell, str):
+                try:
+                    cell = float(cell)
+                except ValueError:
+                    pass
             if isinstance(cell, np.floating):
                 return "{:.4f}".format(cell)
 
@@ -165,13 +171,13 @@ class DataFrameTableView(QtWidgets.QTableView):
     def sizeHint(self):
         # Set width and height based on number of columns in model
         # Width
-        width = 4  # To account for borders
+        width = 8  # To account for borders
         width += self.verticalHeader().width()
         for i in range(self.model().columnCount()):
             width += self.columnWidth(i)
 
         # Height
-        height = 0
+        height = 8
         height += self.horizontalHeader().height()
         for i in range(self.model().rowCount()):
             height += self.rowHeight(i)
@@ -287,16 +293,14 @@ class DataFrameHeaderView(QtWidgets.QTableView):
             self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)  # Scrollbar is replaced in DataFrameView
             self.horizontalHeader().hide()
             self.verticalHeader().setDisabled(True)
-            self.setStyleSheet("background-color: #F8F8F8;"
-                               "border: 0px solid black;")
-
-            self.resizeHorzHeader()
+            # self.setStyleSheet("background-color: #F8F8F8;"
+            #                    "border: 0px solid black;")
         else:
             self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             self.verticalHeader().hide()
             self.horizontalHeader().setDisabled(True)
-            self.setStyleSheet("background-color: #F8F8F8;"
-                               "border: 0px solid black;")
+            # self.setStyleSheet("background-color: #F8F8F8;"
+            #                    "border: 0px solid black;")
 
             self.resizeVertHeader()
 
@@ -418,7 +422,7 @@ class DataFrameHeaderView(QtWidgets.QTableView):
             # Width of DataFrameTableView
             width = self.table.sizeHint().width() + self.verticalHeader().width()
             # Height
-            height = 2
+            height = 8
             for i in range(self.model().rowCount()):
                 height += self.rowHeight(i)
         # Vertical DataFrameHeaderView
@@ -426,7 +430,7 @@ class DataFrameHeaderView(QtWidgets.QTableView):
             # Height of DataFrameTableView
             height = self.table.sizeHint().height() + self.horizontalHeader().height()
             # Width
-            width = 2
+            width = 8
             for i in range(self.model().columnCount()):
                 width += self.columnWidth(i)
         return QSize(width, height)
@@ -435,9 +439,9 @@ class DataFrameHeaderView(QtWidgets.QTableView):
     def minimumSizeHint(self):
         if self.orientation == Qt.Horizontal:
             height = self.sizeHint().height()
-            width = 50
+            width = 8
         else:
-            height = 50
+            height = 8
             width = self.sizeHint().width()
         return QSize(width, height)
 
@@ -478,9 +482,9 @@ if __name__ == '__main__':
     tab_df.insert(loc=0, column='Type', value=multidf.dtypes)
 
     pivot_table = pokemon.pivot_table(values='HP', index='Generation')
-    print(pivot_table)
+    df7 = pd.read_csv(r"C:\Users\Adam-PC\Desktop\pivot tut\SalesOrders.csv").describe(include='all')
 
-    view = DataFrameView(pivot_table)
+    view = DataFrameView(df7)
     view.show()
 
     # view2 = DataFrameTableView(df)
