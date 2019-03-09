@@ -295,12 +295,14 @@ class DataFrameHeaderView(QtWidgets.QTableView):
             self.verticalHeader().setDisabled(True)
             # self.setStyleSheet("background-color: #F8F8F8;"
             #                    "border: 0px solid black;")
+            self.setStyleSheet("padding: 1px;")
         else:
             self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             self.verticalHeader().hide()
             self.horizontalHeader().setDisabled(True)
             # self.setStyleSheet("background-color: #F8F8F8;"
             #                    "border: 0px solid black;")
+            self.setStyleSheet("padding: 1px;")
 
             self.resizeVertHeader()
 

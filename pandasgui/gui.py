@@ -15,7 +15,6 @@ try:
 except ImportError:
     pass
 
-
 class PandasGUI(QtWidgets.QMainWindow):
 
     def __init__(self, nonblocking=False, **kwargs):
@@ -288,7 +287,7 @@ class PandasGUI(QtWidgets.QMainWindow):
             width = 10
             for i in range(self.columnCount()):
                 width += self.columnWidth(i)
-            return QtCore.QSize(width, 500)
+            return QtCore.QSize(500, 500)
 
         def dragEnterEvent(self, e):
             if e.mimeData().hasUrls:

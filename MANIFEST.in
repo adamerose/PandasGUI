@@ -1,0 +1,4 @@
+include *.md
+recursive-include pandasgui *.csv
+recursive-include pandasgui *.png
+recursive-include pandasgui *.txt
