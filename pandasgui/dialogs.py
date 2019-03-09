@@ -1,6 +1,5 @@
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QTreeWidgetItem
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -9,10 +8,12 @@ import pandas as pd
 from pandasgui.functions import flatten_multiindex
 import sys
 
+
 class PivotDialog(QtWidgets.QDialog):
     def __init__(self, dataframes, gui=None, default=None):
         super().__init__(gui)
-        self.core = DialogCore(dataframes, destination_names=['index','columns','values'], parent=self, default=default)
+        self.core = DialogCore(dataframes, destination_names=['index', 'columns', 'values'], parent=self,
+                               default=default)
 
         self.show()
 
@@ -26,14 +27,37 @@ class PivotDialog(QtWidgets.QDialog):
             columns = dict['columns']
             values = dict['values']
 
-
             from pandasgui import show
             pivot_table = df.pivot_table(values, index, columns)
 
-            self.gui.add_dataframe(df_name+"_pivot", pivot_table, parent_name = df_name)
+            self.gui.add_dataframe(df_name + "_pivot", pivot_table, parent_name=df_name)
 
         except Exception as e:
             print(e)
+
+
+class ScatterDialog(QtWidgets.QDialog):
+    def __init__(self, dataframes, gui=None, default=None):
+        super().__init__(gui)
+        self.core = DialogCore(dataframes, destination_names=['X Variable', 'Y Variable', 'Color By'], parent=self,
+                               default=default)
+
+        self.show()
+
+    def finish(self):
+        dict = self.core.getChoices()
+        df = self.core.getDataFrame()
+
+        try:
+            x = dict['X Variable'][0]
+            y = dict['Y Variable'][0]
+            c = dict['Color By'][0]
+        except IndexError:
+            c = None
+
+        sns.scatterplot(x, y, c, data=df)
+        plt.show()
+
 
 class DialogCore(QtWidgets.QWidget):
     def __init__(self, dataframes, destination_names=['Default'], parent=None, default=None):
@@ -50,13 +74,13 @@ class DialogCore(QtWidgets.QWidget):
             self.dataframePicker.addItem(df_name)
         # Set default selection
         index = self.dataframePicker.findText(default)
-        if index!=-1:
+        if index != -1:
             self.dataframePicker.setCurrentIndex(index)
         # Connect signal
         self.dataframePicker.currentIndexChanged.connect(self.initColumnPicker)
 
         # Build column picker
-        self.columnPicker = ColumnPicker([],destination_names=destination_names)
+        self.columnPicker = ColumnPicker([], destination_names=destination_names)
         self.initColumnPicker()
 
         # Add button
@@ -74,7 +98,7 @@ class DialogCore(QtWidgets.QWidget):
         layout.addWidget(self.dataframePicker)
         layout.addWidget(self.columnPicker)
         layout.addLayout(buttonLayout)
-        self.resize(640,480)
+        self.resize(640, 480)
 
         self.show()
 
@@ -100,6 +124,7 @@ class DialogCore(QtWidgets.QWidget):
         df_name = self.dataframePicker.itemText(self.dataframePicker.currentIndex())
         return self.dataframes[df_name]['dataframe']
 
+
 # List of column names and multiple lists (as QTreeWidgets) to drag them to
 class ColumnPicker(QtWidgets.QWidget):
     def __init__(self, column_names, destination_names=['Default']):
@@ -112,7 +137,6 @@ class ColumnPicker(QtWidgets.QWidget):
         self.destinations = []
         for name in destination_names:
             self.destinations.append(DestTree(name))
-
 
         # Add items to layout
         self.destLayout = QtWidgets.QVBoxLayout()
@@ -144,7 +168,6 @@ class ColumnPicker(QtWidgets.QWidget):
     def moveSelectedLeft(self):
 
         items = self.columnDestination.selectedItems()
-
 
     def addTreeItem(self, label):
         # Add to tree
@@ -205,9 +228,9 @@ class DestTree(QtWidgets.QTreeWidget):
             treeItem.setFlags(treeItem.flags() & ~QtCore.Qt.ItemIsDropEnabled)
 
             # Set 2nd column
-            treeItem.setData(1,Qt.DisplayRole,"test")
+            treeItem.setData(1, Qt.DisplayRole, "test")
 
-        if type(event.source())==SourceList:
+        if type(event.source()) == SourceList:
             event.source().resetItems()
 
         print(self.getItems())
@@ -219,6 +242,7 @@ class DestTree(QtWidgets.QTreeWidget):
             treeItem = self.topLevelItem(i)
             items.append(treeItem.text(0))
         return items
+
 
 class SourceList(QtWidgets.QListWidget):
     def __init__(self, columnNames=[], parent=None):
@@ -244,8 +268,8 @@ class SourceList(QtWidgets.QListWidget):
         for name in self.columnNames:
             self.addItem(name)
 
-if __name__=='__main__':
 
+if __name__ == '__main__':
     dataframes = {}
 
     pokemon = pd.read_csv('sample_data/pokemon.csv')

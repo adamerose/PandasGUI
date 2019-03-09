@@ -64,6 +64,7 @@ class TabbedFigureViewer(QtWidgets.QWidget):
         os.system("start " + filename)
         win = TabbedFigureViewer(figs)
 
+
 class FigureViewer(QtWidgets.QWidget):
     def __init__(self, image=Figure()):
         super().__init__()
@@ -92,7 +93,6 @@ class FigureViewer(QtWidgets.QWidget):
         self.ax.clear()
         self.ax.plot(data, '*-')
         self.canvas.draw()
-
 
 
 def to_ppt_slide(fig, file_path, append=False, padding=0.5):

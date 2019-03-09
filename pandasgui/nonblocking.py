@@ -1,5 +1,5 @@
 '''
-This module creates a nonblocking instance of the Pandas GUI in a separate process. Works in both script & interactive mode
+Creates a nonblocking instance of the Pandas GUI in a separate process. Works in both script & interactive mode
 '''
 
 import multiprocess
@@ -28,16 +28,10 @@ def show_nonblocking(**kwargs):
 
 if __name__ == '__main__':
     import pandas as pd
-    from pandasgui.gui import show
+    from pandasgui import show
 
     pokemon = pd.read_csv('sample_data/pokemon.csv')
-
     sample = pd.read_csv('sample_data/sample.csv')
 
-    tuples = [('A', 'one', 'x'), ('A', 'one', 'y'), ('A', 'two', 'x'), ('A', 'two', 'y'),
-              ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')]
-    index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
-    multidf = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
-
     show(sample, nonblocking=True)
-    show(multidf)
+    show(pokemon)

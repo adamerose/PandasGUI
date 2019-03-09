@@ -333,7 +333,6 @@ class DataFrameHeaderView(QtWidgets.QTableView):
             if width > max_size:
                 self.setColumnWidth(col, max_size)
 
-
     # This sets spans to group together adjacent cells with the same values
     def setSpans(self):
         df = self.model().df
@@ -467,8 +466,8 @@ if __name__ == '__main__':
                ('E'), ('F'), ('F'), ('H')]
     df3 = pd.DataFrame(pd.np.random.randint(0, 10, (4, 8)), index=singles[0:4], columns=singles[0:8])
 
-    n=60
-    df6 = pd.DataFrame([[1 for i in range(n)]],columns=["x"*i for i in range(n,0,-1)])
+    n = 60
+    df6 = pd.DataFrame([[1 for i in range(n)]], columns=["x" * i for i in range(n, 0, -1)])
 
     pokemon = pd.read_csv(r'C:\_MyFiles\Programming\Python Projects\pandasgui\pandasgui\sample_data\pokemon.csv')
     # sample = pd.read_csv('sample_data/sample.csv')

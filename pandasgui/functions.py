@@ -1,10 +1,12 @@
 import pandas as pd
 import numpy as np
 
+
 # %% Reshaping
 
 def pivot(df, keys, categories, data):
     return pivoted_df
+
 
 # %%
 def save_figs_to_ppt(figs, filename):
@@ -57,9 +59,11 @@ def flatten_multiindex(mi, sep=' - ', format=None):
 
     return flat_index
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     #### EXAMPLES ####
     from gui import show
+
     X = False  # I'm just using "if X:" instead of "if False:" so my IDE doesn't complain about unreachable code
     #### flatten_multiindex ####
     if 1:
@@ -68,7 +72,7 @@ if __name__=='__main__':
         tuples = list(zip(*arrays))
         index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
         s = pd.Series(np.random.randn(8), index=index)
-        show(s,nonblocking=True)
+        show(s, nonblocking=True)
         s.index = flatten_multiindex(s.index)
         show(s)
 
@@ -84,6 +88,5 @@ if __name__=='__main__':
 
         grouped = df.groupby(keys + categories)
         aggregated = grouped.agg(data)
-        aggregated.columns.names = ['AggColumn','AggFunc']
+        aggregated.columns.names = ['AggColumn', 'AggFunc']
         pivoted_df = aggregated.unstack(categories)
-
