@@ -95,23 +95,15 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Make the menu bar
         self.make_menu_bar()
 
-        # Make the navigation bar
-        self.make_nav()
-
         # Make the QTabWidgets for each DataFrame
         self.tabs_stacked_widget = QtWidgets.QStackedWidget()
-
-        # Iterate over all dataframe names and make the tab_widgets
         for df_name in self.df_dicts.keys():
             tab_widget = self.make_tab_widget(df_name)
             self.df_dicts[df_name]['tab_widget'] = tab_widget
             self.tabs_stacked_widget.addWidget(tab_widget)
 
-        initial_df_name = list(self.df_dicts.keys())[0]
-        initial_tab_widget = self.df_dicts[initial_df_name]['tab_widget']
-        self.df_shown = self.df_dicts[initial_df_name]['dataframe']
-
-        self.tabs_stacked_widget.setCurrentWidget(initial_tab_widget)
+        # Make the navigation bar
+        self.make_nav()
 
         # Adds navigation section to splitter.
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
@@ -213,6 +205,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         chart_tab = self.make_tab_charts()
 
         tab_widget = QtWidgets.QTabWidget()
+
         # Adds them to the tab_view
         tab_widget.addTab(dataframe_tab, "Dataframe")
         tab_widget.addTab(statistics_tab, "Statistics")
@@ -321,11 +314,11 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         # Creates the headers.
         self.nav_tree.setHeaderLabels(['Name', 'Shape'])
-
+        self.nav_tree.itemClicked.connect(self.nav_clicked)
         for df_name in df_names:
             self.add_df_to_nav(df_name)
 
-        self.nav_tree.itemClicked.connect(self.nav_clicked)
+
 
     def test(self, x):
         print(self.df_dicts)

@@ -80,12 +80,10 @@ class DataFrameView(QtWidgets.QWidget):
 
         # Add items to layout
         self.gridLayout.addLayout(horzHeaderLayout, 0, 0, 1, 2)
-        self.gridLayout.addWidget(self.vertHeader, 1, 0)
+        self.gridLayout.addWidget(self.vertHeader, 1, 0, 1, 1)
         self.gridLayout.addLayout(tableViewLayout, 1, 1)
-        self.gridLayout.addWidget(self.tableView.horizontalScrollBar(), 2, 1, 2, 1)
-        self.gridLayout.addWidget(self.tableView.verticalScrollBar(), 1, 2, 1, 1)
-        self.gridLayout.setColumnStretch(3, 1)
-        self.gridLayout.setRowStretch(4, 1)
+        self.gridLayout.addWidget(self.tableView.horizontalScrollBar(), 2, 1, 2, 1, alignment=Qt.AlignTop)
+        self.gridLayout.addWidget(self.tableView.verticalScrollBar(), 1, 2, 1, 1, alignment=Qt.AlignLeft)
 
         # self.setStyleSheet("background-color: white")
 
@@ -172,13 +170,11 @@ class DataFrameTableView(QtWidgets.QTableView):
         # Set width and height based on number of columns in model
         # Width
         width = 8  # To account for borders
-        width += self.verticalHeader().width()
         for i in range(self.model().columnCount()):
             width += self.columnWidth(i)
 
         # Height
         height = 8
-        height += self.horizontalHeader().height()
         for i in range(self.model().rowCount()):
             height += self.rowHeight(i)
 
@@ -485,7 +481,7 @@ if __name__ == '__main__':
     pivot_table = pokemon.pivot_table(values='HP', index='Generation')
     df7 = pd.read_csv(r"C:\Users\Adam-PC\Desktop\pivot tut\SalesOrders.csv").describe(include='all')
 
-    view = DataFrameView(df7)
+    view = DataFrameView(pokemon)
     view.show()
 
     # view2 = DataFrameTableView(df)

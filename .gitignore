@@ -6,11 +6,20 @@ test.py
 1500000 Sales Records.csv
 *.pyc
 qtdesigner
-build/
-dist/
+Scripts/
 *.spec
 
+# PyPI
+build/
+dist/
+Lib/
+src/
+tcl/
+Include/
 
+# Pipenv
+Pipfile
+Pipfile.lock
 
 # Created by https://www.gitignore.io/api/python
 # Edit at https://www.gitignore.io/?templates=python
