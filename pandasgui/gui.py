@@ -5,9 +5,7 @@ import pandas as pd
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 from pandasgui.dataframe_viewer import DataFrameView
-import qdarkstyle
-
-qdarkstyle.load_stylesheet_pyqt5()
+from pandasgui.dialogs import PivotDialog, ScatterDialog
 
 # Fix lack of stack trace on PyQt exceptions
 try:
@@ -79,11 +77,21 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         # Create main Widget
         self.show()
-        # self.resize()
+
+        screen = QtWidgets.QDesktopWidget().screenGeometry()
+
+        percentage_of_screen = 0.6
+        size = tuple((pd.np.array([screen.width(), screen.height()])*percentage_of_screen).astype(int))
+        self.resize(QtCore.QSize(*size))
+
+        print('test')
+        print(size)
+        print(self.size())
         # Center window on screen
         screen = QtWidgets.QDesktopWidget().screenGeometry()
         size = self.geometry()
         self.move(int((screen.width() - size.width()) / 2), int((screen.height() - size.height()) / 2))
+
 
     def setupUI(self):
         """
@@ -171,12 +179,6 @@ class PandasGUI(QtWidgets.QMainWindow):
             styleMenu.addAction(styleAction)
         # Set the default style
         styleAction.trigger()
-        # Add option for dark theme
-        styleAction = QtWidgets.QAction('&Dark', self, checkable=True)
-        styleAction.triggered.connect(
-            lambda state, style=style: self.app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5()))
-        styleGroup.addAction(styleAction)
-        styleMenu.addAction(styleAction)
 
         # Creates a chart menu.
         chartMenu = menubar.addMenu('&Plot Charts')
@@ -361,12 +363,10 @@ class PandasGUI(QtWidgets.QMainWindow):
     # Dialog functions.
 
     def pivot_dialog(self):
-        from pandasgui.dialogs import PivotDialog
         default = self.nav_tree.currentItem().data(0, Qt.DisplayRole)
         win = PivotDialog(self.df_dicts, default=default, gui=self)
 
     def scatter_dialog(self):
-        from pandasgui.dialogs import ScatterDialog
         default = self.nav_tree.currentItem().data(0, Qt.DisplayRole)
         win = ScatterDialog(self.df_dicts, default=default, gui=self)
 
@@ -399,11 +399,12 @@ def show(*args, nonblocking=False, **kwargs):
 
     # Creeate the application and PandasGUI window
     app = QtWidgets.QApplication.instance()
+    if app:
+        print('Using existing QApplication instance')
     if not app:
         app = QtWidgets.QApplication(sys.argv)
     win = PandasGUI(**kwargs)
     app.exec_()
-
 
 if __name__ == '__main__':
     try:
@@ -428,7 +429,7 @@ if __name__ == '__main__':
         if file_dataframes:
             show(**file_dataframes)
         else:
-            show(pokemon, sample, multidf=multidf)
+            show(multidf=multidf)
     except Exception as e:
         print(e)
         import traceback

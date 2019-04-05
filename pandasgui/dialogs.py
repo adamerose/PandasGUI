@@ -4,84 +4,54 @@ from PyQt5.QtCore import Qt
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+import re
 
 from pandasgui.functions import flatten_multiindex
 import sys
 
 
-class PivotDialog(QtWidgets.QDialog):
-    def __init__(self, dataframes, gui=None, default=None):
-        super().__init__(gui)
-        self.core = DialogCore(dataframes, destination_names=['index', 'columns', 'values'], parent=self,
-                               default=default)
+# %% These classes are all inherited and reused by multiple dialog types (pivot, scatter, etc.)
 
-        self.show()
+class DialogGeneric(QtWidgets.QDialog):
+    """
+    This widget allows the user to pick columns from DataFrames and pass the choices to a wrapper class with getters
 
-    def finish(self):
-        dict = self.core.getChoices()
-        df = self.core.getDataFrame()
-        df_name = self.core.getDataFrameName()
+    Args:
+        dataframes:
+        destination_names:
+        destination_options:
+        parent:
+        default:
+    """
+    def __init__(self, dataframes, destination_names, title, parent=None, default_df=None):
 
-        try:
-            index = dict['index']
-            columns = dict['columns']
-            values = dict['values']
-
-            from pandasgui import show
-            pivot_table = df.pivot_table(values, index, columns)
-
-            self.gui.add_dataframe(df_name + "_pivot", pivot_table, parent_name=df_name)
-
-        except Exception as e:
-            print(e)
-
-
-class ScatterDialog(QtWidgets.QDialog):
-    def __init__(self, dataframes, gui=None, default=None):
-        super().__init__(gui)
-        self.core = DialogCore(dataframes, destination_names=['X Variable', 'Y Variable', 'Color By'], parent=self,
-                               default=default)
-
-        self.show()
-
-    def finish(self):
-        dict = self.core.getChoices()
-        df = self.core.getDataFrame()
-
-        try:
-            x = dict['X Variable'][0]
-            y = dict['Y Variable'][0]
-            c = dict['Color By'][0]
-        except IndexError:
-            c = None
-
-        sns.scatterplot(x, y, c, data=df)
-        plt.show()
-
-
-class DialogCore(QtWidgets.QWidget):
-    def __init__(self, dataframes, destination_names=['Default'], parent=None, default=None):
         super().__init__(parent)
 
         self.dataframes = dataframes
+        self.setWindowTitle(title)
 
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
 
+        # Create column picker
+        self.columnPicker = Picker(destination_names=destination_names)
+
         # Create DataFrame picker dropdown
         self.dataframePicker = QtWidgets.QComboBox()
+        # Fill the dataframe picker with the names of dataframes
         for df_name in dataframes.keys():
             self.dataframePicker.addItem(df_name)
-        # Set default selection
-        index = self.dataframePicker.findText(default)
+
+        # Set default selection and trigger currentIndexChanged
+        index = self.dataframePicker.findText(default_df)
         if index != -1:
             self.dataframePicker.setCurrentIndex(index)
-        # Connect signal
-        self.dataframePicker.currentIndexChanged.connect(self.initColumnPicker)
+        else:
+            self.dataframePicker.setCurrentIndex(0)
+        self.dataframeChanged()
 
-        # Build column picker
-        self.columnPicker = ColumnPicker([], destination_names=destination_names)
-        self.initColumnPicker()
+        # Connect signals
+        self.dataframePicker.currentIndexChanged.connect(self.dataframeChanged)
 
         # Add button
         btnFinish = QtWidgets.QPushButton("Finish")
@@ -98,23 +68,13 @@ class DialogCore(QtWidgets.QWidget):
         layout.addWidget(self.dataframePicker)
         layout.addWidget(self.columnPicker)
         layout.addLayout(buttonLayout)
+
         self.resize(640, 480)
 
-        self.show()
-
     def finish(self):
-        self.parent().finish()
+        print('Finish (This should be overridden)')
 
-    def initColumnPicker(self):
-        selected_dataframe = self.dataframePicker.itemText(self.dataframePicker.currentIndex())
-        print(selected_dataframe)
-        self.dataframe = self.dataframes[selected_dataframe]['dataframe'].copy()
-        self.dataframe.columns = flatten_multiindex(self.dataframe.columns)
-        column_names = self.dataframe.columns
-
-        self.columnPicker.resetValues(column_names)
-
-    def getChoices(self):
+    def getDestinationItems(self):
         return self.columnPicker.getDestinationItems()
 
     def getDataFrameName(self):
@@ -124,19 +84,33 @@ class DialogCore(QtWidgets.QWidget):
         df_name = self.dataframePicker.itemText(self.dataframePicker.currentIndex())
         return self.dataframes[df_name]['dataframe']
 
+    def dataframeChanged(self):
+        print('dfchanged')
+        # Get the name of the selected dataframe from the dataframePicker
+        selected_df_name = self.dataframePicker.itemText(self.dataframePicker.currentIndex())
+        self.selected_df = self.dataframes[selected_df_name]['dataframe'].copy()
 
-# List of column names and multiple lists (as QTreeWidgets) to drag them to
-class ColumnPicker(QtWidgets.QWidget):
-    def __init__(self, column_names, destination_names=['Default']):
+        self.initColumnPicker()
+
+    def initColumnPicker(self):
+        self.columnPicker.clearDestinationItems()
+        column_names = list(self.selected_df.columns)
+        self.columnPicker.setSourceItems(column_names)
+
+# Widget for selecting DataFrame columns from the SourceList into multiple destination lists (DestList) for usage in
+# the dialog function. For example the destinations could be XVariable, Y-Variables, ColorBy for the ScatterPlot dialog
+class Picker(QtWidgets.QWidget):
+    def __init__(self, destination_names=['Default Dest'], column_names = ['Default Cols']):
         super().__init__()
 
         # Set up widgets and layout
         layout = QtWidgets.QHBoxLayout()
         self.setLayout(layout)
-        self.columnSource = SourceList(column_names)
+
+        self.columnSource = RegexSourceList(column_names)
         self.destinations = []
         for name in destination_names:
-            self.destinations.append(DestTree(name))
+            self.destinations.append(DestList(name))
 
         # Add items to layout
         self.destLayout = QtWidgets.QVBoxLayout()
@@ -145,51 +119,19 @@ class ColumnPicker(QtWidgets.QWidget):
         layout.addWidget(self.columnSource)
         layout.addLayout(self.destLayout)
 
-    def resetValues(self, column_names):
+    def setSourceItems(self, items=None):
+        self.columnSource.setItems(items)
 
+    def resetItems(self):
         # Clear list
-        self.columnSource.columnNames = column_names
-        self.columnSource.resetItems()
+        self.columnSource.setItems()
 
+    def clearDestinationItems(self):
         # Clear tree
         for dest in self.destinations:
             dest.clear()
 
-    def moveSelectedRight(self, index):
-        sourceItems = self.columnSource.selectedItems()
-
-        for item in sourceItems:
-            self.addTreeItem(item.text())
-
-            # Remove from list
-            self.columnSource.removeItemWidget(item)
-
-    # Takes a list of QTreeWidgetItem items and adds them to the QListWidget
-    def moveSelectedLeft(self):
-
-        items = self.columnDestination.selectedItems()
-
-    def addTreeItem(self, label):
-        # Add to tree
-        destinationSection = self.columnDestination.selectedItems()[0]
-        treeItem = QtWidgets.QTreeWidgetItem(destinationSection, [label])
-        destinationSection.setExpanded(True)
-        treeItem.setFlags(treeItem.flags() & ~QtCore.Qt.ItemIsDropEnabled)
-
-        print(self.getDestinationItems())
-
-    # Takes a list of QTreeWidgetItem items and removes them from the tree
-    def removeTreeItems(self, items):
-        for item in items:
-            item.parent().removeChild(item)
-
-    def addListItem(self, label):
-        pass
-
-    def removeListItem(self, label):
-        pass
-
-    # Return a dict of the items in the destination tree
+    # Return a dict of the items in the destination trees
     def getDestinationItems(self):
         items = {}
 
@@ -197,79 +139,216 @@ class ColumnPicker(QtWidgets.QWidget):
             items[dest.title] = dest.getItems()
         return items
 
-
-class DestTree(QtWidgets.QTreeWidget):
+# Though the content is a flat list this is implemented as a QTreeWidget for some additional functionality like column
+# titles and multiple columns
+class DestList(QtWidgets.QTreeWidget):
     def __init__(self, title='Variable', parent=None):
         super().__init__(parent)
         self.title = title
+        self.setHeaderLabels([title])
 
         # Tree settings
-        self.setHeaderLabels([title])
-        # self.columnDestination.setSelectionBehavior(self.columnDestination.SelectRows)
-
         self.setDragDropMode(self.DragDrop)
         self.setSelectionMode(self.ExtendedSelection)
         self.setDefaultDropAction(QtCore.Qt.MoveAction)
         self.setAcceptDrops(True)
 
+        # Remove items by double clicking them
         self.doubleClicked.connect(self.removeSelectedItems)
 
     def removeSelectedItems(self):
         for item in self.selectedItems():
             self.invisibleRootItem().removeChild(item)
 
-    def dropEvent(self, event):
-        QtWidgets.QTreeWidget.dropEvent(self, event)
-
-        # Loop over tree items
-        for i in range(self.topLevelItemCount()):
-            # Don't allow dropping items inside other items
-            treeItem = self.topLevelItem(i)
-            treeItem.setFlags(treeItem.flags() & ~QtCore.Qt.ItemIsDropEnabled)
-
-            # Set 2nd column
-            treeItem.setData(1, Qt.DisplayRole, "test")
-
-        if type(event.source()) == SourceList:
-            event.source().resetItems()
-
-        print(self.getItems())
-
-    # Return a list of strings of the items in the tree
     def getItems(self):
+        """
+        Returns:
+            [str]: a list of the items in the tree
+        """
         items = []
         for i in range(self.topLevelItemCount()):
             treeItem = self.topLevelItem(i)
             items.append(treeItem.text(0))
         return items
 
+class RegexSourceList(QtWidgets.QWidget):
+    def __init__(self, item_list, parent=None):
+        super().__init__(parent=parent)
+        self.item_list = item_list
+
+        layout = QtWidgets.QVBoxLayout()
+        self.setLayout(layout)
+
+        self.searchBox = QtWidgets.QLineEdit()
+        self.list = SourceList(parent=parent)
+        self.setItems(item_list)
+
+        self.searchBox.textChanged.connect(self.filter)
+
+        layout.addWidget(self.searchBox)
+        layout.addWidget(self.list)
+
+    def filter(self):
+        filteredItems = [item for item in self.item_list if re.search(self.searchBox.text().lower(), item.lower())]
+        self.list.setItems(filteredItems)
+
+    def setItems(self, items):
+        self.item_list = items
+        self.list.setItems(items)
+
 
 class SourceList(QtWidgets.QListWidget):
-    def __init__(self, columnNames=[], parent=None):
-        super().__init__(parent)
-        self.columnNames = columnNames
+    '''
+    A QListWidget that shows the list of column names for a dataframe given as columnNames
+    '''
 
-        self.resetItems()
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
         # Settings
         self.setDragDropMode(self.DragDrop)
         self.setSelectionMode(self.ExtendedSelection)
-        self.setDefaultDropAction(QtCore.Qt.MoveAction)
+        self.setDefaultDropAction(QtCore.Qt.CopyAction)
         self.setAcceptDrops(True)
 
+    # Allow dropping to this list but keep it unchanging by resetting it every time this happens. So the item will just
+    # be removed from the DestList it was dragged from.
     def dropEvent(self, event):
-        print('asf')
+
+        itemsTextList = self.getItems()
+
+        # Default action
         QtWidgets.QListWidget.dropEvent(self, event)
 
-        self.resetItems()
+        self.setItems(itemsTextList)
 
-    def resetItems(self):
+    def getItems(self):
+        return [str(self.item(i).text()) for i in range(self.count())]
+
+    # This gets called when an item gets dragged from DestList to SourceList or vice versa
+    def setItems(self, items):
         self.clear()
-        for name in self.columnNames:
+        for name in items:
             self.addItem(name)
 
+# %% Specific dialogs that inherit GenericDialog
 
-if __name__ == '__main__':
+
+###
+class PivotDialog(DialogGeneric):
+    def __init__(self, dataframes, default_df=None, parent=None):
+        super().__init__(dataframes, destination_names=['index', 'columns', 'values'], default_df=default_df, title='Pivot', parent=parent)
+
+        self.show()
+
+    def finish(self):
+        dict = self.getDestinationItems()
+        df = self.getDataFrame()
+        df_name = self.getDataFrameName()
+
+        try:
+            index = dict['index']
+            columns = dict['columns']
+            values = dict['values']
+
+            from pandasgui import show
+            pivot_table = df.pivot_table(values, index, columns)
+
+            self.gui.add_dataframe(df_name + "_pivot", pivot_table, parent_name=df_name)
+
+        except Exception as e:
+            print(e)
+
+##
+
+class Categorizer(QtWidgets.QDialog):
+    def __init__(self, df, column):
+        super().__init__()
+
+
+        self.layout = QtWidgets.QVBoxLayout()
+        self.setLayout(self.layout)
+        self.df = df
+        from pandasgui import show
+        self.column_name = column
+        self.names = QtWidgets.QLineEdit()
+        self.names.textChanged.connect(self.makePicker)
+
+        self.picker = Picker(['col1','col2','col3'], df[column].astype(str).unique())
+
+        # Add button
+        btnFinish = QtWidgets.QPushButton("Finish")
+        btnFinish.clicked.connect(self.finish)
+        btnReset = QtWidgets.QPushButton("Reset")
+        btnReset.clicked.connect(self.finish)
+        buttonLayout = QtWidgets.QHBoxLayout()
+        spacer = QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        buttonLayout.addSpacerItem(spacer)
+        buttonLayout.addWidget(btnReset)
+        buttonLayout.addWidget(btnFinish)
+
+        # Add all to layout
+        self.layout.addLayout(buttonLayout)
+        self.layout.addWidget(self.names)
+        self.layout.addWidget(self.picker)
+        self.show()
+    def makePicker(self):
+        self.layout.removeWidget(self.picker)
+        self.df[self.column_name].astype(str).unique()
+        self.picker = Picker(self.names.text().split(','), self.df[self.column_name].astype(str).unique())
+        print(self.df[self.column_name].astype(str).unique())
+        self.layout.addWidget(self.picker)
+
+    def finish(self):
+        dict = self.picker.getDestinationItems()
+
+        try:
+            print(self.picker.getDestinationItems())
+            mapping = {
+                'Columbia': 'South-America',
+                'Ecuador': 'South-America',
+                'Peru': 'South-America',
+                'South-Africa': 'Africa',
+                'Namibia': 'Africa',
+            }
+
+            results = self.picker.getDestinationItems()
+            mapping = {}
+            for key in results.keys():
+                for value in results[key]:
+                    mapping[value] = key
+
+            print(mapping)
+            self.df[self.column_name + ' Categorized'] = self.df[self.column_name].astype(str).replace(mapping)
+            from pandasgui import show
+            show(self.df)
+
+        except Exception as e:
+            print(e)
+
+class ScatterDialog(DialogGeneric):
+    def __init__(self, dataframes, default_df=None, parent=None):
+        super().__init__(dataframes, destination_names=['X Variable', 'Y Variable', 'Color By'], default_df=default_df, title='Scatter Plot', parent=parent)
+
+        self.show()
+
+    def finish(self):
+        dict = self.getDestinationItems()
+        df = self.getDataFrame()
+
+        try:
+            x = dict['X Variable'][0]
+            y = dict['Y Variable'][0]
+            c = dict['Color By'][0]
+        except IndexError:
+            c = None
+
+        sns.scatterplot(x, y, c, data=df)
+        plt.show()
+
+# %%
+
+def main():
     dataframes = {}
 
     pokemon = pd.read_csv('sample_data/pokemon.csv')
@@ -283,7 +362,14 @@ if __name__ == '__main__':
     ## PyQt
     app = QtWidgets.QApplication(sys.argv)
 
-    win = PivotDialog(dataframes)
-    # win = Tree()
+
+    # win = ScatterDialog(dataframes)
+    from pandasgui import show
+    win = Categorizer(pokemon, 'Generation')
+    show(pokemon)
     win.show()
     app.exec_()
+
+if __name__ == '__main__':
+    main()
+

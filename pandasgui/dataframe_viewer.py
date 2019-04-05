@@ -91,8 +91,10 @@ class DataFrameView(QtWidgets.QWidget):
                      self.tableView.verticalScrollBar()]:
             item.setContentsMargins(0, 0, 0, 0)
             # item.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed))
-            # item.setStyleSheet("border: 1px solid red;")
+            item.setStyleSheet("border: 0px solid black;")
             item.show()
+
+        # self.tableView.setStyleSheet("border: 0px solid red;")
 
 
 class DataFrameTableModel(QtCore.QAbstractTableModel):
@@ -121,12 +123,19 @@ class DataFrameTableModel(QtCore.QAbstractTableModel):
             col = index.column()
             cell = self.df.iloc[row, col]
 
+            # Convert string to float if possible
             if isinstance(cell, str):
                 try:
                     cell = float(cell)
                 except ValueError:
                     pass
-            if isinstance(cell, np.floating):
+
+            # NaN case
+            if pd.isnull(cell):
+                return ""
+
+            # Float formatting
+            if isinstance(cell, (float, np.floating)):
                 return "{:.4f}".format(cell)
 
             return str(cell)
@@ -169,12 +178,14 @@ class DataFrameTableView(QtWidgets.QTableView):
     def sizeHint(self):
         # Set width and height based on number of columns in model
         # Width
-        width = 8  # To account for borders
+        width = 2*self.frameWidth()  # Account for border & padding
+        # width += self.verticalScrollBar().width()  # Dark theme has scrollbars always shown
         for i in range(self.model().columnCount()):
             width += self.columnWidth(i)
 
         # Height
-        height = 8
+        height = 2*self.frameWidth()  # Account for border & padding
+        # height += self.horizontalScrollBar().height()  # Dark theme has scrollbars always shown
         for i in range(self.model().rowCount()):
             height += self.rowHeight(i)
 
@@ -289,16 +300,10 @@ class DataFrameHeaderView(QtWidgets.QTableView):
             self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)  # Scrollbar is replaced in DataFrameView
             self.horizontalHeader().hide()
             self.verticalHeader().setDisabled(True)
-            # self.setStyleSheet("background-color: #F8F8F8;"
-            #                    "border: 0px solid black;")
-            self.setStyleSheet("padding: 1px;")
         else:
             self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             self.verticalHeader().hide()
             self.horizontalHeader().setDisabled(True)
-            # self.setStyleSheet("background-color: #F8F8F8;"
-            #                    "border: 0px solid black;")
-            self.setStyleSheet("padding: 1px;")
 
             self.resizeVertHeader()
 
@@ -414,20 +419,22 @@ class DataFrameHeaderView(QtWidgets.QTableView):
 
     # Return the size of the header needed to match the corresponding DataFrameTableView
     def sizeHint(self):
+
         # Horizontal DataFrameHeaderView
         if self.orientation == Qt.Horizontal:
             # Width of DataFrameTableView
             width = self.table.sizeHint().width() + self.verticalHeader().width()
             # Height
-            height = 8
+            height = 2*self.frameWidth()  # Account for border & padding
             for i in range(self.model().rowCount()):
                 height += self.rowHeight(i)
+
         # Vertical DataFrameHeaderView
         else:
             # Height of DataFrameTableView
             height = self.table.sizeHint().height() + self.horizontalHeader().height()
             # Width
-            width = 8
+            width = 2*self.frameWidth()  # Account for border & padding
             for i in range(self.model().columnCount()):
                 width += self.columnWidth(i)
         return QSize(width, height)
@@ -435,12 +442,10 @@ class DataFrameHeaderView(QtWidgets.QTableView):
     # This is needed because otherwise when the horizontal header is a single row it will add whitespace to be bigger
     def minimumSizeHint(self):
         if self.orientation == Qt.Horizontal:
-            height = self.sizeHint().height()
-            width = 8
+            return QSize(0, self.sizeHint().height())
         else:
-            height = 8
-            width = self.sizeHint().width()
-        return QSize(width, height)
+            return QSize(self.sizeHint().width(),0 )
+
 
 
 # Examples
@@ -468,7 +473,7 @@ if __name__ == '__main__':
     df6 = pd.DataFrame([[1 for i in range(n)]], columns=["x" * i for i in range(n, 0, -1)])
 
     pokemon = pd.read_csv(r'C:\_MyFiles\Programming\Python Projects\pandasgui\pandasgui\sample_data\pokemon.csv')
-    # sample = pd.read_csv('sample_data/sample.csv')
+    sample = pd.read_csv('sample_data/sample.csv')
 
     tuples = [('A', 'one', 'x'), ('A', 'one', 'y'), ('A', 'two', 'x'), ('A', 'two', 'y'),
               ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')]
@@ -481,7 +486,7 @@ if __name__ == '__main__':
     pivot_table = pokemon.pivot_table(values='HP', index='Generation')
     df7 = pd.read_csv(r"C:\Users\Adam-PC\Desktop\pivot tut\SalesOrders.csv").describe(include='all')
 
-    view = DataFrameView(pokemon)
+    view = DataFrameView(multidf)
     view.show()
 
     # view2 = DataFrameTableView(df)
