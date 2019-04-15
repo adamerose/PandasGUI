@@ -123,13 +123,6 @@ class DataFrameTableModel(QtCore.QAbstractTableModel):
             col = index.column()
             cell = self.df.iloc[row, col]
 
-            # Convert string to float if possible
-            if isinstance(cell, str):
-                try:
-                    cell = float(cell)
-                except ValueError:
-                    pass
-
             # NaN case
             if pd.isnull(cell):
                 return ""
@@ -137,6 +130,17 @@ class DataFrameTableModel(QtCore.QAbstractTableModel):
             # Float formatting
             if isinstance(cell, (float, np.floating)):
                 return "{:.4f}".format(cell)
+
+            return str(cell)
+
+        elif role == QtCore.Qt.ToolTipRole:
+            row = index.row()
+            col = index.column()
+            cell = self.df.iloc[row, col]
+
+            # NaN case
+            if pd.isnull(cell):
+                return "NaN"
 
             return str(cell)
 
@@ -178,13 +182,13 @@ class DataFrameTableView(QtWidgets.QTableView):
     def sizeHint(self):
         # Set width and height based on number of columns in model
         # Width
-        width = 2*self.frameWidth()  # Account for border & padding
+        width = 2 * self.frameWidth()  # Account for border & padding
         # width += self.verticalScrollBar().width()  # Dark theme has scrollbars always shown
         for i in range(self.model().columnCount()):
             width += self.columnWidth(i)
 
         # Height
-        height = 2*self.frameWidth()  # Account for border & padding
+        height = 2 * self.frameWidth()  # Account for border & padding
         # height += self.horizontalScrollBar().height()  # Dark theme has scrollbars always shown
         for i in range(self.model().rowCount()):
             height += self.rowHeight(i)
@@ -425,7 +429,7 @@ class DataFrameHeaderView(QtWidgets.QTableView):
             # Width of DataFrameTableView
             width = self.table.sizeHint().width() + self.verticalHeader().width()
             # Height
-            height = 2*self.frameWidth()  # Account for border & padding
+            height = 2 * self.frameWidth()  # Account for border & padding
             for i in range(self.model().rowCount()):
                 height += self.rowHeight(i)
 
@@ -434,7 +438,7 @@ class DataFrameHeaderView(QtWidgets.QTableView):
             # Height of DataFrameTableView
             height = self.table.sizeHint().height() + self.horizontalHeader().height()
             # Width
-            width = 2*self.frameWidth()  # Account for border & padding
+            width = 2 * self.frameWidth()  # Account for border & padding
             for i in range(self.model().columnCount()):
                 width += self.columnWidth(i)
         return QSize(width, height)
@@ -444,8 +448,7 @@ class DataFrameHeaderView(QtWidgets.QTableView):
         if self.orientation == Qt.Horizontal:
             return QSize(0, self.sizeHint().height())
         else:
-            return QSize(self.sizeHint().width(),0 )
-
+            return QSize(self.sizeHint().width(), 0)
 
 
 # Examples

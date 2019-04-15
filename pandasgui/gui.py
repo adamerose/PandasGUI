@@ -239,8 +239,14 @@ class PandasGUI(QtWidgets.QMainWindow):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout()
 
-        tab_df = df.describe(include='all').T
-        tab_df.insert(loc=0, column='Type', value=df.dtypes)
+        tab_df = pd.DataFrame({
+            'Type': df.dtypes,
+            'Count': df.count(),
+            'Mean': df.mean(),
+            'StdDev': df.std(),
+            'Min': df.min(),
+            'Max': df.max(),
+        })
 
         view = DataFrameView(tab_df)
 
