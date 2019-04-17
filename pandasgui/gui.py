@@ -4,7 +4,7 @@ import os
 import pandas as pd
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
-from pandasgui.dataframe_viewer import DataFrameView
+from pandasgui.dataframe_viewer import DataFrameViewer
 from pandasgui.dialogs import PivotDialog, ScatterDialog
 
 # Fix lack of stack trace on PyQt exceptions
@@ -12,6 +12,7 @@ try:
     import pyqt_fix
 except ImportError:
     pass
+
 
 class PandasGUI(QtWidgets.QMainWindow):
 
@@ -81,7 +82,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         screen = QtWidgets.QDesktopWidget().screenGeometry()
 
         percentage_of_screen = 0.6
-        size = tuple((pd.np.array([screen.width(), screen.height()])*percentage_of_screen).astype(int))
+        size = tuple((pd.np.array([screen.width(), screen.height()]) * percentage_of_screen).astype(int))
         self.resize(QtCore.QSize(*size))
 
         print('test')
@@ -91,7 +92,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         screen = QtWidgets.QDesktopWidget().screenGeometry()
         size = self.geometry()
         self.move(int((screen.width() - size.width()) / 2), int((screen.height() - size.height()) / 2))
-
 
     def setupUI(self):
         """
@@ -226,7 +226,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         tab = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout()
 
-        view = DataFrameView(df)
+        view = DataFrameViewer(df)
 
         layout.addWidget(view)
         tab.setLayout(layout)
@@ -240,7 +240,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         layout = QtWidgets.QVBoxLayout()
 
         tab_df = pd.DataFrame({
-            'Type': df.dtypes.replace('object','string'),
+            'Type': df.dtypes.replace('object', 'string'),
             'Count': df.count(),
             'Mean': df.mean(),
             'StdDev': df.std(),
@@ -248,7 +248,7 @@ class PandasGUI(QtWidgets.QMainWindow):
             'Max': df.max(),
         })
 
-        view = DataFrameView(tab_df)
+        view = DataFrameViewer(tab_df)
 
         layout.addWidget(view)
 
@@ -325,8 +325,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.nav_tree.itemClicked.connect(self.nav_clicked)
         for df_name in df_names:
             self.add_df_to_nav(df_name)
-
-
 
     def test(self, x):
         print(self.df_dicts)
@@ -412,6 +410,7 @@ def show(*args, nonblocking=False, **kwargs):
     win = PandasGUI(**kwargs)
     app.exec_()
 
+
 if __name__ == '__main__':
     try:
         file_paths = sys.argv[1:]
@@ -435,7 +434,7 @@ if __name__ == '__main__':
         if file_dataframes:
             show(**file_dataframes)
         else:
-            show(pokemon, multidf,sample)
+            show(pokemon, multidf, sample)
     except Exception as e:
         print(e)
         import traceback

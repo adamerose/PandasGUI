@@ -13,9 +13,9 @@ except:
     pass
 
 
-class DataFrameView(QtWidgets.QWidget):
+class DataFrameViewer(QtWidgets.QWidget):
     """
-    This is a container for the DataFrameTableView and two DataFrameHeaderViews in a QGridLayout
+    This is a container for the DataTableView and two DataFrameHeaderViews in a QGridLayout
     """
 
     def __init__(self, df):
@@ -24,11 +24,11 @@ class DataFrameView(QtWidgets.QWidget):
         df = df.copy()
 
         # Set up DataFrame TableView and Model
-        self.dataView = DataFrameTableView(df)
+        self.dataView = DataTableView(df, parent=self)
 
         # Create headers
-        self.indexHeader = DataFrameHeaderView(table=self.dataView, df=df, orientation=Qt.Horizontal)
-        self.columnHeader = DataFrameHeaderView(table=self.dataView, df=df, orientation=Qt.Vertical)
+        self.columnHeader = HeaderView(parent=self, df=df, orientation=Qt.Horizontal)
+        self.indexHeader = HeaderView(parent=self, df=df, orientation=Qt.Vertical)
 
         # Set up layout
         self.gridLayout = QtWidgets.QGridLayout()
@@ -37,21 +37,20 @@ class DataFrameView(QtWidgets.QWidget):
         # Link scrollbars
         # Scrolling in data table also scrolls the headers
         self.dataView.horizontalScrollBar().valueChanged.connect(
-            self.indexHeader.horizontalScrollBar().setValue)
+            self.columnHeader.horizontalScrollBar().setValue)
         self.dataView.verticalScrollBar().valueChanged.connect(
-            self.columnHeader.verticalScrollBar().setValue)
+            self.indexHeader.verticalScrollBar().setValue)
         # Scrolling in headers also scrolls the data table
-        self.indexHeader.horizontalScrollBar().valueChanged.connect(
+        self.columnHeader.horizontalScrollBar().valueChanged.connect(
             self.dataView.horizontalScrollBar().setValue)
-        self.columnHeader.verticalScrollBar().valueChanged.connect(
+        self.indexHeader.verticalScrollBar().valueChanged.connect(
             self.dataView.verticalScrollBar().setValue)
 
         self.dataView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.dataView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         # Disable scrolling on the headers. Even though the scrollbars are hidden, scrolling by dragging desyncs them
-        self.columnHeader.horizontalScrollBar().valueChanged.connect(lambda: None)
-
+        self.indexHeader.horizontalScrollBar().valueChanged.connect(lambda: None)
 
         # TESTING
         # btn = QtWidgets.QPushButton("test")
@@ -67,21 +66,21 @@ class DataFrameView(QtWidgets.QWidget):
 
         # Toggle level names
         if not (any(df.columns.names) or df.columns.name):
-            self.indexHeader.verticalHeader().setFixedWidth(1)
+            self.columnHeader.verticalHeader().setFixedWidth(1)
         if not (any(df.index.names) or df.index.name):
-            self.columnHeader.horizontalHeader().setFixedHeight(1)
+            self.indexHeader.horizontalHeader().setFixedHeight(1)
 
         # Set up space left of horzHeader to align it with the data table edge
         horzHeaderLayout = QtWidgets.QHBoxLayout()
-        width = self.columnHeader.width() - self.indexHeader.verticalHeader().width()
+        width = self.indexHeader.width() - self.columnHeader.verticalHeader().width()
 
         horzSpacer = QtWidgets.QSpacerItem(width, 20, QSizePolicy.Fixed, QSizePolicy.Fixed)
         horzHeaderLayout.addItem(horzSpacer)
-        horzHeaderLayout.addWidget(self.indexHeader)
+        horzHeaderLayout.addWidget(self.columnHeader)
 
         # Set up space above data table body and below the horizontal header to make room for vertHeader level names
         tableViewLayout = QtWidgets.QVBoxLayout()
-        height = self.columnHeader.horizontalHeader().height()
+        height = self.indexHeader.horizontalHeader().height()
         verticalSpacer = QtWidgets.QSpacerItem(20, height, QSizePolicy.Fixed, QSizePolicy.Fixed)
         tableViewLayout.addItem(verticalSpacer)
         tableViewLayout.addWidget(self.dataView)
@@ -90,14 +89,14 @@ class DataFrameView(QtWidgets.QWidget):
 
         # Add items to layout
         self.gridLayout.addLayout(horzHeaderLayout, 0, 0, 1, 2)
-        self.gridLayout.addWidget(self.columnHeader, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.indexHeader, 1, 0, 1, 1)
         self.gridLayout.addLayout(tableViewLayout, 1, 1)
         self.gridLayout.addWidget(self.dataView.horizontalScrollBar(), 2, 1, 2, 1, alignment=Qt.AlignTop)
         self.gridLayout.addWidget(self.dataView.verticalScrollBar(), 1, 2, 1, 1, alignment=Qt.AlignLeft)
 
         # self.setStyleSheet("background-color: white")
 
-        for item in [self.dataView, self.indexHeader, self.columnHeader, self.dataView.horizontalScrollBar(),
+        for item in [self.dataView, self.columnHeader, self.indexHeader, self.dataView.horizontalScrollBar(),
                      self.dataView.verticalScrollBar()]:
             item.setContentsMargins(0, 0, 0, 0)
             # item.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed))
@@ -107,9 +106,9 @@ class DataFrameView(QtWidgets.QWidget):
         # self.tableView.setStyleSheet("border: 0px solid red;")
 
 
-class DataFrameTableModel(QtCore.QAbstractTableModel):
+class DataTableModel(QtCore.QAbstractTableModel):
     """
-    Model for DataFrameTableView to connect for DataFrame data
+    Model for DataTableView to connect for DataFrame data
     """
 
     def __init__(self, df, parent=None):
@@ -117,7 +116,7 @@ class DataFrameTableModel(QtCore.QAbstractTableModel):
         self.df = df
 
     def headerData(self, section, orientation, role=None):
-        # Headers for DataFrameTableView are hidden. Header data is shown in DataFrameHeaderView
+        # Headers for DataTableView are hidden. Header data is shown in HeaderView
         pass
 
     def columnCount(self, parent=None):
@@ -173,21 +172,54 @@ class DataFrameTableModel(QtCore.QAbstractTableModel):
             return True
 
 
-class DataFrameTableView(QtWidgets.QTableView):
+class DataTableView(QtWidgets.QTableView):
     """
     Displays the DataFrame contents as a table
     """
 
-    def __init__(self, df):
-        super().__init__()
+    def __init__(self, df, parent):
+        super().__init__(parent)
+        self.parent = parent
 
         # Create and set model
-        model = DataFrameTableModel(df)
+        model = DataTableModel(df)
         self.setModel(model)
 
         # Hide the headers. The DataFrame headers (index & columns) will be displayed in the DataFrameHeaderViews
         self.horizontalHeader().hide()
         self.verticalHeader().hide()
+
+        # Link selection to headers
+        self.selectionModel().selectionChanged.connect(self.selectCells)
+
+    def selectCells(self):
+
+        # Check focus so we don't get recursive loop, since headers trigger selection of data cells and vice versa
+        if self.hasFocus():
+            columnHeader = self.parent.columnHeader
+            indexHeader = self.parent.indexHeader
+
+            initialColumnSelectionMode = self.parent.columnHeader.selectionMode()
+            columnHeader.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
+            columnHeader.selectionModel().clearSelection()
+
+            initialIndexSelectionMode = indexHeader.selectionMode()
+            indexHeader.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
+            indexHeader.selectionModel().clearSelection()
+
+            rows = []
+            cols = []
+            for Qindex in self.selectedIndexes():
+                rows.append(Qindex.row())
+                cols.append(Qindex.column())
+
+            for row in set(rows):
+                indexHeader.selectRow(row)
+            for col in set(cols):
+                columnHeader.selectColumn(col)
+
+            columnHeader.setSelectionMode(initialColumnSelectionMode)
+            indexHeader.setSelectionMode(initialIndexSelectionMode)
 
     def sizeHint(self):
         # Set width and height based on number of columns in model
@@ -206,9 +238,9 @@ class DataFrameTableView(QtWidgets.QTableView):
         return QSize(width, height)
 
 
-class DataFrameHeaderModel(QtCore.QAbstractTableModel):
+class HeaderModel(QtCore.QAbstractTableModel):
     """
-    Model for DataFrameHeaderView
+    Model for HeaderView
     """
 
     def __init__(self, df, orientation, parent=None):
@@ -273,7 +305,7 @@ class DataFrameHeaderModel(QtCore.QAbstractTableModel):
     # The headers of this table will show the level names of the MultiIndex
     def headerData(self, section, orientation, role=None):
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.ToolTipRole:
-            # self.orientation says which DataFrameHeaderView this is and orientation says which of its headers this is
+            # self.orientation says which HeaderView this is and orientation says which of its headers this is
             if self.orientation == Qt.Horizontal and orientation == Qt.Vertical:
                 if type(self.df.columns) == pd.MultiIndex:
                     return str(self.df.columns.names[section])
@@ -290,39 +322,78 @@ class DataFrameHeaderModel(QtCore.QAbstractTableModel):
                 return None
 
 
-class DataFrameHeaderView(QtWidgets.QTableView):
+class HeaderView(QtWidgets.QTableView):
     """
     Displays the DataFrame index or columns depending on orientation
     """
 
-    def __init__(self, table: DataFrameTableView, df, orientation):
-        super().__init__()
+    def __init__(self, parent: DataFrameViewer, df, orientation):
+        super().__init__(parent)
 
         # Setup
         self.orientation = orientation
         self.df = df
-        self.table = table  # This is the DataFrameTableView that this is a header for
-        self.setModel(DataFrameHeaderModel(df, orientation))
+        self.parent = parent
+        self.table = parent.dataView
+        self.setModel(HeaderModel(df, orientation))
         self.setSpans()
 
         # Settings
         self.setSizePolicy(QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum))
-        self.setSelectionMode(self.NoSelection)
+        # self.setSelectionMode(self.NoSelection)
+
+        # Link selection to DataTable
+        self.selectionModel().selectionChanged.connect(self.selectCells)
 
         # Orientation specific settings
         if orientation == Qt.Horizontal:
-            self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)  # Scrollbar is replaced in DataFrameView
+            self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)  # Scrollbar is replaced in DataFrameViewer
             self.horizontalHeader().hide()
             self.verticalHeader().setDisabled(True)
+            self.setSelectionBehavior(self.SelectColumns)
+
+
         else:
             self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             self.verticalHeader().hide()
             self.horizontalHeader().setDisabled(True)
+            self.setSelectionBehavior(self.SelectRows)
 
             self.resizeVertHeader()
 
         # Set initial size
         self.resize(self.sizeHint())
+
+    def selectCells(self):
+
+        # Check focus so we don't get recursive loop, since headers trigger selection of data cells and vice versa
+        if self.hasFocus():
+            # Clear selection of other header
+            if self.orientation == Qt.Horizontal:
+                self.parent.indexHeader.selectionModel().clearSelection()
+            else:
+                self.parent.columnHeader.selectionModel().clearSelection()
+
+            dataView = self.parent.dataView
+            # Set selection mode so selecting one row or column at a time adds to selection each time
+            initialSelectionMode = dataView.selectionMode()
+            dataView.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
+            dataView.selectionModel().clearSelection()
+
+            rows = []
+            cols = []
+            for Qindex in self.selectedIndexes():
+                if self.orientation == Qt.Horizontal:
+                    cols.append(Qindex.column())
+                else:
+                    rows.append(Qindex.row())
+
+            for row in set(rows):
+                dataView.selectRow(row)
+            for col in set(cols):
+                dataView.selectColumn(col)
+
+            dataView.setSelectionMode(initialSelectionMode)
 
     # Fits columns to contents but with a minimum width and added padding
     def resizeHorzHeader(self):
@@ -354,7 +425,7 @@ class DataFrameHeaderView(QtWidgets.QTableView):
     def setSpans(self):
         df = self.model().df
 
-        # Find spans for horizontal DataFrameHeaderView
+        # Find spans for horizontal HeaderView
         if self.orientation == Qt.Horizontal:
 
             # Find how many levels the MultiIndex has
@@ -392,7 +463,7 @@ class DataFrameHeaderView(QtWidgets.QTableView):
                             self.setSpan(level, match_start, 1, span_size)
                             match_start = None
 
-        # Find spans for vertical DataFrameHeaderView
+        # Find spans for vertical HeaderView
         else:
 
             # Find how many levels the MultiIndex has
@@ -431,21 +502,21 @@ class DataFrameHeaderView(QtWidgets.QTableView):
                             self.setSpan(match_start, level, span_size, 1)
                             match_start = None
 
-    # Return the size of the header needed to match the corresponding DataFrameTableView
+    # Return the size of the header needed to match the corresponding DataTableView
     def sizeHint(self):
 
-        # Horizontal DataFrameHeaderView
+        # Horizontal HeaderView
         if self.orientation == Qt.Horizontal:
-            # Width of DataFrameTableView
+            # Width of DataTableView
             width = self.table.sizeHint().width() + self.verticalHeader().width()
             # Height
             height = 2 * self.frameWidth()  # Account for border & padding
             for i in range(self.model().rowCount()):
                 height += self.rowHeight(i)
 
-        # Vertical DataFrameHeaderView
+        # Vertical HeaderView
         else:
-            # Height of DataFrameTableView
+            # Height of DataTableView
             height = self.table.sizeHint().height() + self.horizontalHeader().height()
             # Width
             width = 2 * self.frameWidth()  # Account for border & padding
@@ -499,10 +570,10 @@ if __name__ == '__main__':
     pivot_table = pokemon.pivot_table(values='HP', index='Generation')
     df7 = pd.read_csv(r"C:\Users\Adam-PC\Desktop\pivot tut\SalesOrders.csv").describe(include='all')
 
-    view = DataFrameView(multidf)
+    view = DataFrameViewer(multidf)
     view.show()
 
-    # view2 = DataFrameTableView(df)
-    # view2.setModel(DataFrameTableModel(df))
+    # view2 = DataTableView(df)
+    # view2.setModel(DataTableModel(df))
     # view2.show()
     sys.exit(app.exec_())
