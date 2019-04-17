@@ -24,24 +24,34 @@ class DataFrameView(QtWidgets.QWidget):
         df = df.copy()
 
         # Set up DataFrame TableView and Model
-        self.tableView = DataFrameTableView(df)
+        self.dataView = DataFrameTableView(df)
 
         # Create headers
-        self.horzHeader = DataFrameHeaderView(table=self.tableView, df=df, orientation=Qt.Horizontal)
-        self.vertHeader = DataFrameHeaderView(table=self.tableView, df=df, orientation=Qt.Vertical)
+        self.indexHeader = DataFrameHeaderView(table=self.dataView, df=df, orientation=Qt.Horizontal)
+        self.columnHeader = DataFrameHeaderView(table=self.dataView, df=df, orientation=Qt.Vertical)
 
         # Set up layout
         self.gridLayout = QtWidgets.QGridLayout()
         self.setLayout(self.gridLayout)
 
         # Link scrollbars
-        self.tableView.horizontalScrollBar().valueChanged.connect(
-            self.horzHeader.horizontalScrollBar().setValue)
-        self.tableView.verticalScrollBar().valueChanged.connect(
-            self.vertHeader.verticalScrollBar().setValue)
+        # Scrolling in data table also scrolls the headers
+        self.dataView.horizontalScrollBar().valueChanged.connect(
+            self.indexHeader.horizontalScrollBar().setValue)
+        self.dataView.verticalScrollBar().valueChanged.connect(
+            self.columnHeader.verticalScrollBar().setValue)
+        # Scrolling in headers also scrolls the data table
+        self.indexHeader.horizontalScrollBar().valueChanged.connect(
+            self.dataView.horizontalScrollBar().setValue)
+        self.columnHeader.verticalScrollBar().valueChanged.connect(
+            self.dataView.verticalScrollBar().setValue)
 
-        self.tableView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.tableView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.dataView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.dataView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        # Disable scrolling on the headers. Even though the scrollbars are hidden, scrolling by dragging desyncs them
+        self.columnHeader.horizontalScrollBar().valueChanged.connect(lambda: None)
+
 
         # TESTING
         # btn = QtWidgets.QPushButton("test")
@@ -57,38 +67,38 @@ class DataFrameView(QtWidgets.QWidget):
 
         # Toggle level names
         if not (any(df.columns.names) or df.columns.name):
-            self.horzHeader.verticalHeader().setFixedWidth(1)
+            self.indexHeader.verticalHeader().setFixedWidth(1)
         if not (any(df.index.names) or df.index.name):
-            self.vertHeader.horizontalHeader().setFixedHeight(1)
+            self.columnHeader.horizontalHeader().setFixedHeight(1)
 
         # Set up space left of horzHeader to align it with the data table edge
         horzHeaderLayout = QtWidgets.QHBoxLayout()
-        width = self.vertHeader.width() - self.horzHeader.verticalHeader().width()
+        width = self.columnHeader.width() - self.indexHeader.verticalHeader().width()
 
         horzSpacer = QtWidgets.QSpacerItem(width, 20, QSizePolicy.Fixed, QSizePolicy.Fixed)
         horzHeaderLayout.addItem(horzSpacer)
-        horzHeaderLayout.addWidget(self.horzHeader)
+        horzHeaderLayout.addWidget(self.indexHeader)
 
-        # Set up space above data table to make room for vertHeader level names
+        # Set up space above data table body and below the horizontal header to make room for vertHeader level names
         tableViewLayout = QtWidgets.QVBoxLayout()
-        height = self.vertHeader.horizontalHeader().height()
+        height = self.columnHeader.horizontalHeader().height()
         verticalSpacer = QtWidgets.QSpacerItem(20, height, QSizePolicy.Fixed, QSizePolicy.Fixed)
         tableViewLayout.addItem(verticalSpacer)
-        tableViewLayout.addWidget(self.tableView)
+        tableViewLayout.addWidget(self.dataView)
 
-        self.tableView.setSizePolicy(QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum))
+        self.dataView.setSizePolicy(QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum))
 
         # Add items to layout
         self.gridLayout.addLayout(horzHeaderLayout, 0, 0, 1, 2)
-        self.gridLayout.addWidget(self.vertHeader, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.columnHeader, 1, 0, 1, 1)
         self.gridLayout.addLayout(tableViewLayout, 1, 1)
-        self.gridLayout.addWidget(self.tableView.horizontalScrollBar(), 2, 1, 2, 1, alignment=Qt.AlignTop)
-        self.gridLayout.addWidget(self.tableView.verticalScrollBar(), 1, 2, 1, 1, alignment=Qt.AlignLeft)
+        self.gridLayout.addWidget(self.dataView.horizontalScrollBar(), 2, 1, 2, 1, alignment=Qt.AlignTop)
+        self.gridLayout.addWidget(self.dataView.verticalScrollBar(), 1, 2, 1, 1, alignment=Qt.AlignLeft)
 
         # self.setStyleSheet("background-color: white")
 
-        for item in [self.tableView, self.horzHeader, self.vertHeader, self.tableView.horizontalScrollBar(),
-                     self.tableView.verticalScrollBar()]:
+        for item in [self.dataView, self.indexHeader, self.columnHeader, self.dataView.horizontalScrollBar(),
+                     self.dataView.verticalScrollBar()]:
             item.setContentsMargins(0, 0, 0, 0)
             # item.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed))
             item.setStyleSheet("border: 0px solid black;")

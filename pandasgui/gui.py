@@ -240,7 +240,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         layout = QtWidgets.QVBoxLayout()
 
         tab_df = pd.DataFrame({
-            'Type': df.dtypes,
+            'Type': df.dtypes.replace('object','string'),
             'Count': df.count(),
             'Mean': df.mean(),
             'StdDev': df.std(),
@@ -435,7 +435,7 @@ if __name__ == '__main__':
         if file_dataframes:
             show(**file_dataframes)
         else:
-            show(multidf=multidf)
+            show(pokemon, multidf,sample)
     except Exception as e:
         print(e)
         import traceback
