@@ -126,7 +126,7 @@ class DataTableModel(QtCore.QAbstractTableModel):
         return len(self.df)
 
     # Returns the data from the DataFrame
-    def data(self, index, role=None):
+    def data(self, index, role=QtCore.Qt.DisplayRole):
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole or role == QtCore.Qt.ToolTipRole:
             row = index.row()
             col = index.column()
@@ -190,29 +190,32 @@ class DataTableView(QtWidgets.QTableView):
         self.verticalHeader().hide()
 
         # Link selection to headers
-        self.selectionModel().selectionChanged.connect(self.selectCells)
+        self.selectionModel().selectionChanged.connect(self.on_selectionChanged)
 
-    def selectCells(self):
+    def on_selectionChanged(self):
 
-        # Check focus so we don't get recursive loop, since headers trigger selection of data cells and vice versa
         if self.hasFocus():
             columnHeader = self.parent.columnHeader
             indexHeader = self.parent.indexHeader
 
-            initialColumnSelectionMode = self.parent.columnHeader.selectionMode()
-            columnHeader.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
-            columnHeader.selectionModel().clearSelection()
-
+            # Temporarily enable MultiSelection so we can add multiple rows / columns to selection
+            initialColumnSelectionMode = columnHeader.selectionMode()
             initialIndexSelectionMode = indexHeader.selectionMode()
+
+            columnHeader.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
             indexHeader.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
+
+            columnHeader.selectionModel().clearSelection()
             indexHeader.selectionModel().clearSelection()
 
+            # Select all rows or columns in the data table view that are selected in headers
             rows = []
             cols = []
-            for Qindex in self.selectedIndexes():
-                rows.append(Qindex.row())
-                cols.append(Qindex.column())
+            for ix in self.selectedIndexes():
+                rows.append(ix.row())
+                cols.append(ix.column())
 
+            # Check for focus because we don't want to change it if it trigger the selection in this table view
             for row in set(rows):
                 indexHeader.selectRow(row)
             for col in set(cols):
@@ -220,6 +223,57 @@ class DataTableView(QtWidgets.QTableView):
 
             columnHeader.setSelectionMode(initialColumnSelectionMode)
             indexHeader.setSelectionMode(initialIndexSelectionMode)
+
+    def keyPressEvent(self, event):
+
+        QtWidgets.QTableView.keyPressEvent(self, event)
+
+        if event.matches(QtGui.QKeySequence.Copy):
+            print('Ctrl + C')
+            self.copy()
+        if event.matches(QtGui.QKeySequence.Paste):
+            self.paste()
+            print('Ctrl + V')
+
+    def copy(self):
+        # Set up clipboard object
+        app = QtWidgets.QApplication.instance()
+        if not app:
+            app = QtWidgets.QApplication(sys.argv)
+        clipboard = app.clipboard()
+
+        text = ""
+
+        last_row = None
+        for ix in self.selectedIndexes():
+            if last_row is None:
+                last_row = ix.row()
+
+            value = str(self.model().data(self.model().index(ix.row(), ix.column())))
+
+            if text == "":
+                # First item
+                pass
+            elif ix.row() != last_row:
+                # New row
+                text += '\n'
+                last_row = ix.row()
+            else:
+                text += '\t'
+
+            text += value
+
+        clipboard.setText(text)
+
+    def paste(self):
+        # Set up clipboard object
+        app = QtWidgets.QApplication.instance()
+        if not app:
+            app = QtWidgets.QApplication(sys.argv)
+        clipboard = app.clipboard()
+
+        # TODO
+        print(clipboard.text())
 
     def sizeHint(self):
         # Set width and height based on number of columns in model
@@ -343,28 +397,26 @@ class HeaderView(QtWidgets.QTableView):
         # self.setSelectionMode(self.NoSelection)
 
         # Link selection to DataTable
-        self.selectionModel().selectionChanged.connect(self.selectCells)
+        self.selectionModel().selectionChanged.connect(self.on_selectionChanged)
 
         # Orientation specific settings
         if orientation == Qt.Horizontal:
             self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)  # Scrollbar is replaced in DataFrameViewer
             self.horizontalHeader().hide()
             self.verticalHeader().setDisabled(True)
-            self.setSelectionBehavior(self.SelectColumns)
-
-
+            # self.setSelectionBehavior(self.SelectColumns)
         else:
             self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             self.verticalHeader().hide()
             self.horizontalHeader().setDisabled(True)
-            self.setSelectionBehavior(self.SelectRows)
+            # self.setSelectionBehavior(self.SelectRows)
 
             self.resizeVertHeader()
 
         # Set initial size
         self.resize(self.sizeHint())
 
-    def selectCells(self):
+    def on_selectionChanged(self):
 
         # Check focus so we don't get recursive loop, since headers trigger selection of data cells and vice versa
         if self.hasFocus():
@@ -375,25 +427,58 @@ class HeaderView(QtWidgets.QTableView):
                 self.parent.columnHeader.selectionModel().clearSelection()
 
             dataView = self.parent.dataView
+
             # Set selection mode so selecting one row or column at a time adds to selection each time
             initialSelectionMode = dataView.selectionMode()
             dataView.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
             dataView.selectionModel().clearSelection()
 
-            rows = []
-            cols = []
-            for Qindex in self.selectedIndexes():
-                if self.orientation == Qt.Horizontal:
-                    cols.append(Qindex.column())
-                else:
-                    rows.append(Qindex.row())
+            if self.orientation == Qt.Horizontal:
+                # Find max row (lowest row visually containing a selected cell)
+                maximum = max([ix.row() for ix in self.selectedIndexes()])
 
-            for row in set(rows):
-                dataView.selectRow(row)
-            for col in set(cols):
-                dataView.selectColumn(col)
+                cols = []
+                # Loop over selected cells
+                for ix in self.selectedIndexes():
+                    if ix.row() == maximum:
+                        for seg in range(self.columnSpan(ix.row(), ix.column())):
+                            cols.append(ix.column() + seg)
+
+                for col in set(cols):
+                    dataView.selectColumn(col)
+
+            else:
+                # Find rightmost column with a selected cell
+                maximum = max([ix.column() for ix in self.selectedIndexes()])
+
+                rows = []
+                # Loop over selected cells
+                for ix in self.selectedIndexes():
+                    if ix.column() == maximum:
+                        for seg in range(self.rowSpan(ix.row(), ix.column())):
+                            rows.append(ix.row() + seg)
+
+                for row in set(rows):
+                    dataView.selectRow(row)
 
             dataView.setSelectionMode(initialSelectionMode)
+
+        self.selectAbove()
+
+    # Take the current set of selected cells and make it so that any spanning cell above a selected cell is selected too
+    # This should happen after every selection change
+    def selectAbove(self):
+        for ix in self.selectedIndexes():
+            if self.orientation == Qt.Horizontal:
+                # Loop over the rows above this one
+                for row in range(ix.row()):
+                    ix2 = self.model().index(row, ix.column())
+                    self.setSelection(self.visualRect(ix2), QtCore.QItemSelectionModel.Select)
+            else:
+                # Loop over the columns left of this one
+                for col in range(ix.column()):
+                    ix2 = self.model().index(ix.row(), col)
+                    self.setSelection(self.visualRect(ix2), QtCore.QItemSelectionModel.Select)
 
     # Fits columns to contents but with a minimum width and added padding
     def resizeHorzHeader(self):
