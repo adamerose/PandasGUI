@@ -1,4 +1,9 @@
-call "Scripts/activate.bat"
+rmdir build /Q/S
+rmdir dist /Q/S
+rmdir include /Q/S
+rmdir Lib /Q/S
+rmdir tcl /Q/S
+rmdir pandasgui.egg-info /Q/S
 python setup.py bdist_wheel sdist
-twine upload dist/*
+python3 -m twine upload dist/*
 PAUSE

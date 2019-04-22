@@ -401,7 +401,7 @@ def show(*args, nonblocking=False, **kwargs):
         show_nonblocking(**kwargs)
         return
 
-    # Creeate the application and PandasGUI window
+    # Create the application and PandasGUI window
     app = QtWidgets.QApplication.instance()
     if app:
         print('Using existing QApplication instance')

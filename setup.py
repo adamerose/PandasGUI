@@ -6,7 +6,7 @@ with open('README.md', 'r') as fh:
     long_description = fh.read()
 
 setup(name='pandasgui',
-      version='0.0.3',
+      version='0.0.4',
       description='GUI for Pandas DataFrames',
       author='Adam Rose',
       author_email='adamerose@hotmail.com',
