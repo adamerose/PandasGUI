@@ -1,5 +1,5 @@
 from PyQt5 import QtGui, QtCore, QtWidgets
-from PyQt5.QtCore import QAbstractItemModel, QModelIndex, QSize, QRect, Qt, QPoint
+from PyQt5.QtCore import QAbstractItemModel, QModelIndex, QSize, QRect, Qt, QPoint, QItemSelectionModel
 from PyQt5.QtGui import QPainter, QFont, QFontMetrics, QPalette, QBrush, QColor, QTransform
 from PyQt5.QtWidgets import QSizePolicy
 import pandas as pd
@@ -196,36 +196,15 @@ class DataTableView(QtWidgets.QTableView):
         self.selectionModel().selectionChanged.connect(self.on_selectionChanged)
 
     def on_selectionChanged(self):
-
         if self.hasFocus():
-            print('x')
             columnHeader = self.parent.columnHeader
             indexHeader = self.parent.indexHeader
 
-            # Temporarily enable MultiSelection so we can add multiple rows / columns to selection
-            initialColumnSelectionMode = columnHeader.selectionMode()
-            initialIndexSelectionMode = indexHeader.selectionMode()
-
-            columnHeader.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
-            indexHeader.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
-
-            columnHeader.selectionModel().clearSelection()
-            indexHeader.selectionModel().clearSelection()
-
-            # Select all rows or columns in the data table view that are selected in headers
-            rows = []
-            cols = []
-            for ix in self.selectedIndexes():
-                rows.append(ix.row())
-                cols.append(ix.column())
-            # Check for focus because we don't want to change it if it trigger the selection in this table view
-            for row in set(rows):
-                indexHeader.selectRow(row)
-            for col in set(cols):
-                columnHeader.selectColumn(col)
-
-            columnHeader.setSelectionMode(initialColumnSelectionMode)
-            indexHeader.setSelectionMode(initialIndexSelectionMode)
+            selection = self.selectionModel().selection()
+            columnHeader.selectionModel().select(selection,
+                                                 QItemSelectionModel.Columns | QItemSelectionModel.ClearAndSelect)
+            indexHeader.selectionModel().select(selection,
+                                                QItemSelectionModel.Rows | QItemSelectionModel.ClearAndSelect)
 
     def keyPressEvent(self, event):
 
@@ -396,6 +375,7 @@ class HeaderView(QtWidgets.QTableView):
         # Set initial size
         self.resize(self.sizeHint())
 
+    # Header
     def on_selectionChanged(self):
         # Check focus so we don't get recursive loop, since headers trigger selection of data cells and vice versa
         if self.hasFocus():
@@ -409,90 +389,30 @@ class HeaderView(QtWidgets.QTableView):
             dataView = self.parent.dataView
 
             # Set selection mode so selecting one row or column at a time adds to selection each time
-            initialSelectionMode = dataView.selectionMode()
-            dataView.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
-            dataView.selectionModel().clearSelection()
 
             if self.orientation == Qt.Horizontal:
-                # Find max row (lowest row visually containing a selected cell)
-                maximum = max([ix.row() for ix in self.selectedIndexes()])
-                cols = []
-                # Loop over selected cells
-                for ix in self.selectedIndexes():
-                    if ix.row() == maximum:
-                        for seg in range(self.columnSpan(ix.row(), ix.column())):
-                            cols.append(ix.column() + seg)
+                selection = self.selectionModel().selection()
 
-                # Selection
-                total_selection = QtCore.QItemSelection()
-                cols = sorted(list(set(cols)))
-                contiguous_start = cols[0]
-                contiguous_prev = cols[0]
-                for col in cols:
-                    if col == cols[-1]:
-                        start = contiguous_start
-                        end = contiguous_prev
+                last_row_ix = self.df.columns.nlevels - 1
+                last_col_ix = self.model().columnCount() - 1
+                higher_levels = QtCore.QItemSelection(self.model().index(0, 0),
+                                                      self.model().index(last_row_ix - 1, last_col_ix))
 
-                        selection = QtCore.QItemSelection(dataView.model().index(0, col),
-                                                          dataView.model().index(dataView.model().rowCount() - 1, col))
-                        total_selection.merge(selection, QtCore.QItemSelectionModel.Select)
-                    elif (col != contiguous_prev) + 1:
-                        start = contiguous_start
-                        end = contiguous_prev
+                selection.merge(higher_levels, QtCore.QItemSelectionModel.Deselect)
+                dataView.selectionModel().select(selection,
+                                                 QtCore.QItemSelectionModel.Columns | QtCore.QItemSelectionModel.ClearAndSelect)
+            if self.orientation == Qt.Vertical:
+                selection = self.selectionModel().selection()
 
-                        contiguous_start = col
-                    else:
-                        contiguous_prev = col
+                last_row_ix = self.model().rowCount() - 1
+                last_col_ix = self.df.index.nlevels - 1
+                higher_levels = QtCore.QItemSelection(self.model().index(0, 0),
+                                                      self.model().index(last_row_ix, last_col_ix - 1))
 
-                selection = QtCore.QItemSelection(dataView.model().index(0, start),
-                                                  dataView.model().index(dataView.model().rowCount() - 1, end))
-                total_selection.merge(selection, QtCore.QItemSelectionModel.Select)
+                selection.merge(higher_levels, QtCore.QItemSelectionModel.Deselect)
+                dataView.selectionModel().select(selection,
+                                                 QtCore.QItemSelectionModel.Rows | QtCore.QItemSelectionModel.ClearAndSelect)
 
-                dataView.selectionModel().select(total_selection, QtCore.QItemSelectionModel.Select)
-
-
-            else:
-
-                # Find rightmost column with a selected cell
-                maximum = max([ix.column() for ix in self.selectedIndexes()])
-                print('A')
-                rows = []
-                # Loop over selected cells
-                x = self.selectionModel().selectedIndexes()
-                print('B')
-                for ix in x:
-                    if ix.column() == maximum:
-                        for seg in range(self.rowSpan(ix.row(), ix.column())):
-                            rows.append(ix.row() + seg)
-                print('C')
-                # Selection
-                total_selection = QtCore.QItemSelection()
-                rows = sorted(list(set(rows)))
-                contiguous_start = rows[0]
-                contiguous_prev = rows[0]
-
-                for row in rows:
-                    if row == rows[-1]:
-                        start = contiguous_start
-                        end = contiguous_prev
-
-                        selection = QtCore.QItemSelection(dataView.model().index(row, 0),
-                                                          dataView.model().index(row, dataView.model().columnCount() - 1))
-                        total_selection.merge(selection, QtCore.QItemSelectionModel.Select)
-                    elif (row != contiguous_prev) + 1:
-                        start = contiguous_start
-                        end = contiguous_prev
-
-                        contiguous_start = row
-                    else:
-                        contiguous_prev = row
-                selection = QtCore.QItemSelection(dataView.model().index(start, 0),
-                                                  dataView.model().index(end, dataView.model().columnCount() - 1))
-                total_selection.merge(selection, QtCore.QItemSelectionModel.Select)
-
-                dataView.selectionModel().select(total_selection, QtCore.QItemSelectionModel.Select)
-
-            dataView.setSelectionMode(initialSelectionMode)
         self.selectAbove()
 
     # Take the current set of selected cells and make it so that any spanning cell above a selected cell is selected too
@@ -651,45 +571,38 @@ class HeaderView(QtWidgets.QTableView):
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
     app.setStyle('Windows XP')
-    print(QtWidgets.QStyleFactory.keys())
+    from numpy.random import randn
 
-    # Prepare sample data with 3 index levels all unique
-    tuples = [('WW1', 'A', '1'), ('WW1', 'A', '2'), ('WW1', 'B', '3'), ('WW1', 'B', '4'),
-              ('WW2', 'B', '5'), ('WW2', 'C', '6'), ('WW2', 'D', '7'), ('WW2', 'D', '8')]
-    index = pd.MultiIndex.from_tuples(tuples, names=['week', 'letter', 'level'])
-    df = pd.DataFrame(pd.np.random.randint(0, 10, (8, 8)), index=index[:8], columns=index[:8])
-
-    # Prepare sample data with 3 index levels all unique
-    tuples = [('WW1',), ('WW1',), ('WW1',), ('WW1',), ('WW1',), ('WW1',), ('WW1',), ('WW1',)]
-    index = pd.MultiIndex.from_tuples(tuples, names=['week'])
-    df2 = pd.DataFrame(pd.np.random.randint(0, 10, (8, 8)), index=index[:8], columns=index[:8])
-
-    singles = [('A'), ('A'), ('C'), ('D'),
-               ('E'), ('F'), ('F'), ('H')]
-    df3 = pd.DataFrame(pd.np.random.randint(0, 10, (4, 8)), index=singles[0:4], columns=singles[0:8])
-
-    n = 60
-    df6 = pd.DataFrame([[1 for i in range(n)]], columns=["x" * i for i in range(n, 0, -1)])
-
-    pokemon = pd.read_csv(r'C:\_MyFiles\Programming\Python Projects\pandasgui\pandasgui\sample_data\pokemon.csv')
-    sample = pd.read_csv('sample_data/sample.csv')
-
+    # 3-level Multindex
     tuples = [('A', 'one', 'x'), ('A', 'one', 'y'), ('A', 'two', 'x'), ('A', 'two', 'y'),
               ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')]
-    index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
-    multidf = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
+    mi3 = pd.MultiIndex.from_tuples(tuples, names=['name1', 'name2', 'name3'])
 
-    ser = pd.Series(pd.np.random.randn(8), index=index[:8])
+    # 2-level Multindex
+    tuples = [('A', 'one'), ('A', 'two'), ('B', 'one'), ('B', 'two')]
+    mi2 = pd.MultiIndex.from_tuples(tuples, names=['name1', 'name2'])
 
-    tab_df = multidf.describe(include='all').T
-    tab_df.insert(loc=0, column='Type', value=multidf.dtypes)
+    # 1-level Multindex
+    tuples = [('A'), ('B'), ('C'), ('D')]
+    mi1 = pd.MultiIndex.from_tuples(tuples, names=['name1'])
 
-    pivot_table = pokemon.pivot_table(values='HP', index='Generation')
-    df7 = pd.read_csv(r"C:\Users\Adam-PC\Desktop\pivot tut\SalesOrders.csv").describe(include='all')
+    # pd.Index
+    index = pd.Index(['A', 'B', 'C', 'D'])
+    index.name = 'name1'
+
+    df1 = pd.DataFrame(randn(8, 8), index=mi3, columns=mi3)
+    df2 = pd.DataFrame(randn(4, 4), index=mi2, columns=mi2)
+    df3 = pd.DataFrame(randn(4, 4), index=mi1, columns=mi1)
+    df4 = pd.DataFrame(randn(4, 4), index=index, columns=index)
+    s1 = pd.Series(randn(8), index=mi3)
+    s2 = pd.Series(randn(4), index=mi2)
+    s3 = pd.Series(randn(4), index=mi1)
+    s4 = pd.Series(randn(4), index=index)
 
     df8 = pd.read_csv(r'C:\Users\Adam-PC\Desktop\large_wafer_data.csv')
+    df9 = pd.DataFrame(np.random.randn(100000, 5))
 
-    view = DataFrameViewer(df8)
+    view = DataFrameViewer(df1)
     view.show()
 
     # view2 = DataTableView(df)
