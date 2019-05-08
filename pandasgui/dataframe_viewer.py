@@ -123,7 +123,7 @@ class DataTableModel(QtCore.QAbstractTableModel):
         if type(self.df) == pd.Series:
             return 1
         else:
-            return len(self.df.columns)
+            return self.df.columns.shape[0]
 
     def rowCount(self, parent=None):
         return len(self.df)
@@ -196,7 +196,9 @@ class DataTableView(QtWidgets.QTableView):
         self.selectionModel().selectionChanged.connect(self.on_selectionChanged)
 
     def on_selectionChanged(self):
+
         if self.hasFocus():
+            print('x')
             columnHeader = self.parent.columnHeader
             indexHeader = self.parent.indexHeader
 
@@ -303,35 +305,17 @@ class HeaderModel(QtCore.QAbstractTableModel):
         self.df = df
         self.orientation = orientation
 
-    # Required for table
     def columnCount(self, parent=None):
-
         if self.orientation == Qt.Horizontal:
-            return len(self.df.columns.values)
-
+            return self.df.columns.shape[0]
         else:  # Vertical
-            if type(self.df.index) == pd.MultiIndex:
-
-                # This if statement is needed because if we get a single string it will return the length of the string
-                if type(self.df.index.values[0]) == tuple:
-                    return len(self.df.index.values[0])
-                else:
-                    return 1
-            else:
-                return 1
+            return self.df.index.nlevels
 
     def rowCount(self, parent=None):
-
         if self.orientation == Qt.Horizontal:
-
-            if type(self.df.columns) == pd.MultiIndex:
-                return len(self.df.columns[0])
-            else:
-                return 1
-
+            return self.df.columns.nlevels
         elif self.orientation == Qt.Vertical:
-
-            return len(self.df.index.values)
+            return self.df.index.shape[0]
 
     def data(self, index, role=None):
         row = index.row()
@@ -399,10 +383,13 @@ class HeaderView(QtWidgets.QTableView):
             self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)  # Scrollbar is replaced in DataFrameViewer
             self.horizontalHeader().hide()
             self.verticalHeader().setDisabled(True)
+            self.verticalHeader().setHighlightSections(False)  # Selection lags a lot without this
+
         else:
             self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             self.verticalHeader().hide()
             self.horizontalHeader().setDisabled(True)
+            self.horizontalHeader().setHighlightSections(False)  # Selection lags a lot without this
 
             self.resizeVertHeader()
 
@@ -432,30 +419,80 @@ class HeaderView(QtWidgets.QTableView):
                 cols = []
                 # Loop over selected cells
                 for ix in self.selectedIndexes():
-                    print(ix)
                     if ix.row() == maximum:
                         for seg in range(self.columnSpan(ix.row(), ix.column())):
                             cols.append(ix.column() + seg)
-                print(set(cols))
-                for col in set(cols):
-                    dataView.selectColumn(col)
-                print('end')
+
+                # Selection
+                total_selection = QtCore.QItemSelection()
+                cols = sorted(list(set(cols)))
+                contiguous_start = cols[0]
+                contiguous_prev = cols[0]
+                for col in cols:
+                    if col == cols[-1]:
+                        start = contiguous_start
+                        end = contiguous_prev
+
+                        selection = QtCore.QItemSelection(dataView.model().index(0, col),
+                                                          dataView.model().index(dataView.model().rowCount() - 1, col))
+                        total_selection.merge(selection, QtCore.QItemSelectionModel.Select)
+                    elif (col != contiguous_prev) + 1:
+                        start = contiguous_start
+                        end = contiguous_prev
+
+                        contiguous_start = col
+                    else:
+                        contiguous_prev = col
+
+                selection = QtCore.QItemSelection(dataView.model().index(0, start),
+                                                  dataView.model().index(dataView.model().rowCount() - 1, end))
+                total_selection.merge(selection, QtCore.QItemSelectionModel.Select)
+
+                dataView.selectionModel().select(total_selection, QtCore.QItemSelectionModel.Select)
+
+
             else:
+
                 # Find rightmost column with a selected cell
                 maximum = max([ix.column() for ix in self.selectedIndexes()])
-
+                print('A')
                 rows = []
                 # Loop over selected cells
-                for ix in self.selectedIndexes():
+                x = self.selectionModel().selectedIndexes()
+                print('B')
+                for ix in x:
                     if ix.column() == maximum:
                         for seg in range(self.rowSpan(ix.row(), ix.column())):
                             rows.append(ix.row() + seg)
+                print('C')
+                # Selection
+                total_selection = QtCore.QItemSelection()
+                rows = sorted(list(set(rows)))
+                contiguous_start = rows[0]
+                contiguous_prev = rows[0]
 
-                for row in set(rows):
-                    dataView.selectRow(row)
+                for row in rows:
+                    if row == rows[-1]:
+                        start = contiguous_start
+                        end = contiguous_prev
+
+                        selection = QtCore.QItemSelection(dataView.model().index(row, 0),
+                                                          dataView.model().index(row, dataView.model().columnCount() - 1))
+                        total_selection.merge(selection, QtCore.QItemSelectionModel.Select)
+                    elif (row != contiguous_prev) + 1:
+                        start = contiguous_start
+                        end = contiguous_prev
+
+                        contiguous_start = row
+                    else:
+                        contiguous_prev = row
+                selection = QtCore.QItemSelection(dataView.model().index(start, 0),
+                                                  dataView.model().index(end, dataView.model().columnCount() - 1))
+                total_selection.merge(selection, QtCore.QItemSelectionModel.Select)
+
+                dataView.selectionModel().select(total_selection, QtCore.QItemSelectionModel.Select)
 
             dataView.setSelectionMode(initialSelectionMode)
-
         self.selectAbove()
 
     # Take the current set of selected cells and make it so that any spanning cell above a selected cell is selected too
