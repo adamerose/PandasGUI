@@ -410,6 +410,14 @@ class HeaderView(QtWidgets.QTableView):
     # Take the current set of selected cells and make it so that any spanning cell above a selected cell is selected too
     # This should happen after every selection change
     def selectAbove(self):
+        if self.orientation == Qt.Horizontal:
+            if self.df.columns.nlevels == 1:
+                return
+        else:
+            if self.df.index.nlevels == 1:
+                return
+
+
         for ix in self.selectedIndexes():
             if self.orientation == Qt.Horizontal:
                 # Loop over the rows above this one
