@@ -203,14 +203,14 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         # Creates the tabs
         dataframe_tab = self.make_dataframe_tab(df_name)
-        statistics_tab = self.make_statistics_tab(df_name)
+        # statistics_tab = self.make_statistics_tab(df_name)
         chart_tab = self.make_tab_charts()
 
         tab_widget = QtWidgets.QTabWidget()
 
         # Adds them to the tab_view
         tab_widget.addTab(dataframe_tab, "Dataframe")
-        tab_widget.addTab(statistics_tab, "Statistics")
+        # tab_widget.addTab(statistics_tab, "Statistics")
         tab_widget.addTab(chart_tab, "Test")
 
         return tab_widget
@@ -220,7 +220,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         df = self.df_dicts[df_name]['dataframe']
 
         # Create a smaller version to display so it doesn't lag
-        df = df.head(1000)
+        # df = df.head(1000)
         self.df_dicts[df_name]['display_df'] = df
 
         tab = QtWidgets.QWidget()

@@ -196,7 +196,6 @@ class DataTableView(QtWidgets.QTableView):
         self.selectionModel().selectionChanged.connect(self.on_selectionChanged)
 
     def on_selectionChanged(self):
-
         if self.hasFocus():
             columnHeader = self.parent.columnHeader
             indexHeader = self.parent.indexHeader
@@ -217,7 +216,6 @@ class DataTableView(QtWidgets.QTableView):
             for ix in self.selectedIndexes():
                 rows.append(ix.row())
                 cols.append(ix.column())
-
             # Check for focus because we don't want to change it if it trigger the selection in this table view
             for row in set(rows):
                 indexHeader.selectRow(row)
@@ -401,12 +399,10 @@ class HeaderView(QtWidgets.QTableView):
             self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)  # Scrollbar is replaced in DataFrameViewer
             self.horizontalHeader().hide()
             self.verticalHeader().setDisabled(True)
-            # self.setSelectionBehavior(self.SelectColumns)
         else:
             self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             self.verticalHeader().hide()
             self.horizontalHeader().setDisabled(True)
-            # self.setSelectionBehavior(self.SelectRows)
 
             self.resizeVertHeader()
 
@@ -414,9 +410,9 @@ class HeaderView(QtWidgets.QTableView):
         self.resize(self.sizeHint())
 
     def on_selectionChanged(self):
-
         # Check focus so we don't get recursive loop, since headers trigger selection of data cells and vice versa
         if self.hasFocus():
+
             # Clear selection of other header
             if self.orientation == Qt.Horizontal:
                 self.parent.indexHeader.selectionModel().clearSelection()
@@ -433,17 +429,17 @@ class HeaderView(QtWidgets.QTableView):
             if self.orientation == Qt.Horizontal:
                 # Find max row (lowest row visually containing a selected cell)
                 maximum = max([ix.row() for ix in self.selectedIndexes()])
-
                 cols = []
                 # Loop over selected cells
                 for ix in self.selectedIndexes():
+                    print(ix)
                     if ix.row() == maximum:
                         for seg in range(self.columnSpan(ix.row(), ix.column())):
                             cols.append(ix.column() + seg)
-
+                print(set(cols))
                 for col in set(cols):
                     dataView.selectColumn(col)
-
+                print('end')
             else:
                 # Find rightmost column with a selected cell
                 maximum = max([ix.column() for ix in self.selectedIndexes()])
@@ -654,10 +650,12 @@ if __name__ == '__main__':
     pivot_table = pokemon.pivot_table(values='HP', index='Generation')
     df7 = pd.read_csv(r"C:\Users\Adam-PC\Desktop\pivot tut\SalesOrders.csv").describe(include='all')
 
-    view = DataFrameViewer(ser)
+    df8 = pd.read_csv(r'C:\Users\Adam-PC\Desktop\large_wafer_data.csv')
+
+    view = DataFrameViewer(df8)
     view.show()
 
     # view2 = DataTableView(df)
     # view2.setModel(DataTableModel(df))
     # view2.show()
-    # sys.exit(app.exec_())
+    sys.exit(app.exec_())
