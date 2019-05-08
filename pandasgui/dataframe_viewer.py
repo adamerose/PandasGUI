@@ -196,15 +196,14 @@ class DataTableView(QtWidgets.QTableView):
         self.selectionModel().selectionChanged.connect(self.on_selectionChanged)
 
     def on_selectionChanged(self):
-        if self.hasFocus():
-            columnHeader = self.parent.columnHeader
-            indexHeader = self.parent.indexHeader
+        columnHeader = self.parent.columnHeader
+        indexHeader = self.parent.indexHeader
 
-            selection = self.selectionModel().selection()
-            columnHeader.selectionModel().select(selection,
-                                                 QItemSelectionModel.Columns | QItemSelectionModel.ClearAndSelect)
-            indexHeader.selectionModel().select(selection,
-                                                QItemSelectionModel.Rows | QItemSelectionModel.ClearAndSelect)
+        selection = self.selectionModel().selection()
+        columnHeader.selectionModel().select(selection,
+                                             QItemSelectionModel.Columns | QItemSelectionModel.ClearAndSelect)
+        indexHeader.selectionModel().select(selection,
+                                            QItemSelectionModel.Rows | QItemSelectionModel.ClearAndSelect)
 
     def keyPressEvent(self, event):
 
@@ -379,13 +378,6 @@ class HeaderView(QtWidgets.QTableView):
     def on_selectionChanged(self):
         # Check focus so we don't get recursive loop, since headers trigger selection of data cells and vice versa
         if self.hasFocus():
-
-            # Clear selection of other header
-            if self.orientation == Qt.Horizontal:
-                self.parent.indexHeader.selectionModel().clearSelection()
-            else:
-                self.parent.columnHeader.selectionModel().clearSelection()
-
             dataView = self.parent.dataView
 
             # Set selection mode so selecting one row or column at a time adds to selection each time
@@ -602,7 +594,7 @@ if __name__ == '__main__':
     df8 = pd.read_csv(r'C:\Users\Adam-PC\Desktop\large_wafer_data.csv')
     df9 = pd.DataFrame(np.random.randn(100000, 5))
 
-    view = DataFrameViewer(df1)
+    view = DataFrameViewer(df8)
     view.show()
 
     # view2 = DataTableView(df)
