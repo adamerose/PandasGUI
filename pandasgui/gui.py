@@ -203,14 +203,14 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         # Creates the tabs
         dataframe_tab = self.make_dataframe_tab(df_name)
-        # statistics_tab = self.make_statistics_tab(df_name)
+        statistics_tab = self.make_statistics_tab(df_name)
         chart_tab = self.make_tab_charts()
 
         tab_widget = QtWidgets.QTabWidget()
 
         # Adds them to the tab_view
         tab_widget.addTab(dataframe_tab, "Dataframe")
-        # tab_widget.addTab(statistics_tab, "Statistics")
+        tab_widget.addTab(statistics_tab, "Statistics")
         tab_widget.addTab(chart_tab, "Test")
 
         return tab_widget
@@ -241,11 +241,11 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         tab_df = pd.DataFrame({
             'Type': df.dtypes.replace('object', 'string'),
-            'Count': df.count(),
-            'Mean': df.mean(),
-            'StdDev': df.std(),
-            'Min': df.min(),
-            'Max': df.max(),
+            'Count': df.count(numeric_only=True).astype(pd.Int64Dtype()),
+            'Mean': df.mean(numeric_only=True),
+            'StdDev': df.std(numeric_only=True),
+            'Min': df.min(numeric_only=True),
+            'Max': df.max(numeric_only=True),
         })
 
         view = DataFrameViewer(tab_df)
