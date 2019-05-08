@@ -31,6 +31,9 @@ class PandasGUI(QtWidgets.QMainWindow):
         super().__init__()
         self.app = QtWidgets.QApplication.instance()
 
+        # https://stackoverflow.com/a/27178019/3620725
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+
         # self.df_dicts is a dictionary of all dataframes in the GUI.
         # {dataframe name: objects}
 
@@ -59,9 +62,9 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Adds keyword arguments to df_dict.
         for i, (df_name, df_object) in enumerate(kwargs.items()):
 
-            if type(df_object) == pd.core.series.Series:
+            if type(df_object) == pd.Series:
                 df_object = df_object.to_frame()
-                print(f'"{df_name}" was automatically converted from Series to DataFrame')
+                print(f'"{df_name}" was automatically converted from Series to DataFrame for viewing')
             self.df_dicts[df_name] = {}
             self.df_dicts[df_name]['dataframe'] = df_object
 
@@ -85,9 +88,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         size = tuple((pd.np.array([screen.width(), screen.height()]) * percentage_of_screen).astype(int))
         self.resize(QtCore.QSize(*size))
 
-        print('test')
-        print(size)
-        print(self.size())
         # Center window on screen
         screen = QtWidgets.QDesktopWidget().screenGeometry()
         size = self.geometry()
@@ -322,7 +322,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         # Creates the headers.
         self.nav_tree.setHeaderLabels(['Name', 'Shape'])
-        self.nav_tree.itemClicked.connect(self.nav_clicked)
+        self.nav_tree.itemSelectionChanged.connect(self.nav_clicked)
         for df_name in df_names:
             self.add_df_to_nav(df_name)
 
@@ -339,10 +339,10 @@ class PandasGUI(QtWidgets.QMainWindow):
         shape = str(shape[0]) + ' X ' + str(shape[1])
 
         item = QtWidgets.QTreeWidgetItem(parent, [df_name, shape])
-        self.nav_tree.itemClicked.emit(item, 0)
+        self.nav_tree.itemSelectionChanged.emit()
         self.nav_tree.setCurrentItem(item)
 
-    def nav_clicked(self, item, column):
+    def nav_clicked(self):
         """
         Examines navbar row pressed by user
         and then changes the dataframe shown.
@@ -353,6 +353,10 @@ class PandasGUI(QtWidgets.QMainWindow):
                               Provides information on the location clicked,
                               accessible with methods such as row() or data().
         """
+        try:
+            item = self.nav_tree.selectedItems()[0]
+        except IndexError:
+            return
 
         df_name = item.data(0, Qt.DisplayRole)
         df_properties = self.df_dicts.get(df_name)

@@ -120,7 +120,10 @@ class DataTableModel(QtCore.QAbstractTableModel):
         pass
 
     def columnCount(self, parent=None):
-        return len(self.df.columns)
+        if type(self.df) == pd.Series:
+            return 1
+        else:
+            return len(self.df.columns)
 
     def rowCount(self, parent=None):
         return len(self.df)
@@ -319,47 +322,43 @@ class HeaderModel(QtCore.QAbstractTableModel):
             else:
                 return 1
 
-    # Required
     def rowCount(self, parent=None):
-        # Horizontal
-        if self.orientation == Qt.Horizontal:
-            if type(self.df.columns) == pd.MultiIndex:
-                if type(self.df.columns.values[0]) == tuple:
-                    return len(self.df.columns.values[0])
-                else:
-                    return 1
-            else:  # Not multiindex
-                return 1
-        else:  # Vertical
-            if type(self.df.index) == pd.MultiIndex:
-                return len(self.df.index.values)
-            else:
-                return len(self.df.index.values)
 
-    # Required
-    def data(self, index: QModelIndex, role: int):
+        if self.orientation == Qt.Horizontal:
+
+            if type(self.df.columns) == pd.MultiIndex:
+                return len(self.df.columns[0])
+            else:
+                return 1
+
+        elif self.orientation == Qt.Vertical:
+
+            return len(self.df.index.values)
+
+    def data(self, index, role=None):
+        row = index.row()
+        col = index.column()
+
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.ToolTipRole:
+
             if self.orientation == Qt.Horizontal:
+
                 if type(self.df.columns) == pd.MultiIndex:
-                    row = index.row()
-                    col = index.column()
                     return str(self.df.columns.values[col][row])
-                else:  # Not MultiIndex
-                    col = index.column()
+                else:
                     return str(self.df.columns.values[col])
+
             elif self.orientation == Qt.Vertical:
+
                 if type(self.df.index) == pd.MultiIndex:
-                    row = index.row()
-                    col = index.column()
                     return str(self.df.index.values[row][col])
-                else:  # Not MultiIndex
-                    row = index.row()
+                else:
                     return str(self.df.index.values[row])
 
     # The headers of this table will show the level names of the MultiIndex
     def headerData(self, section, orientation, role=None):
-        if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.ToolTipRole:
-            # self.orientation says which HeaderView this is and orientation says which of its headers this is
+        if role in [QtCore.Qt.DisplayRole, QtCore.Qt.ToolTipRole]:
+
             if self.orientation == Qt.Horizontal and orientation == Qt.Vertical:
                 if type(self.df.columns) == pd.MultiIndex:
                     return str(self.df.columns.names[section])
@@ -370,10 +369,8 @@ class HeaderModel(QtCore.QAbstractTableModel):
                     return str(self.df.index.names[section])
                 else:
                     return str(self.df.index.name)
-
             else:
-                # These cells should be hidden anyways
-                return None
+                return None  # These cells should be hidden anyways
 
 
 class HeaderView(QtWidgets.QTableView):
@@ -649,16 +646,18 @@ if __name__ == '__main__':
     index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
     multidf = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
 
+    ser = pd.Series(pd.np.random.randn(8), index=index[:8])
+
     tab_df = multidf.describe(include='all').T
     tab_df.insert(loc=0, column='Type', value=multidf.dtypes)
 
     pivot_table = pokemon.pivot_table(values='HP', index='Generation')
     df7 = pd.read_csv(r"C:\Users\Adam-PC\Desktop\pivot tut\SalesOrders.csv").describe(include='all')
 
-    view = DataFrameViewer(multidf)
+    view = DataFrameViewer(ser)
     view.show()
 
     # view2 = DataTableView(df)
     # view2.setModel(DataTableModel(df))
     # view2.show()
-    sys.exit(app.exec_())
+    # sys.exit(app.exec_())
