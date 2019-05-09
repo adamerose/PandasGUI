@@ -94,16 +94,28 @@ class DataFrameViewer(QtWidgets.QWidget):
         self.gridLayout.addWidget(self.dataView.horizontalScrollBar(), 2, 1, 2, 1, alignment=Qt.AlignTop)
         self.gridLayout.addWidget(self.dataView.verticalScrollBar(), 1, 2, 1, 1, alignment=Qt.AlignLeft)
 
-        # self.setStyleSheet("background-color: white")
+        # Styling
+        for header in [self.indexHeader, self.columnHeader]:
+            header.setStyleSheet("background-color: white;"
+                                 "selection-color: black;"
+                                 "selection-background-color: #EAEAEA;")
 
-        for item in [self.dataView, self.columnHeader, self.indexHeader, self.dataView.horizontalScrollBar(),
-                     self.dataView.verticalScrollBar()]:
+        self.dataView.setStyleSheet("background-color: white;"
+                                    "selection-color: black;"
+                                    "selection-background-color: #BBDEFB;")
+
+        for item in [self.dataView, self.columnHeader, self.indexHeader]:
             item.setContentsMargins(0, 0, 0, 0)
-            # item.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed))
-            item.setStyleSheet("border: 0px solid black;")
-            item.show()
+            item.setStyleSheet(item.styleSheet() + "border: 0px solid black;")
+            item.setItemDelegate(NoFocusDelegate())
 
-        # self.tableView.setStyleSheet("border: 0px solid red;")
+
+# Remove dotted border on cell focus.  https://stackoverflow.com/a/55252650/3620725
+class NoFocusDelegate(QtWidgets.QStyledItemDelegate):
+    def paint(self, QPainter, QStyleOptionViewItem, QModelIndex):
+        if QStyleOptionViewItem.state & QtWidgets.QStyle.State_HasFocus:
+            QStyleOptionViewItem.state = QStyleOptionViewItem.state ^ QtWidgets.QStyle.State_HasFocus
+        super().paint(QPainter, QStyleOptionViewItem, QModelIndex)
 
 
 class DataTableModel(QtCore.QAbstractTableModel):
@@ -195,15 +207,22 @@ class DataTableView(QtWidgets.QTableView):
         # Link selection to headers
         self.selectionModel().selectionChanged.connect(self.on_selectionChanged)
 
+        # Settings
+        self.setWordWrap(False)
+
     def on_selectionChanged(self):
         columnHeader = self.parent.columnHeader
         indexHeader = self.parent.indexHeader
 
-        selection = self.selectionModel().selection()
-        columnHeader.selectionModel().select(selection,
-                                             QItemSelectionModel.Columns | QItemSelectionModel.ClearAndSelect)
-        indexHeader.selectionModel().select(selection,
-                                            QItemSelectionModel.Rows | QItemSelectionModel.ClearAndSelect)
+        if not columnHeader.hasFocus():
+            selection = self.selectionModel().selection()
+            columnHeader.selectionModel().select(selection,
+                                                 QItemSelectionModel.Columns | QItemSelectionModel.ClearAndSelect)
+
+        if not indexHeader.hasFocus():
+            selection = self.selectionModel().selection()
+            indexHeader.selectionModel().select(selection,
+                                                QItemSelectionModel.Rows | QItemSelectionModel.ClearAndSelect)
 
     def keyPressEvent(self, event):
 
@@ -347,14 +366,15 @@ class HeaderView(QtWidgets.QTableView):
         self.parent = parent
         self.table = parent.dataView
         self.setModel(HeaderModel(df, orientation))
-        self.setSpans()
 
         # Settings
         self.setSizePolicy(QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum))
-        # self.setSelectionMode(self.NoSelection)
+        self.setWordWrap(False)
 
         # Link selection to DataTable
         self.selectionModel().selectionChanged.connect(self.on_selectionChanged)
+        self.setSpans()
+        self.initSize()
 
         # Orientation specific settings
         if orientation == Qt.Horizontal:
@@ -367,12 +387,14 @@ class HeaderView(QtWidgets.QTableView):
             self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             self.verticalHeader().hide()
             self.horizontalHeader().setDisabled(True)
-            self.horizontalHeader().setHighlightSections(False)  # Selection lags a lot without this
 
-            self.resizeVertHeader()
+            self.horizontalHeader().setHighlightSections(False)  # Selection lags a lot without this
 
         # Set initial size
         self.resize(self.sizeHint())
+
+    def test(self):
+        print('test')
 
     # Header
     def on_selectionChanged(self):
@@ -417,7 +439,6 @@ class HeaderView(QtWidgets.QTableView):
             if self.df.index.nlevels == 1:
                 return
 
-
         for ix in self.selectedIndexes():
             if self.orientation == Qt.Horizontal:
                 # Loop over the rows above this one
@@ -431,30 +452,29 @@ class HeaderView(QtWidgets.QTableView):
                     self.setSelection(self.visualRect(ix2), QtCore.QItemSelectionModel.Select)
 
     # Fits columns to contents but with a minimum width and added padding
-    def resizeHorzHeader(self):
-        min_size = 125
-        padding = 20
-        self.resizeColumnsToContents()
+    def initSize(self):
+        padding = 0
 
-        for col in range(self.model().columnCount()):
-            width = self.columnWidth(col)
-            if width + padding < min_size:
-                new_width = 125
-            else:
-                new_width = width + padding
+        if self.orientation == Qt.Horizontal:
+            min_size = 100
 
-            self.setColumnWidth(col, new_width)
-            self.table.setColumnWidth(col, new_width)
+            self.resizeColumnsToContents()
 
-    # Fits columns to contents but with a minimum width and added padding
-    def resizeVertHeader(self):
-        max_size = 250
-        self.resizeColumnsToContents()
+            for col in range(self.model().columnCount()):
+                width = self.columnWidth(col)
+                if width + padding < min_size:
+                    new_width = min_size
+                else:
+                    new_width = width + padding
 
-        for col in range(self.model().columnCount()):
-            width = self.columnWidth(col)
-            if width > max_size:
-                self.setColumnWidth(col, max_size)
+                self.setColumnWidth(col, new_width)
+                self.table.setColumnWidth(col, new_width)
+        else:
+            max_size = 1000
+            self.resizeColumnsToContents()
+            for col in range(self.model().columnCount()):
+                width = self.columnWidth(col)
+                self.setColumnWidth(col, width + padding)
 
     # This sets spans to group together adjacent cells with the same values
     def setSpans(self):
@@ -500,7 +520,6 @@ class HeaderView(QtWidgets.QTableView):
 
         # Find spans for vertical HeaderView
         else:
-
             # Find how many levels the MultiIndex has
             if type(df.index) == pd.MultiIndex:
                 N = len(df.index[0])
@@ -590,19 +609,19 @@ if __name__ == '__main__':
     index = pd.Index(['A', 'B', 'C', 'D'])
     index.name = 'name1'
 
-    df1 = pd.DataFrame(randn(8, 8), index=mi3, columns=mi3)
+    df1 = pd.DataFrame(randn(4, 4), index=mi1, columns=mi1)
     df2 = pd.DataFrame(randn(4, 4), index=mi2, columns=mi2)
-    df3 = pd.DataFrame(randn(4, 4), index=mi1, columns=mi1)
+    df3 = pd.DataFrame(randn(8, 8), index=mi3, columns=mi3)
     df4 = pd.DataFrame(randn(4, 4), index=index, columns=index)
-    s1 = pd.Series(randn(8), index=mi3)
+    s1 = pd.Series(randn(4), index=mi1)
     s2 = pd.Series(randn(4), index=mi2)
-    s3 = pd.Series(randn(4), index=mi1)
+    s3 = pd.Series(randn(8), index=mi3)
     s4 = pd.Series(randn(4), index=index)
 
     df8 = pd.read_csv(r'C:\Users\Adam-PC\Desktop\large_wafer_data.csv')
     df9 = pd.DataFrame(np.random.randn(100000, 5))
 
-    view = DataFrameViewer(df8)
+    view = DataFrameViewer(df3)
     view.show()
 
     # view2 = DataTableView(df)
