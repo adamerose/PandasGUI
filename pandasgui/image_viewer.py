@@ -3,7 +3,7 @@ from PyQt5 import QtWidgets
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT
 from matplotlib.figure import Figure
-
+import matplotlib.pyplot as plt
 
 class TabbedFigureViewer(QtWidgets.QWidget):
     def __init__(self, figs=[]):
@@ -66,32 +66,42 @@ class TabbedFigureViewer(QtWidgets.QWidget):
 
 
 class FigureViewer(QtWidgets.QWidget):
-    def __init__(self, image=Figure()):
+    def __init__(self, fig=Figure()):
         super().__init__()
 
-        self.figure = image
-        self.canvas = FigureCanvasQTAgg(self.figure)
+        self.canvas = FigureCanvasQTAgg(fig)
         self.toolbar = NavigationToolbar2QT(self.canvas, self)
-        self.ax = self.figure.axes[0]
 
         # Just some button connected to `plot` method
         self.button = QtWidgets.QPushButton('Plot Random')
         self.button.clicked.connect(self.setRandomImage)
 
-        layout = QtWidgets.QVBoxLayout()
-        self.setLayout(layout)
-        layout.addWidget(self.toolbar)
-        layout.addWidget(self.canvas)
-        # layout.addWidget(self.button)
+        self.layout = QtWidgets.QVBoxLayout()
+        self.setLayout(self.layout)
+        self.layout.addWidget(self.toolbar)
+        self.layout.addWidget(self.canvas)
+        self.layout.addWidget(self.button)
 
-    def setImage(self, image):
-        pass
+        self.toolbar.setStyleSheet('background: transparent;')
+
+    def setFigure(self, fig):
+        plt.close(self.canvas.figure)
+
+        new_canvas = FigureCanvasQTAgg(fig)
+        self.layout.replaceWidget(self.canvas, new_canvas)
+
+        new_toolbar = NavigationToolbar2QT(new_canvas, self)
+        self.layout.replaceWidget(self.toolbar, new_toolbar)
+
+        self.toolbar.setParent(None)
+        self.toolbar = new_toolbar
+        self.canvas = new_canvas
 
     def setRandomImage(self):
         data = [random.random() for i in range(10)]
-
-        self.ax.clear()
-        self.ax.plot(data, '*-')
+        plt.figure()
+        plt.plot(data, '*-')
+        self.setFigure(plt.gcf())
         self.canvas.draw()
 
 
@@ -195,5 +205,6 @@ if __name__ == '__main__':
 
     figs.append(plt.gcf())
 
-    win = TabbedFigureViewer(figs)
+    win = FigureViewer(figs[0])
+    win.show()
     app.exec_()

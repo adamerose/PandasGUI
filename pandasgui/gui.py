@@ -6,6 +6,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 from pandasgui.dataframe_viewer import DataFrameViewer
 from pandasgui.dialogs import PivotDialog, ScatterDialog
+from pandasgui.dataframe_explorer import DataFrameExplorer
 
 # Fix lack of stack trace on PyQt exceptions
 try:
@@ -48,7 +49,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         # setupUI() class variable initialization.
         self.main_layout = None
-        self.tabs_stacked_widget = None
+        self.stacked_widget = None
         self.df_shown = None
         self.splitter = None
         self.main_widget = None
@@ -76,17 +77,10 @@ class PandasGUI(QtWidgets.QMainWindow):
             self.setWindowTitle('PandasGUI (nonblocking)')
         else:
             self.setWindowTitle('PandasGUI')
-
         self.app.setWindowIcon(QtGui.QIcon('images/icon.png'))
 
         # Create main Widget
         self.show()
-
-        screen = QtWidgets.QDesktopWidget().screenGeometry()
-
-        percentage_of_screen = 0.6
-        size = tuple((pd.np.array([screen.width(), screen.height()]) * percentage_of_screen).astype(int))
-        self.resize(QtCore.QSize(*size))
 
         # Center window on screen
         screen = QtWidgets.QDesktopWidget().screenGeometry()
@@ -104,11 +98,12 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.make_menu_bar()
 
         # Make the QTabWidgets for each DataFrame
-        self.tabs_stacked_widget = QtWidgets.QStackedWidget()
+        self.stacked_widget = QtWidgets.QStackedWidget()
         for df_name in self.df_dicts.keys():
-            tab_widget = self.make_tab_widget(df_name)
-            self.df_dicts[df_name]['tab_widget'] = tab_widget
-            self.tabs_stacked_widget.addWidget(tab_widget)
+            df = self.df_dicts[df_name]['dataframe']
+            dfe = DataFrameExplorer(df)
+            self.df_dicts[df_name]['tab_widget'] = dfe
+            self.stacked_widget.addWidget(dfe)
 
         # Make the navigation bar
         self.make_nav()
@@ -116,14 +111,17 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Adds navigation section to splitter.
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
         self.splitter.addWidget(self.nav_tree)
-        self.splitter.addWidget(self.tabs_stacked_widget)
+        self.splitter.addWidget(self.stacked_widget)
 
-        # Combines navigation section and main section.
-        self.main_layout.addWidget(self.splitter)
-        self.main_widget = QtWidgets.QWidget()
-        self.main_widget.setLayout(self.main_layout)
+        self.splitter.setCollapsible(0, False)
+        self.splitter.setCollapsible(1, False)
 
-        self.setCentralWidget(self.main_widget)
+        nav_width = self.nav_tree.sizeHint().width()
+        print('nav_width', nav_width)
+        self.splitter.setSizes([nav_width, self.splitter.width() - nav_width])
+        print(self.splitter.width())
+        self.setCentralWidget(self.splitter)
+        self.splitter.setContentsMargins(10,10,10,10)
 
     def import_dataframe(self, path):
         print(path)
@@ -136,6 +134,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
     def add_dataframe(self, df_name, df_object, parent_name=None):
         '''
+        Add a new dataframe to the GUI
 
         :param df_name:
         :param df_object:
@@ -150,7 +149,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Make tab widget
         tab_widget = self.make_tab_widget(df_name)
         self.df_dicts[df_name]['tab_widget'] = tab_widget
-        self.tabs_stacked_widget.addWidget(tab_widget)
+        self.stacked_widget.addWidget(tab_widget)
 
         # Add it to the nav
         parent = None
@@ -163,7 +162,9 @@ class PandasGUI(QtWidgets.QMainWindow):
     # Menu bar functions
 
     def make_menu_bar(self):
-
+        '''
+        Make the menubar and add it to the QMainWindow
+        '''
         # Create a menu for setting the GUI style.
         # Uses radio-style buttons in a QActionGroup.
         menubar = self.menuBar()
@@ -184,6 +185,10 @@ class PandasGUI(QtWidgets.QMainWindow):
         chartMenu = menubar.addMenu('&Plot Charts')
         # chartGroup = QtWidgets.QActionGroup(chartMenu)
 
+        testDialogAction = QtWidgets.QAction('&TEST', self)
+        testDialogAction.triggered.connect(self.test)
+        chartMenu.addAction(testDialogAction)
+
         scatterDialogAction = QtWidgets.QAction('&Scatter Dialog', self)
         scatterDialogAction.triggered.connect(self.scatter_dialog)
         chartMenu.addAction(scatterDialogAction)
@@ -195,80 +200,17 @@ class PandasGUI(QtWidgets.QMainWindow):
         pivotDialogAction.triggered.connect(self.pivot_dialog)
         chartMenu.addAction(pivotDialogAction)
 
-    ####################
-    # Tab widget functions
+    def test(self):
+        print('----------------')
+        print('splitter', self.splitter.size())
+        print('nav_tree', self.nav_tree.size())
+        print('stacked_widget', self.stacked_widget.size())
+        print('splitter', self.splitter.sizeHint())
+        print('nav_tree', self.nav_tree.sizeHint())
+        print('stacked_widget', self.stacked_widget.sizeHint())
+        print('----------------')
 
-    def make_tab_widget(self, df_name):
-        """Take a DataFrame and creates tabs for it in self.tab_widget."""
-
-        # Creates the tabs
-        dataframe_tab = self.make_dataframe_tab(df_name)
-        statistics_tab = self.make_statistics_tab(df_name)
-        chart_tab = self.make_tab_charts()
-
-        tab_widget = QtWidgets.QTabWidget()
-
-        # Adds them to the tab_view
-        tab_widget.addTab(dataframe_tab, "Dataframe")
-        tab_widget.addTab(statistics_tab, "Statistics")
-        tab_widget.addTab(chart_tab, "Test")
-
-        return tab_widget
-
-    def make_dataframe_tab(self, df_name):
-
-        df = self.df_dicts[df_name]['dataframe']
-
-        # Create a smaller version to display so it doesn't lag
-        # df = df.head(1000)
-        self.df_dicts[df_name]['display_df'] = df
-
-        tab = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout()
-
-        view = DataFrameViewer(df)
-
-        layout.addWidget(view)
-        tab.setLayout(layout)
-        return tab
-
-    def make_statistics_tab(self, df_name):
-
-        df = self.df_dicts[df_name]['dataframe']
-
-        tab = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout()
-
-        tab_df = pd.DataFrame({
-            'Type': df.dtypes.replace('object', 'string'),
-            'Count': df.count(numeric_only=True).astype(pd.Int64Dtype()),
-            'Mean': df.mean(numeric_only=True),
-            'StdDev': df.std(numeric_only=True),
-            'Min': df.min(numeric_only=True),
-            'Max': df.max(numeric_only=True),
-        })
-
-        view = DataFrameViewer(tab_df)
-
-        layout.addWidget(view)
-
-        tab.setLayout(layout)
-
-        return tab
-
-    def make_tab_charts(self):
-        tab = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout()
-
-        button = QtWidgets.QPushButton("Test")
-        button.clicked.connect(self.test)
-
-        layout.addWidget(button)
-        tab.setLayout(layout)
-        return tab
-
-    ####################
-    # Nav bar functions
+        self.nav_tree.resize(self.nav_tree.sizeHint())
 
     class NavWidget(QtWidgets.QTreeWidget):
         def __init__(self, gui):
@@ -277,7 +219,9 @@ class PandasGUI(QtWidgets.QMainWindow):
             self.setHeaderLabels(['HeaderLabel'])
             self.expandAll()
             self.setAcceptDrops(True)
-            self.setColumnWidth(0, 200)
+
+            for i in range(self.columnCount()):
+                self.resizeColumnToContents(i)
 
         def rowsInserted(self, parent: QtCore.QModelIndex, start: int, end: int):
             super().rowsInserted(parent, start, end)
@@ -285,10 +229,10 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         def sizeHint(self):
             # Width
-            width = 10
+            width = 0
             for i in range(self.columnCount()):
                 width += self.columnWidth(i)
-            return QtCore.QSize(500, 500)
+            return QtCore.QSize(300, 500)
 
         def dragEnterEvent(self, e):
             if e.mimeData().hasUrls:
@@ -326,9 +270,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         for df_name in df_names:
             self.add_df_to_nav(df_name)
 
-    def test(self, x):
-        print(self.df_dicts)
-
     def add_df_to_nav(self, df_name, parent=None):
         '''Add DataFrame to nav from df_dicts'''
         if parent is None:
@@ -365,7 +306,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         if df_properties is not None:
             self.df_shown = df_properties['dataframe']
             tab_widget = df_properties['tab_widget']
-            self.tabs_stacked_widget.setCurrentWidget(tab_widget)
+            self.stacked_widget.setCurrentWidget(tab_widget)
 
     ####################
     # Dialog functions.
@@ -434,11 +375,12 @@ if __name__ == '__main__':
         multidf = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
         # big = pd.read_csv('sample_data/1500000 Sales Records.csv')
         # show(big)
+        wafers = pd.read_csv(r'C:\_MyFiles\Programming\python scratch\large_wafer_data.csv')
 
         if file_dataframes:
             show(**file_dataframes)
         else:
-            show(pokemon, multidf, sample)
+            show(pokemon, multidf, sample, wafers)
     except Exception as e:
         print(e)
         import traceback

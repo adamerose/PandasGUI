@@ -21,6 +21,10 @@ class DataFrameViewer(QtWidgets.QWidget):
     def __init__(self, df):
         super().__init__()
 
+        if type(df) == pd.Series:
+            df = df.to_frame()
+            print(f'DataFrame was automatically converted from Series to DataFrame for viewing')
+
         df = df.copy()
 
         # Set up DataFrame TableView and Model
@@ -209,6 +213,7 @@ class DataTableView(QtWidgets.QTableView):
 
         # Settings
         self.setWordWrap(False)
+        self.setAlternatingRowColors(True)
 
     def on_selectionChanged(self):
         columnHeader = self.parent.columnHeader
@@ -245,7 +250,9 @@ class DataTableView(QtWidgets.QTableView):
         text = ""
 
         last_row = None
-        for ix in self.selectedIndexes():
+        indexes = self.selectionModel().selection().indexes()
+
+        for ix in indexes:
             if last_row is None:
                 last_row = ix.row()
 
@@ -370,6 +377,7 @@ class HeaderView(QtWidgets.QTableView):
         # Settings
         self.setSizePolicy(QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum))
         self.setWordWrap(False)
+        self.setFont(QtGui.QFont("Times", weight=QtGui.QFont.Bold))
 
         # Link selection to DataTable
         self.selectionModel().selectionChanged.connect(self.on_selectionChanged)
@@ -383,12 +391,14 @@ class HeaderView(QtWidgets.QTableView):
             self.verticalHeader().setDisabled(True)
             self.verticalHeader().setHighlightSections(False)  # Selection lags a lot without this
 
+
         else:
             self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             self.verticalHeader().hide()
             self.horizontalHeader().setDisabled(True)
 
             self.horizontalHeader().setHighlightSections(False)  # Selection lags a lot without this
+
 
         # Set initial size
         self.resize(self.sizeHint())
@@ -453,7 +463,7 @@ class HeaderView(QtWidgets.QTableView):
 
     # Fits columns to contents but with a minimum width and added padding
     def initSize(self):
-        padding = 0
+        padding = 20
 
         if self.orientation == Qt.Horizontal:
             min_size = 100
@@ -618,10 +628,10 @@ if __name__ == '__main__':
     s3 = pd.Series(randn(8), index=mi3)
     s4 = pd.Series(randn(4), index=index)
 
-    df8 = pd.read_csv(r'C:\Users\Adam-PC\Desktop\large_wafer_data.csv')
+    df8 = pd.read_csv(r'C:\_MyFiles\Programming\python scratch\large_wafer_data.csv')
     df9 = pd.DataFrame(np.random.randn(100000, 5))
 
-    view = DataFrameViewer(df3)
+    view = DataFrameViewer(df8)
     view.show()
 
     # view2 = DataTableView(df)
