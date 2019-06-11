@@ -69,14 +69,15 @@ class DataFrameExplorer(QtWidgets.QTabWidget):
 
             self.df = df.copy()
 
-            self.picker = ExtendedComboBox(df.columns)
+            self.picker = QtWidgets.QComboBox()
+            self.picker.addItems(df.columns)
             self.picker.currentIndexChanged.connect(self.update_plot)
             self.figure_viewer = FigureViewer()
 
             self.layout = QtWidgets.QVBoxLayout()
 
-            self.layout.addWidget(self.figure_viewer)
             self.layout.addWidget(self.picker)
+            self.layout.addWidget(self.figure_viewer)
 
             self.setLayout(self.layout)
             self.update_plot()

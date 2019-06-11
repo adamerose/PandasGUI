@@ -69,6 +69,12 @@ class PandasGUI(QtWidgets.QMainWindow):
             self.df_dicts[df_name] = {}
             self.df_dicts[df_name]['dataframe'] = df_object
 
+        # Set window size to percentage of screen
+        screen = QtWidgets.QDesktopWidget().screenGeometry()
+        percentage_of_screen = 0.7
+        size = tuple((pd.np.array([screen.width(), screen.height()]) * percentage_of_screen).astype(int))
+        self.resize(QtCore.QSize(*size))
+
         # Generates the user interface.
         self.setupUI()
 
@@ -81,6 +87,8 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         # Create main Widget
         self.show()
+
+
 
         # Center window on screen
         screen = QtWidgets.QDesktopWidget().screenGeometry()
@@ -106,7 +114,13 @@ class PandasGUI(QtWidgets.QMainWindow):
             self.stacked_widget.addWidget(dfe)
 
         # Make the navigation bar
-        self.make_nav()
+        df_names = list(self.df_dicts.keys())
+        self.nav_tree = self.NavWidget(self)
+        # Creates the headers.
+        self.nav_tree.setHeaderLabels(['Name', 'Shape'])
+        self.nav_tree.itemSelectionChanged.connect(self.nav_clicked)
+        for df_name in df_names:
+            self.add_df_to_nav(df_name)
 
         # Adds navigation section to splitter.
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
@@ -115,10 +129,11 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         self.splitter.setCollapsible(0, False)
         self.splitter.setCollapsible(1, False)
+        self.splitter.setStretchFactor(0, 0)
+        self.splitter.setStretchFactor(1, 1)
 
         nav_width = self.nav_tree.sizeHint().width()
-        print('nav_width', nav_width)
-        self.splitter.setSizes([nav_width, self.splitter.width() - nav_width])
+        self.splitter.setSizes([nav_width, self.width() - nav_width])
         print(self.splitter.width())
         self.setCentralWidget(self.splitter)
         self.splitter.setContentsMargins(10,10,10,10)
@@ -223,6 +238,9 @@ class PandasGUI(QtWidgets.QMainWindow):
             for i in range(self.columnCount()):
                 self.resizeColumnToContents(i)
 
+            self.setColumnWidth(0, 150)
+            self.setColumnWidth(1, 150)
+
         def rowsInserted(self, parent: QtCore.QModelIndex, start: int, end: int):
             super().rowsInserted(parent, start, end)
             self.expandAll()
@@ -260,15 +278,7 @@ class PandasGUI(QtWidgets.QMainWindow):
                 e.ignore()
 
     def make_nav(self):
-        # Create the navigation pane
-        df_names = list(self.df_dicts.keys())
-        self.nav_tree = self.NavWidget(self)
-
-        # Creates the headers.
-        self.nav_tree.setHeaderLabels(['Name', 'Shape'])
-        self.nav_tree.itemSelectionChanged.connect(self.nav_clicked)
-        for df_name in df_names:
-            self.add_df_to_nav(df_name)
+        pass
 
     def add_df_to_nav(self, df_name, parent=None):
         '''Add DataFrame to nav from df_dicts'''

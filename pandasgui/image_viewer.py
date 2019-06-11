@@ -4,6 +4,7 @@ from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
+import random
 
 class TabbedFigureViewer(QtWidgets.QWidget):
     def __init__(self, figs=[]):
