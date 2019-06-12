@@ -40,15 +40,11 @@ class DataFrameViewer(QtWidgets.QWidget):
 
         # Link scrollbars
         # Scrolling in data table also scrolls the headers
-        self.dataView.horizontalScrollBar().valueChanged.connect(
-            self.columnHeader.horizontalScrollBar().setValue)
-        self.dataView.verticalScrollBar().valueChanged.connect(
-            self.indexHeader.verticalScrollBar().setValue)
+        self.dataView.horizontalScrollBar().valueChanged.connect(self.columnHeader.horizontalScrollBar().setValue)
+        self.dataView.verticalScrollBar().valueChanged.connect(self.indexHeader.verticalScrollBar().setValue)
         # Scrolling in headers also scrolls the data table
-        self.columnHeader.horizontalScrollBar().valueChanged.connect(
-            self.dataView.horizontalScrollBar().setValue)
-        self.indexHeader.verticalScrollBar().valueChanged.connect(
-            self.dataView.verticalScrollBar().setValue)
+        self.columnHeader.horizontalScrollBar().valueChanged.connect(self.dataView.horizontalScrollBar().setValue)
+        self.indexHeader.verticalScrollBar().valueChanged.connect(self.dataView.verticalScrollBar().setValue)
 
         self.dataView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.dataView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -239,6 +235,12 @@ class DataTableView(QtWidgets.QTableView):
         if event.matches(QtGui.QKeySequence.Paste):
             self.paste()
             print('Ctrl + V')
+        if event.key() == Qt.Key_P and (event.modifiers() & Qt.ControlModifier):
+            self.print()
+            print('Ctrl + P')
+
+    def print(self):
+        print(self.model().df)
 
     def copy(self):
         # Set up clipboard object
@@ -398,7 +400,6 @@ class HeaderView(QtWidgets.QTableView):
             self.horizontalHeader().setDisabled(True)
 
             self.horizontalHeader().setHighlightSections(False)  # Selection lags a lot without this
-
 
         # Set initial size
         self.resize(self.sizeHint())
@@ -599,42 +600,15 @@ class HeaderView(QtWidgets.QTableView):
 # Examples
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    app.setStyle('Windows XP')
-    from numpy.random import randn
 
-    # 3-level Multindex
-    tuples = [('A', 'one', 'x'), ('A', 'one', 'y'), ('A', 'two', 'x'), ('A', 'two', 'y'),
-              ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')]
-    mi3 = pd.MultiIndex.from_tuples(tuples, names=['name1', 'name2', 'name3'])
+    import seaborn as sns
+    # Load some sample datasets from Seaborn
+    iris = sns.load_dataset('iris')
+    flights = sns.load_dataset('flights')
+    # Example of a DataFrame using a MultiIndex
+    multi = flights.set_index(['year', 'month']).unstack()
 
-    # 2-level Multindex
-    tuples = [('A', 'one'), ('A', 'two'), ('B', 'one'), ('B', 'two')]
-    mi2 = pd.MultiIndex.from_tuples(tuples, names=['name1', 'name2'])
-
-    # 1-level Multindex
-    tuples = [('A'), ('B'), ('C'), ('D')]
-    mi1 = pd.MultiIndex.from_tuples(tuples, names=['name1'])
-
-    # pd.Index
-    index = pd.Index(['A', 'B', 'C', 'D'])
-    index.name = 'name1'
-
-    df1 = pd.DataFrame(randn(4, 4), index=mi1, columns=mi1)
-    df2 = pd.DataFrame(randn(4, 4), index=mi2, columns=mi2)
-    df3 = pd.DataFrame(randn(8, 8), index=mi3, columns=mi3)
-    df4 = pd.DataFrame(randn(4, 4), index=index, columns=index)
-    s1 = pd.Series(randn(4), index=mi1)
-    s2 = pd.Series(randn(4), index=mi2)
-    s3 = pd.Series(randn(8), index=mi3)
-    s4 = pd.Series(randn(4), index=index)
-
-    df8 = pd.read_csv(r'C:\_MyFiles\Programming\python scratch\large_wafer_data.csv')
-    df9 = pd.DataFrame(np.random.randn(100000, 5))
-
-    view = DataFrameViewer(df8)
+    view = DataFrameViewer(iris)
     view.show()
 
-    # view2 = DataTableView(df)
-    # view2.setModel(DataTableModel(df))
-    # view2.show()
     sys.exit(app.exec_())

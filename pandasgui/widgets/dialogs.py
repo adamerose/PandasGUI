@@ -346,30 +346,6 @@ class ScatterDialog(DialogGeneric):
         sns.scatterplot(x, y, c, data=df)
         plt.show()
 
-# %%
-
-def main():
-    dataframes = {}
-
-    pokemon = pd.read_csv('sample_data/pokemon.csv')
-    dataframes['pokemon'] = {}
-    dataframes['pokemon']['dataframe'] = pokemon
-
-    sample = pd.read_csv('sample_data/sample.csv')
-    dataframes['sample'] = {}
-    dataframes['sample']['dataframe'] = sample
-
-    ## PyQt
-    app = QtWidgets.QApplication(sys.argv)
-
-
-    # win = ScatterDialog(dataframes)
-    from pandasgui import show
-    win = Categorizer(pokemon, 'Generation')
-    show(pokemon)
-    win.show()
-    app.exec_()
-
 if __name__ == '__main__':
-    main()
+    pass
 

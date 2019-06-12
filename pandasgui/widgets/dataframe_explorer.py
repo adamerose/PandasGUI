@@ -11,9 +11,9 @@ import seaborn as sns
 
 sns.set()
 
-from dataframe_viewer import DataFrameViewer
-from extended_combobox import ExtendedComboBox
-from image_viewer import FigureViewer
+from pandasgui.dataframe_viewer import DataFrameViewer
+from pandasgui.extended_combobox import ExtendedComboBox
+from pandasgui.image_viewer import FigureViewer
 
 try:
     import pyqt_fix
@@ -35,7 +35,6 @@ class DataFrameExplorer(QtWidgets.QTabWidget):
         # Creates the tabs
         dataframe_tab = DataFrameViewer(df)
         statistics_tab = self.make_statistics_tab(df)
-
 
         # Adds them to the tab_view
         self.addTab(dataframe_tab, "Dataframe")
@@ -86,13 +85,13 @@ class DataFrameExplorer(QtWidgets.QTabWidget):
             col = self.picker.currentText()
 
             fig = plt.figure()
-            if self.df[col].dtype.name in ['object', 'bool']:
-                arr = self.df[col]
 
+            arr = self.df[col].dropna()
+            if self.df[col].dtype.name in ['object', 'bool']:
                 ax = sns.countplot(y=arr, color='grey', order=arr.value_counts().iloc[:10].index)
 
             else:
-                ax = sns.distplot(self.df[col], color='black', hist_kws=dict(color='grey', alpha=1))
+                ax = sns.distplot(arr, color='black', hist_kws=dict(color='grey', alpha=1))
 
             self.figure_viewer.setFigure(ax.figure)
 
@@ -101,8 +100,15 @@ class DataFrameExplorer(QtWidgets.QTabWidget):
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
 
-    pokemon = pd.read_csv('sample_data/pokemon.csv')
-    sample = pd.read_csv('sample_data/sample.csv')
+    # Sample data sets
+    import seaborn as sns
+    iris = sns.load_dataset('iris')
+    flights = sns.load_dataset('flights')
+    multi = flights.set_index(['year', 'month']).unstack()  # MultiIndex example
+
+    # Create and show widget
+    view = DataFrameViewer(iris)
+    view.show()
 
     dfe = DataFrameExplorer(pokemon)
     dfe.show()

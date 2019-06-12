@@ -6,6 +6,7 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import random
 
+
 class TabbedFigureViewer(QtWidgets.QWidget):
     def __init__(self, figs=[]):
         super().__init__()
