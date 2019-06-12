@@ -81,7 +81,7 @@ class DataFrameExplorer(QtWidgets.QTabWidget):
             fig = plt.figure()
 
             arr = self.df[col].dropna()
-            if self.df[col].dtype.name in ['object', 'bool']:
+            if self.df[col].dtype.name in ['object', 'bool', 'category']:
                 ax = sns.countplot(y=arr, color='grey', order=arr.value_counts().iloc[:10].index)
 
             else:
@@ -98,7 +98,7 @@ if __name__ == '__main__':
     from pandasgui.datasets import iris, flights, multi, pokemon
 
     # Create and show widget
-    dfe = DataFrameExplorer(pokemon)
+    dfe = DataFrameExplorer(flights)
     dfe.show()
 
     sys.exit(app.exec_())
