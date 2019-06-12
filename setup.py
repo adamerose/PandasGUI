@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 from distutils.core import setup
 
@@ -11,7 +11,7 @@ setup(name='pandasgui',
       author='Adam Rose',
       author_email='adamerose@hotmail.com',
       url='https://github.com/adamerose/pandasgui',
-      packages=['pandasgui'],
+      packages=find_packages(),
       long_description=long_description,
       long_description_content_type='text/markdown',
       install_requires=[
