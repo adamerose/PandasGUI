@@ -101,6 +101,7 @@ class DataFrameViewer(QtWidgets.QWidget):
                                  "selection-background-color: #EAEAEA;")
 
         self.dataView.setStyleSheet("background-color: white;"
+                                    "alternate-background-color: #F4F6F6;"
                                     "selection-color: black;"
                                     "selection-background-color: #BBDEFB;")
 
