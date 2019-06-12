@@ -43,3 +43,11 @@ This project is still in version 0.x.y and subject to major changes. Issues, fee
 - Copy & Paste from GUI
 - Import CSV files with drag & drop
 - Tabs showing column statistics and histograms
+
+## Gallery
+
+![](./docs/gallery1.png)
+
+![](./docs/gallery2.png)
+
+![](./docs/gallery3.png)
