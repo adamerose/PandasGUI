@@ -1,1 +1,1 @@
-include data/*.csv
+include pandasgui/data/*.csv
