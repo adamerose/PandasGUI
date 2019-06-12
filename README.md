@@ -4,11 +4,18 @@ This project allows display and modification of Pandas DataFrames through a GUI 
 
 ## Installation
 
-Run the following to install:
+Run the following to install from PyPi:
 
 ```python
 pip install pandasgui
 ```
+
+Or install directly from Github for the latest changes.
+
+```python
+pip install git+https://github.com/adamerose/pandasgui.git
+```
+
 
 ## Usage
 View two DataFrames in PandasGUI
