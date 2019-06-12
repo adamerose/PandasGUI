@@ -35,7 +35,6 @@ import seaborn as sns
 from pandasgui import show
 
 flights = sns.load_dataset('flights')
-
 multi = flights.set_index(['year', 'month']).unstack()  # MultiIndex example
 show(flights, flightsReshaped=multi, nonblocking=True)
 
@@ -50,6 +49,11 @@ This project is still in version 0.x.y and subject to major changes. Issues, fee
 - Copy & Paste from GUI
 - Import CSV files with drag & drop
 - Tabs showing column statistics and histograms
+
+## Requirements
+- pandas
+- PyQt5
+- seaborn
 
 ## Gallery
 

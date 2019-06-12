@@ -6,10 +6,10 @@ with open('README.md', 'r') as fh:
     long_description = fh.read()
 
 setup(name='pandasgui',
-      version='0.0.4',
+      version='0.0.5',
       description='GUI for Pandas DataFrames',
       author='Adam Rose',
-      author_email='adamerose@hotmail.com',
+      author_email='adam.e.rose@hotmail.com',
       url='https://github.com/adamerose/pandasgui',
       packages=find_packages(),
       include_package_data=True,
@@ -18,5 +18,5 @@ setup(name='pandasgui',
       install_requires=[
           'pandas',
           'PyQt5',
-          'multiprocess']
+          'seaborn']
       )
