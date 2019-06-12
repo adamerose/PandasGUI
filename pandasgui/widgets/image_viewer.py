@@ -179,34 +179,20 @@ def ppt_section_slide(title, subtitle, file_path):
 
 
 if __name__ == '__main__':
-    import random
-    import sys
-    import matplotlib.pyplot as plt
+    from pandasgui.datasets import iris, flights, multi, pokemon
 
-    app = QtWidgets.QApplication.instance()
-    if not app:
-        app = QtWidgets.QApplication(sys.argv)
 
-    data = [random.random() for i in range(100)]
-    datalist = [[random.random() + i ** j for i in range(-50, 50, 1)] for j in range(5)]
+    app = QtWidgets.QApplication([])
+
     figs = []
-    for data in datalist:
-        fig, ax = plt.subplots()
-        ax.plot(data)
-        figs.append(fig)
-
-    import seaborn as sns
-
-    # Load the example dataset for Anscombe's quartet
-    df = sns.load_dataset("anscombe")
-
-    # Show the results of a linear regression within each dataset
-    sns.lmplot(x="x", y="y", col="dataset", hue="dataset", data=df,
-               col_wrap=2, ci=None, palette="muted", height=4,
-               scatter_kws={"s": 50, "alpha": 1})
-
-    figs.append(plt.gcf())
+    for df in [iris, flights, multi]:
+        df.plot()
+        figs.append(plt.gcf())
 
     win = FigureViewer(figs[0])
     win.show()
+
+    win2 = TabbedFigureViewer(figs)
+    win2.show()
+
     app.exec_()

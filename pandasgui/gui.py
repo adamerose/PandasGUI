@@ -4,9 +4,8 @@ import os
 import pandas as pd
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
-from pandasgui.dataframe_viewer import DataFrameViewer
-from pandasgui.dialogs import PivotDialog, ScatterDialog
-from pandasgui.dataframe_explorer import DataFrameExplorer
+from pandasgui.widgets.dialogs import PivotDialog, ScatterDialog
+from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
 
 # Fix lack of stack trace on PyQt exceptions
 try:
@@ -196,13 +195,15 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Set the default style
         styleAction.trigger()
 
-        # Creates a chart menu.
-        chartMenu = menubar.addMenu('&Plot Charts')
-        # chartGroup = QtWidgets.QActionGroup(chartMenu)
+        # Creates a debug menu.
+        debugMenu = menubar.addMenu('&Debug')
 
         testDialogAction = QtWidgets.QAction('&TEST', self)
         testDialogAction.triggered.connect(self.test)
-        chartMenu.addAction(testDialogAction)
+        debugMenu.addAction(testDialogAction)
+
+        # Creates a chart menu.
+        chartMenu = menubar.addMenu('&Plot Charts')
 
         scatterDialogAction = QtWidgets.QAction('&Scatter Dialog', self)
         scatterDialogAction.triggered.connect(self.scatter_dialog)
@@ -225,7 +226,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         print('stacked_widget', self.stacked_widget.sizeHint())
         print('----------------')
 
-        self.nav_tree.resize(self.nav_tree.sizeHint())
 
     class NavWidget(QtWidgets.QTreeWidget):
         def __init__(self, gui):
@@ -368,33 +368,25 @@ def show(*args, nonblocking=False, **kwargs):
 
 if __name__ == '__main__':
     try:
+        # Get paths of drag & dropped files and prepare to open them in the GUI
         file_paths = sys.argv[1:]
-        file_dataframes = {}
-        for path in file_paths:
-            if os.path.isfile(path) and path.endswith('.csv'):
-                df = pd.read_csv(path)
-                filename = os.path.split(path)[1]
-                file_dataframes[filename] = df
-
-        pokemon = pd.read_csv('sample_data/pokemon.csv')
-        sample = pd.read_csv('sample_data/sample.csv')
-
-        tuples = [('A', 'one', 'x'), ('A', 'one', 'y'), ('A', 'two', 'x'), ('A', 'two', 'y'),
-                  ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')]
-        index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
-        multidf = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
-        # big = pd.read_csv('sample_data/1500000 Sales Records.csv')
-        # show(big)
-        wafers = pd.read_csv(r'C:\_MyFiles\Programming\python scratch\large_wafer_data.csv')
-
-        if file_dataframes:
+        if file_paths:
+            file_dataframes = {}
+            for path in file_paths:
+                if os.path.isfile(path) and path.endswith('.csv'):
+                    df = pd.read_csv(path)
+                    filename = os.path.split(path)[1]
+                    file_dataframes[filename] = df
             show(**file_dataframes)
+
+        # Script was run normally, open sample data sets
         else:
-            show(pokemon, multidf, sample, wafers)
+            from pandasgui.datasets import iris, flights, multi
+            show(iris, flights, multi)
+
+    # Catch errors and call input() so they can be viewed before the console window closes when running with drag n drop
     except Exception as e:
         print(e)
         import traceback
-
         traceback.print_exc()
-
         input()

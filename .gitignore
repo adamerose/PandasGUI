@@ -21,7 +21,9 @@ Include/
 Pipfile
 Pipfile.lock
 
-# Created by https://www.gitignore.io/api/python
+
+
+# Lines below created by https://www.gitignore.io/api/python
 # Edit at https://www.gitignore.io/?templates=python
 
 ### Python ###

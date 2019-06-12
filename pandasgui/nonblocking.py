@@ -2,7 +2,7 @@
 Creates a nonblocking instance of the Pandas GUI in a separate process. Works in both script & interactive mode
 '''
 
-import multiprocess
+import multiprocessing
 
 
 def start_gui(**kwargs):
@@ -22,7 +22,7 @@ def start_gui(**kwargs):
 
 
 def show_nonblocking(**kwargs):
-    thread = multiprocess.Process(target=start_gui, kwargs=kwargs)
+    thread = multiprocessing.Process(target=start_gui, kwargs=kwargs)
     thread.start()
 
 
@@ -30,8 +30,5 @@ if __name__ == '__main__':
     import pandas as pd
     from pandasgui import show
 
-    pokemon = pd.read_csv('sample_data/pokemon.csv')
-    sample = pd.read_csv('sample_data/sample.csv')
-
-    show(sample, nonblocking=True)
-    show(pokemon)
+    from pandasgui.datasets import iris, flights, multi, pokemon
+    show(iris, flights, multi, pokemon)

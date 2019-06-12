@@ -64,7 +64,7 @@ def flatten_multiindex(mi, sep=' - ', format=None):
 
 if __name__ == '__main__':
     #### EXAMPLES ####
-    from gui import show
+    from pandasgui import show
 
     X = False  # I'm just using "if X:" instead of "if False:" so my IDE doesn't complain about unreachable code
     #### flatten_multiindex ####

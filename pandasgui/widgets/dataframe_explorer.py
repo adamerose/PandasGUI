@@ -1,19 +1,13 @@
-from PyQt5 import QtGui, QtCore, QtWidgets
-from PyQt5.QtCore import QAbstractItemModel, QModelIndex, QSize, QRect, Qt, QPoint, QItemSelectionModel
-from PyQt5.QtGui import QPainter, QFont, QFontMetrics, QPalette, QBrush, QColor, QTransform
-from PyQt5.QtWidgets import QSizePolicy
+from PyQt5 import QtWidgets
 import pandas as pd
-import numpy as np
-import datetime
 import sys
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 sns.set()
 
-from pandasgui.dataframe_viewer import DataFrameViewer
-from pandasgui.extended_combobox import ExtendedComboBox
-from pandasgui.image_viewer import FigureViewer
+from pandasgui.widgets.dataframe_viewer import DataFrameViewer
+from pandasgui.widgets.image_viewer import FigureViewer
 
 try:
     import pyqt_fix
@@ -101,17 +95,11 @@ if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
 
     # Sample data sets
-    import seaborn as sns
-    iris = sns.load_dataset('iris')
-    flights = sns.load_dataset('flights')
-    multi = flights.set_index(['year', 'month']).unstack()  # MultiIndex example
+    from pandasgui.datasets import iris, flights, multi, pokemon
 
     # Create and show widget
-    view = DataFrameViewer(iris)
-    view.show()
-
     dfe = DataFrameExplorer(pokemon)
     dfe.show()
+
     sys.exit(app.exec_())
 
-plt.figure().autofmt_xdate

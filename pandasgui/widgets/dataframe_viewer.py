@@ -601,14 +601,9 @@ class HeaderView(QtWidgets.QTableView):
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
 
-    import seaborn as sns
-    # Load some sample datasets from Seaborn
-    iris = sns.load_dataset('iris')
-    flights = sns.load_dataset('flights')
-    # Example of a DataFrame using a MultiIndex
-    multi = flights.set_index(['year', 'month']).unstack()
+    from pandasgui.datasets import iris, flights, multi, pokemon
 
-    view = DataFrameViewer(iris)
+    view = DataFrameViewer(pokemon)
     view.show()
 
     sys.exit(app.exec_())

@@ -6,7 +6,7 @@ import seaborn as sns
 import pandas as pd
 import re
 
-from pandasgui.functions import flatten_multiindex
+from pandasgui.utility import flatten_multiindex
 import sys
 
 
