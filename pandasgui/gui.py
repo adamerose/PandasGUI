@@ -197,25 +197,25 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         # Creates a debug menu.
         debugMenu = menubar.addMenu('&Debug')
-
-        testDialogAction = QtWidgets.QAction('&TEST', self)
+        testDialogAction = QtWidgets.QAction('&Test', self)
         testDialogAction.triggered.connect(self.test)
         debugMenu.addAction(testDialogAction)
 
+        '''
         # Creates a chart menu.
         chartMenu = menubar.addMenu('&Plot Charts')
-
         scatterDialogAction = QtWidgets.QAction('&Scatter Dialog', self)
         scatterDialogAction.triggered.connect(self.scatter_dialog)
         chartMenu.addAction(scatterDialogAction)
 
         # Creates a reshaping menu.
         chartMenu = menubar.addMenu('&Reshape Data')
-
         pivotDialogAction = QtWidgets.QAction('&Pivot Dialog', self)
         pivotDialogAction.triggered.connect(self.pivot_dialog)
         chartMenu.addAction(pivotDialogAction)
+        '''
 
+    # I just use this function for printing various things to console while the GUI is running
     def test(self):
         print('----------------')
         print('splitter', self.splitter.size())
@@ -381,8 +381,8 @@ if __name__ == '__main__':
 
         # Script was run normally, open sample data sets
         else:
-            from pandasgui.datasets import iris, flights, multi
-            show(iris, flights, multi)
+            from pandasgui.datasets import iris, flights, multi, all_datasets
+            show(**all_datasets)
 
     # Catch errors and call input() so they can be viewed before the console window closes when running with drag n drop
     except Exception as e:
