@@ -36,3 +36,10 @@ show(flights, flightsReshaped=multi, nonblocking=True)
 
 ## About
 This project is still in version 0.x.y and subject to major changes. Issues, feedback and forks are welcome. 
+
+## Features
+- View DataFrames and Series
+- MultiIndex support
+- Copy & Paste from GUI
+- Import CSV files with drag & drop
+- Tabs showing column statistics and histograms
