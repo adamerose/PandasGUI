@@ -1,16 +1,18 @@
 # PandasGUI
 
-This project allows display and modification of Pandas DataFrames through a GUI based on PyQt5
+A GUI for viewing and analyzing Pandas DataFrames based on PyQt5.
+
+<img src="docs/screenshot1.png" alt="Screenshot" width="500"/>
 
 ## Installation
 
-Run the following to install from PyPi:
+Install from PyPi:
 
 ```python
 pip install pandasgui
 ```
 
-Or install directly from Github for the latest changes.
+Install directly from Github for the latest changes.
 
 ```python
 pip install git+https://github.com/adamerose/pandasgui.git
@@ -18,7 +20,7 @@ pip install git+https://github.com/adamerose/pandasgui.git
 
 
 ## Usage
-View two DataFrames in PandasGUI
+View the *iris* and *flights* DataFrames in PandasGUI
 ```python
 import seaborn as sns
 from pandasgui import show
@@ -55,10 +57,12 @@ This project is still in version 0.x.y and subject to major changes. Issues, fee
 - PyQt5
 - seaborn
 
-## Gallery
-
-![](./docs/gallery1.png)
-
-![](./docs/gallery2.png)
-
-![](./docs/gallery3.png)
+## Screenshots
+DataFrame Viewer
+![](./docs/screenshot1.png)
+DataFrame Statistics
+![](./docs/screenshot2.png)
+Histogram Viewer
+![](./docs/screenshot3.png)
+DataFrame Viewer with MultIndex
+![](./docs/screenshot4.png)
