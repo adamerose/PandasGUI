@@ -41,7 +41,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         # {'dataframe': DataFrame object
         # 'view': DataFrameViewer object
         # 'model': DataFrameModel object
-        # 'tab_widget': QTabWidget object}
+        # 'dataframe_explorer': DataFrameExplorer object}
         # 'display_df': DataFrame object
         # This is a truncated version of the dataframe for displaying
         self.df_dicts = {}
@@ -104,24 +104,20 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Make the menu bar
         self.make_menu_bar()
 
-        # Make the QTabWidgets for each DataFrame
+        # This holds the DataFrameExplorer for each DataFrame
         self.stacked_widget = QtWidgets.QStackedWidget()
-        for df_name in self.df_dicts.keys():
-            df = self.df_dicts[df_name]['dataframe']
-            dfe = DataFrameExplorer(df)
-            self.df_dicts[df_name]['tab_widget'] = dfe
-            self.stacked_widget.addWidget(dfe)
 
         # Make the navigation bar
-        df_names = list(self.df_dicts.keys())
         self.nav_tree = self.NavWidget(self)
         # Creates the headers.
         self.nav_tree.setHeaderLabels(['Name', 'Shape'])
         self.nav_tree.itemSelectionChanged.connect(self.nav_clicked)
-        for df_name in df_names:
-            self.add_df_to_nav(df_name)
 
-        # Adds navigation section to splitter.
+        for df_name in self.df_dicts.keys():
+            df_object = self.df_dicts[df_name]['dataframe']
+            self.add_dataframe(df_name, df_object)
+
+        # Make splitter to hold nav and DataFrameExplorers
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
         self.splitter.addWidget(self.nav_tree)
         self.splitter.addWidget(self.stacked_widget)
@@ -133,44 +129,33 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         nav_width = self.nav_tree.sizeHint().width()
         self.splitter.setSizes([nav_width, self.width() - nav_width])
-        print(self.splitter.width())
+
         self.setCentralWidget(self.splitter)
         self.splitter.setContentsMargins(10,10,10,10)
 
     def import_dataframe(self, path):
-        print(path)
+
         if os.path.isfile(path) and path.endswith('.csv'):
             df_name = os.path.split(path)[1]
             df_object = pd.read_csv(path)
             self.add_dataframe(df_name, df_object)
+
         else:
             print("Invalid file: ", path)
 
-    def add_dataframe(self, df_name, df_object, parent_name=None):
+    def add_dataframe(self, df_name, df_object):
         '''
-        Add a new dataframe to the GUI
-
-        :param df_name:
-        :param df_object:
-        :param parent_name: Name of the parent this should be under in the navbar
-        :return:
+        Add a new DataFrame to the GUI
         '''
 
         self.df_dicts[df_name] = {}
         self.df_dicts[df_name] = {}
         self.df_dicts[df_name]['dataframe'] = df_object
 
-        # Make tab widget
-        tab_widget = self.make_tab_widget(df_name)
-        self.df_dicts[df_name]['tab_widget'] = tab_widget
-        self.stacked_widget.addWidget(tab_widget)
-
-        # Add it to the nav
-        parent = None
-        for item in self.nav_tree.findItems(parent_name, Qt.MatchExactly, column=0):
-            parent = item
-
-        self.add_df_to_nav(df_name, parent)
+        dfe = DataFrameExplorer(df_object)
+        self.df_dicts[df_name]['dataframe_explorer'] = dfe
+        self.stacked_widget.addWidget(dfe)
+        self.add_df_to_nav(df_name)
 
     ####################
     # Menu bar functions
@@ -310,13 +295,9 @@ class PandasGUI(QtWidgets.QMainWindow):
             return
 
         df_name = item.data(0, Qt.DisplayRole)
-        df_properties = self.df_dicts.get(df_name)
 
-        # If the dataframe exists, change the tab widget shown.
-        if df_properties is not None:
-            self.df_shown = df_properties['dataframe']
-            tab_widget = df_properties['tab_widget']
-            self.stacked_widget.setCurrentWidget(tab_widget)
+        dfe = self.df_dicts[df_name]['dataframe_explorer']
+        self.stacked_widget.setCurrentWidget(dfe)
 
     ####################
     # Dialog functions.
