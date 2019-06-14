@@ -3,6 +3,10 @@ __all__ = ['iris', 'flights', 'multi', 'pokemon', 'multidf', 'all_datasets']
 import seaborn as sns
 import pandas as pd
 import os
+import warnings
+
+# This warning is given by sns.get_dataset_names
+warnings.filterwarnings('ignore',message='No parser was explicitly specified')
 
 cwd = os.path.dirname(__file__)
 
