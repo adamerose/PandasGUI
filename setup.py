@@ -7,7 +7,7 @@ with open('README.md', 'r') as fh:
 
 setup(name='pandasgui',
       version='0.0.5',
-      description='GUI for Pandas DataFrames',
+      description='A GUI for viewing and analyzing Pandas DataFrames based on PyQt5.',
       author='Adam Rose',
       author_email='adam.e.rose@hotmail.com',
       url='https://github.com/adamerose/pandasgui',
