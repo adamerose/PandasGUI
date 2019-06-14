@@ -3,6 +3,7 @@ import seaborn as sns
 from pandasgui import show
 
 import warnings
+
 # warnings.filterwarnings('error')
 
 case = 1

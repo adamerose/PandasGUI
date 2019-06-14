@@ -23,6 +23,7 @@ class DialogGeneric(QtWidgets.QDialog):
         parent:
         default:
     """
+
     def __init__(self, dataframes, destination_names, title, parent=None, default_df=None):
 
         super().__init__(parent)
@@ -97,10 +98,11 @@ class DialogGeneric(QtWidgets.QDialog):
         column_names = list(self.selected_df.columns)
         self.columnPicker.setSourceItems(column_names)
 
+
 # Widget for selecting DataFrame columns from the SourceList into multiple destination lists (DestList) for usage in
 # the dialog function. For example the destinations could be XVariable, Y-Variables, ColorBy for the ScatterPlot dialog
 class Picker(QtWidgets.QWidget):
-    def __init__(self, destination_names=['Default Dest'], column_names = ['Default Cols']):
+    def __init__(self, destination_names=['Default Dest'], column_names=['Default Cols']):
         super().__init__()
 
         # Set up widgets and layout
@@ -139,6 +141,7 @@ class Picker(QtWidgets.QWidget):
             items[dest.title] = dest.getItems()
         return items
 
+
 # Though the content is a flat list this is implemented as a QTreeWidget for some additional functionality like column
 # titles and multiple columns
 class DestList(QtWidgets.QTreeWidget):
@@ -170,6 +173,7 @@ class DestList(QtWidgets.QTreeWidget):
             treeItem = self.topLevelItem(i)
             items.append(treeItem.text(0))
         return items
+
 
 class RegexSourceList(QtWidgets.QWidget):
     def __init__(self, item_list, parent=None):
@@ -214,7 +218,6 @@ class SourceList(QtWidgets.QListWidget):
     # Allow dropping to this list but keep it unchanging by resetting it every time this happens. So the item will just
     # be removed from the DestList it was dragged from.
     def dropEvent(self, event):
-
         itemsTextList = self.getItems()
 
         # Default action
@@ -231,13 +234,15 @@ class SourceList(QtWidgets.QListWidget):
         for name in items:
             self.addItem(name)
 
+
 # %% Specific dialogs that inherit GenericDialog
 
 
 ###
 class PivotDialog(DialogGeneric):
     def __init__(self, dataframes, default_df=None, parent=None):
-        super().__init__(dataframes, destination_names=['index', 'columns', 'values'], default_df=default_df, title='Pivot', parent=parent)
+        super().__init__(dataframes, destination_names=['index', 'columns', 'values'], default_df=default_df,
+                         title='Pivot', parent=parent)
 
         self.show()
 
@@ -259,12 +264,12 @@ class PivotDialog(DialogGeneric):
         except Exception as e:
             print(e)
 
+
 ##
 
 class Categorizer(QtWidgets.QDialog):
     def __init__(self, df, column):
         super().__init__()
-
 
         self.layout = QtWidgets.QVBoxLayout()
         self.setLayout(self.layout)
@@ -274,7 +279,7 @@ class Categorizer(QtWidgets.QDialog):
         self.names = QtWidgets.QLineEdit()
         self.names.textChanged.connect(self.makePicker)
 
-        self.picker = Picker(['col1','col2','col3'], df[column].astype(str).unique())
+        self.picker = Picker(['col1', 'col2', 'col3'], df[column].astype(str).unique())
 
         # Add button
         btnFinish = QtWidgets.QPushButton("Finish")
@@ -292,6 +297,7 @@ class Categorizer(QtWidgets.QDialog):
         self.layout.addWidget(self.names)
         self.layout.addWidget(self.picker)
         self.show()
+
     def makePicker(self):
         self.layout.removeWidget(self.picker)
         self.df[self.column_name].astype(str).unique()
@@ -326,9 +332,11 @@ class Categorizer(QtWidgets.QDialog):
         except Exception as e:
             print(e)
 
+
 class ScatterDialog(DialogGeneric):
     def __init__(self, dataframes, default_df=None, parent=None):
-        super().__init__(dataframes, destination_names=['X Variable', 'Y Variable', 'Color By'], default_df=default_df, title='Scatter Plot', parent=parent)
+        super().__init__(dataframes, destination_names=['X Variable', 'Y Variable', 'Color By'], default_df=default_df,
+                         title='Scatter Plot', parent=parent)
 
         self.show()
 
@@ -346,6 +354,6 @@ class ScatterDialog(DialogGeneric):
         sns.scatterplot(x, y, c, data=df)
         plt.show()
 
+
 if __name__ == '__main__':
     pass
-
