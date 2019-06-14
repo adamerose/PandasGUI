@@ -110,6 +110,19 @@ class DataFrameViewer(QtWidgets.QWidget):
             item.setStyleSheet(item.styleSheet() + "border: 0px solid black;")
             item.setItemDelegate(NoFocusDelegate())
 
+        for column_index in range(self.columnHeader.model().columnCount()):
+            self.auto_size_column(column_index)
+
+    def auto_size_column(self, column_index):
+        padding = 10
+
+        self.columnHeader.resizeColumnToContents(column_index)
+        self.dataView.resizeColumnToContents(column_index)
+
+        width = max(self.columnHeader.columnWidth(column_index), self.dataView.columnWidth(column_index)) + padding
+        self.columnHeader.setColumnWidth(column_index, width)
+        self.dataView.setColumnWidth(column_index, width)
+
 
 # Remove dotted border on cell focus.  https://stackoverflow.com/a/55252650/3620725
 class NoFocusDelegate(QtWidgets.QStyledItemDelegate):
@@ -376,6 +389,12 @@ class HeaderView(QtWidgets.QTableView):
         self.parent = parent
         self.table = parent.dataView
         self.setModel(HeaderModel(df, orientation))
+        self.resizing_column = None
+
+        # Handled by self.eventFilter()
+        self.setMouseTracking(True)
+        self.viewport().setMouseTracking(True)
+        self.viewport().installEventFilter(self)
 
         # Settings
         self.setSizePolicy(QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum))
@@ -567,6 +586,47 @@ class HeaderView(QtWidgets.QTableView):
                             span_size = match_end - match_start + 1
                             self.setSpan(match_start, level, span_size, 1)
                             match_start = None
+
+    def eventFilter(self, object: QtCore.QObject, event: QtCore.QEvent):
+        edge_width = 6
+
+        if event.type() == QtCore.QEvent.MouseButtonPress:
+            x = event.pos().x()
+            if self.columnAt(x - edge_width / 2) != self.columnAt(x + edge_width / 2):
+                self.resizing_column = self.columnAt(x - edge_width / 2)
+                self.resize_start = x
+                self.resized_column_start = self.columnWidth(self.resizing_column)
+                return True
+            else:
+                self.resizing_column = None
+
+        if event.type() == QtCore.QEvent.MouseButtonRelease:
+            self.resizing_column = None
+
+        if event.type() == QtCore.QEvent.MouseButtonDblClick:
+            x = event.pos().x()
+            if self.columnAt(x - edge_width / 2) != self.columnAt(x + edge_width / 2):
+                column_index = self.columnAt(x - edge_width / 2)
+                self.parent.auto_size_column(column_index)
+                return True
+
+        if event.type() == QtCore.QEvent.MouseMove:
+
+            x = event.pos().x()
+
+            if self.resizing_column is not None:
+                width = self.resized_column_start + (x - self.resize_start)
+                if width > 10:
+                    self.setColumnWidth(self.resizing_column, width)
+                    self.parent.dataView.setColumnWidth(self.resizing_column, width)
+                return True
+
+            if self.columnAt(x - edge_width / 2) != self.columnAt(x + edge_width / 2):
+                self.viewport().setCursor(QtGui.QCursor(Qt.SplitHCursor))
+            else:
+                self.viewport().setCursor(QtGui.QCursor(Qt.ArrowCursor))
+
+        return False
 
     # Return the size of the header needed to match the corresponding DataTableView
     def sizeHint(self):
