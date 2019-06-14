@@ -1,2 +1,4 @@
 from pandasgui.gui import show
-__all__ = [show]
+from pandasgui import datasets
+
+__all__ = ['show', 'datasets']
