@@ -2,7 +2,7 @@
 
 A GUI for viewing and analyzing Pandas DataFrames based on PyQt5.
 
-<img src="https://raw.githubusercontent.com/adamerose/pandasgui/master/docs/gallery1.png" alt="Screenshot" width="500"/>
+<img src="https://raw.githubusercontent.com/adamerose/pandasgui/master/docs/gallery1.png)" alt="Screenshot" width="500"/>
 
 ## Installation
 
@@ -65,4 +65,4 @@ DataFrame Statistics
 Histogram Viewer
 ![](https://raw.githubusercontent.com/adamerose/pandasgui/master/docs/gallery3.png)
 DataFrame Viewer with MultIndex
-![](https://raw.githubusercontent.com/adamerose/pandasgui/master/docs/gallery1.png)
+![](https://raw.githubusercontent.com/adamerose/pandasgui/master/docs/gallery4.png)
