@@ -68,8 +68,6 @@ class DataFrameViewer(QtWidgets.QWidget):
         self.gridLayout.addWidget(self.dataView, 2, 2, 1, 1)
         self.gridLayout.addWidget(self.dataView.horizontalScrollBar(), 3, 2, 1, 1)
         self.gridLayout.addWidget(self.dataView.verticalScrollBar(), 2, 3, 1, 1)
-        self.gridLayout.addItem(QtWidgets.QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Expanding), 1, 2, 1, 1)
-        self.gridLayout.addItem(QtWidgets.QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Expanding), 0, 0, 1, 1)
 
         # These expand when the window is enlarged instead of having the grid squares spread out
         self.gridLayout.setColumnStretch(4, 1)
@@ -78,6 +76,7 @@ class DataFrameViewer(QtWidgets.QWidget):
         # These placeholders will ensure the size of the blank spaces beside our headers
         self.gridLayout.addWidget(TrackingSpacer(ref_x=self.columnHeader.verticalHeader()), 3, 1, 1, 1)
         self.gridLayout.addWidget(TrackingSpacer(ref_y=self.indexHeader.horizontalHeader()), 1, 2, 1, 1)
+        self.gridLayout.addItem(QtWidgets.QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Expanding), 0, 0, 1, 1)
 
         # Styling
         for header in [self.indexHeader, self.columnHeader]:
@@ -120,6 +119,9 @@ class DataFrameViewer(QtWidgets.QWidget):
         self.columnHeader.setColumnWidth(column_index, width)
         self.dataView.setColumnWidth(column_index, width)
 
+        self.dataView.updateGeometry()
+        self.columnHeader.updateGeometry()
+
     def keyPressEvent(self, event):
 
         QtWidgets.QWidget.keyPressEvent(self, event)
@@ -138,7 +140,9 @@ class DataFrameViewer(QtWidgets.QWidget):
             print('Ctrl + D')
 
     def debug(self):
-        print(self.indexHeader.sizeHint())
+        print(self.columnHeader.sizeHint())
+        print(self.dataView.sizeHint())
+        print(self.dataView.horizontalScrollBar().sizeHint())
 
 
 # Remove dotted border on cell focus.  https://stackoverflow.com/a/55252650/3620725
@@ -639,6 +643,9 @@ class HeaderView(QtWidgets.QTableView):
                 if width > 10:
                     self.setColumnWidth(self.column_being_resized, width)
                     self.parent.dataView.setColumnWidth(self.column_being_resized, width)
+
+                    self.updateGeometry()
+                    self.parent.dataView.updateGeometry()
                 return True
 
             # Set the cursor shape
