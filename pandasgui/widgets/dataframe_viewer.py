@@ -53,47 +53,31 @@ class DataFrameViewer(QtWidgets.QWidget):
         # Disable scrolling on the headers. Even though the scrollbars are hidden, scrolling by dragging desyncs them
         self.indexHeader.horizontalScrollBar().valueChanged.connect(lambda: None)
 
-        # TESTING
-        # btn = QtWidgets.QPushButton("test")
-        # btn.clicked.connect(self.func)
-        # self.gridLayout.addWidget(btn, 0, 0)
-
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.gridLayout.setSpacing(0)
 
-        # corner_box = QtWidgets.QLabel("X")
-        # corner_box.resize(QSize(50, 50))
-        # self.gridLayout.addWidget(corner_box, 0, 0, 1, 2)
-
         # Toggle level names
         if not (any(df.columns.names) or df.columns.name):
-            self.columnHeader.verticalHeader().setFixedWidth(1)
+            self.columnHeader.verticalHeader().setFixedWidth(0)
         if not (any(df.index.names) or df.index.name):
-            self.indexHeader.horizontalHeader().setFixedHeight(1)
-
-        # Set up space left of horzHeader to align it with the data table edge
-        horzHeaderLayout = QtWidgets.QHBoxLayout()
-        width = self.indexHeader.width() - self.columnHeader.verticalHeader().width()
-
-        horzSpacer = QtWidgets.QSpacerItem(width, 20, QSizePolicy.Fixed, QSizePolicy.Fixed)
-        horzHeaderLayout.addItem(horzSpacer)
-        horzHeaderLayout.addWidget(self.columnHeader)
-
-        # Set up space above data table body and below the horizontal header to make room for vertHeader level names
-        tableViewLayout = QtWidgets.QVBoxLayout()
-        height = self.indexHeader.horizontalHeader().height()
-        verticalSpacer = QtWidgets.QSpacerItem(20, height, QSizePolicy.Fixed, QSizePolicy.Fixed)
-        tableViewLayout.addItem(verticalSpacer)
-        tableViewLayout.addWidget(self.dataView)
-
-        self.dataView.setSizePolicy(QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum))
+            self.indexHeader.horizontalHeader().setFixedHeight(0)
 
         # Add items to layout
-        self.gridLayout.addLayout(horzHeaderLayout, 0, 0, 1, 2)
-        self.gridLayout.addWidget(self.indexHeader, 1, 0, 1, 1)
-        self.gridLayout.addLayout(tableViewLayout, 1, 1)
-        self.gridLayout.addWidget(self.dataView.horizontalScrollBar(), 2, 1, 2, 1, alignment=Qt.AlignTop)
-        self.gridLayout.addWidget(self.dataView.verticalScrollBar(), 1, 2, 1, 1, alignment=Qt.AlignLeft)
+        self.gridLayout.addWidget(self.columnHeader, 0, 1, 1, 2)
+        self.gridLayout.addWidget(self.indexHeader, 1, 0, 2, 2)
+        self.gridLayout.addWidget(self.dataView, 2, 2, 1, 1)
+        self.gridLayout.addWidget(self.dataView.horizontalScrollBar(), 3, 2, 1, 1)
+        self.gridLayout.addWidget(self.dataView.verticalScrollBar(), 2, 3, 1, 1)
+        self.gridLayout.addItem(QtWidgets.QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Expanding), 1, 2, 1, 1)
+        self.gridLayout.addItem(QtWidgets.QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Expanding), 0, 0, 1, 1)
+
+        # These expand when the window is enlarged instead of having the grid squares spread out
+        self.gridLayout.setColumnStretch(4, 1)
+        self.gridLayout.setRowStretch(4, 1)
+
+        # These placeholders will ensure the size of the blank spaces beside our headers
+        self.gridLayout.addWidget(TrackingSpacer(ref_x=self.columnHeader.verticalHeader()), 3, 1, 1, 1)
+        self.gridLayout.addWidget(TrackingSpacer(ref_y=self.indexHeader.horizontalHeader()), 1, 2, 1, 1)
 
         # Styling
         for header in [self.indexHeader, self.columnHeader]:
@@ -693,6 +677,24 @@ class HeaderView(QtWidgets.QTableView):
             return QSize(0, self.sizeHint().height())
         else:
             return QSize(self.sizeHint().width(), 0)
+
+
+# This is a fixed size widget with a size that tracks some other widget
+class TrackingSpacer(QtWidgets.QFrame):
+    def __init__(self, ref_x=None, ref_y=None):
+        super().__init__()
+        self.ref_x = ref_x
+        self.ref_y = ref_y
+
+    def minimumSizeHint(self):
+        width = 0
+        height = 0
+        if self.ref_x:
+            width = self.ref_x.width()
+        if self.ref_y:
+            height = self.ref_y.height()
+
+        return QtCore.QSize(width, height)
 
 
 # Examples
