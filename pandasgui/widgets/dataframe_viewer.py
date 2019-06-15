@@ -410,6 +410,7 @@ class HeaderView(QtWidgets.QTableView):
         self.setSizePolicy(QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum))
         self.setWordWrap(False)
         self.setFont(QtGui.QFont("Times", weight=QtGui.QFont.Bold))
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         # Link selection to DataTable
         self.selectionModel().selectionChanged.connect(self.on_selectionChanged)
@@ -642,7 +643,8 @@ class HeaderView(QtWidgets.QTableView):
                 width = self.initial_column_width + (x - self.resize_start_position)
                 if width > 10:
                     self.setColumnWidth(self.column_being_resized, width)
-                    self.parent.dataView.setColumnWidth(self.column_being_resized, width)
+                    if self.orientation == Qt.Horizontal:
+                        self.parent.dataView.setColumnWidth(self.column_being_resized, width)
 
                     self.updateGeometry()
                     self.parent.dataView.updateGeometry()
