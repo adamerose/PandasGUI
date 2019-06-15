@@ -123,6 +123,26 @@ class DataFrameViewer(QtWidgets.QWidget):
         self.columnHeader.setColumnWidth(column_index, width)
         self.dataView.setColumnWidth(column_index, width)
 
+    def keyPressEvent(self, event):
+
+        QtWidgets.QWidget.keyPressEvent(self, event)
+
+        if event.matches(QtGui.QKeySequence.Copy):
+            print('Ctrl + C')
+            self.dataView.copy()
+        if event.matches(QtGui.QKeySequence.Paste):
+            self.dataView.paste()
+            print('Ctrl + V')
+        if event.key() == Qt.Key_P and (event.modifiers() & Qt.ControlModifier):
+            self.dataView.print()
+            print('Ctrl + P')
+        if event.key() == Qt.Key_D and (event.modifiers() & Qt.ControlModifier):
+            self.debug()
+            print('Ctrl + D')
+
+    def debug(self):
+        print(self.indexHeader.sizeHint())
+
 
 # Remove dotted border on cell focus.  https://stackoverflow.com/a/55252650/3620725
 class NoFocusDelegate(QtWidgets.QStyledItemDelegate):
@@ -239,19 +259,7 @@ class DataTableView(QtWidgets.QTableView):
             indexHeader.selectionModel().select(selection,
                                                 QItemSelectionModel.Rows | QItemSelectionModel.ClearAndSelect)
 
-    def keyPressEvent(self, event):
 
-        QtWidgets.QTableView.keyPressEvent(self, event)
-
-        if event.matches(QtGui.QKeySequence.Copy):
-            print('Ctrl + C')
-            self.copy()
-        if event.matches(QtGui.QKeySequence.Paste):
-            self.paste()
-            print('Ctrl + V')
-        if event.key() == Qt.Key_P and (event.modifiers() & Qt.ControlModifier):
-            self.print()
-            print('Ctrl + P')
 
     def print(self):
         print(self.model().df)
