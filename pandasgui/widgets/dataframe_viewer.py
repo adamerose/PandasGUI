@@ -20,6 +20,7 @@ class DataFrameViewer(QtWidgets.QWidget):
 
     def __init__(self, df):
         super().__init__()
+        self._loaded = False
 
         if type(df) == pd.Series:
             df = df.to_frame()
@@ -110,16 +111,28 @@ class DataFrameViewer(QtWidgets.QWidget):
             item.setStyleSheet(item.styleSheet() + "border: 0px solid black;")
             item.setItemDelegate(NoFocusDelegate())
 
-        for column_index in range(self.columnHeader.model().columnCount()):
-            self.auto_size_column(column_index)
+    def showEvent(self, event: QtGui.QShowEvent):
+        if not self._loaded:
+            for column_index in range(self.columnHeader.model().columnCount()):
+                self.auto_size_column(column_index)
+        self._loaded = True
+        event.accept()
 
     def auto_size_column(self, column_index):
-        padding = 10
+        padding = 20
 
         self.columnHeader.resizeColumnToContents(column_index)
-        self.dataView.resizeColumnToContents(column_index)
+        width = self.columnHeader.columnWidth(column_index)
 
-        width = max(self.columnHeader.columnWidth(column_index), self.dataView.columnWidth(column_index)) + padding
+        for i in range(min(100, self.dataView.model().rowCount())):
+            mi = self.dataView.model().index(i, column_index)
+            text = self.dataView.model().data(mi)
+            w = self.dataView.fontMetrics().boundingRect(text).width()
+
+            if w > width:
+                width = w
+
+        width += padding
         self.columnHeader.setColumnWidth(column_index, width)
         self.dataView.setColumnWidth(column_index, width)
 
@@ -259,8 +272,6 @@ class DataTableView(QtWidgets.QTableView):
             indexHeader.selectionModel().select(selection,
                                                 QItemSelectionModel.Rows | QItemSelectionModel.ClearAndSelect)
 
-
-
     def print(self):
         print(self.model().df)
 
@@ -397,7 +408,10 @@ class HeaderView(QtWidgets.QTableView):
         self.parent = parent
         self.table = parent.dataView
         self.setModel(HeaderModel(df, orientation))
-        self.resizing_column = None
+        # These are used during column resizing
+        self.column_being_resized = None
+        self.resize_start_position = None
+        self.initial_column_width = None
 
         # Handled by self.eventFilter()
         self.setMouseTracking(True)
@@ -595,41 +609,56 @@ class HeaderView(QtWidgets.QTableView):
                             self.setSpan(match_start, level, span_size, 1)
                             match_start = None
 
-    def eventFilter(self, object: QtCore.QObject, event: QtCore.QEvent):
-        edge_width = 6
+    # Return the index of the column this x position is on the right edge of
+    def over_column_edge(self, x, margin=3):
+        if self.columnAt(x - margin) != self.columnAt(x + margin):
+            if self.columnAt(x + margin) == 0:
+                # We're at the left edge of the first column
+                return None
+            else:
+                return self.columnAt(x - margin)
+        else:
+            return None
 
+    def eventFilter(self, object: QtCore.QObject, event: QtCore.QEvent):
+
+        # If mouse is on an edge, start the drag resize process
         if event.type() == QtCore.QEvent.MouseButtonPress:
             x = event.pos().x()
-            if self.columnAt(x - edge_width / 2) != self.columnAt(x + edge_width / 2):
-                self.resizing_column = self.columnAt(x - edge_width / 2)
-                self.resize_start = x
-                self.resized_column_start = self.columnWidth(self.resizing_column)
+            if self.over_column_edge(x) is not None:
+                self.column_being_resized = self.over_column_edge(x)
+                self.resize_start_position = x
+                self.initial_column_width = self.columnWidth(self.column_being_resized)
                 return True
             else:
-                self.resizing_column = None
+                self.column_being_resized = None
 
+        # End the drag process
         if event.type() == QtCore.QEvent.MouseButtonRelease:
-            self.resizing_column = None
+            self.column_being_resized = None
 
+        # Auto size the column that was double clicked
         if event.type() == QtCore.QEvent.MouseButtonDblClick:
             x = event.pos().x()
-            if self.columnAt(x - edge_width / 2) != self.columnAt(x + edge_width / 2):
-                column_index = self.columnAt(x - edge_width / 2)
+            if self.over_column_edge(x) is not None:
+                column_index = self.over_column_edge(x)
                 self.parent.auto_size_column(column_index)
                 return True
 
+        # Handle active drag resizing
         if event.type() == QtCore.QEvent.MouseMove:
-
             x = event.pos().x()
 
-            if self.resizing_column is not None:
-                width = self.resized_column_start + (x - self.resize_start)
+            # If this is None, there is no drag resize happening
+            if self.column_being_resized is not None:
+                width = self.initial_column_width + (x - self.resize_start_position)
                 if width > 10:
-                    self.setColumnWidth(self.resizing_column, width)
-                    self.parent.dataView.setColumnWidth(self.resizing_column, width)
+                    self.setColumnWidth(self.column_being_resized, width)
+                    self.parent.dataView.setColumnWidth(self.column_being_resized, width)
                 return True
 
-            if self.columnAt(x - edge_width / 2) != self.columnAt(x + edge_width / 2):
+            # Set the cursor shape
+            if self.over_column_edge(x) is not None:
                 self.viewport().setCursor(QtGui.QCursor(Qt.SplitHCursor))
             else:
                 self.viewport().setCursor(QtGui.QCursor(Qt.ArrowCursor))
@@ -670,9 +699,12 @@ class HeaderView(QtWidgets.QTableView):
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
 
-    from pandasgui.datasets import iris, flights, multi, pokemon
+    from pandasgui.datasets import iris, flights, multi, pokemon, multidf
 
-    view = DataFrameViewer(pokemon)
-    view.show()
+    # view = DataFrameViewer(pokemon)
+    # view.show()
+
+    view2 = DataFrameViewer(multidf)
+    view2.show()
 
     sys.exit(app.exec_())
