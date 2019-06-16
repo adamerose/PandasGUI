@@ -1,19 +1,20 @@
-__all__ = ['iris', 'flights', 'multi', 'pokemon', 'multidf', 'all_datasets']
+"""Defines sample datasets to be used"""
 
 import seaborn as sns
 import pandas as pd
-import os
 import warnings
 
-# This warning is given by sns.get_dataset_names
-warnings.filterwarnings('ignore',message='No parser was explicitly specified')
+__all__ = ['all_datasets',
+           'iris', 'flights', 'multi', 'pokemon', 'multidf']
 
-cwd = os.path.dirname(__file__)
+# This warning is given by sns.get_dataset_names
+warnings.filterwarnings('ignore', message='No parser was explicitly specified')
 
 iris = sns.load_dataset('iris')
 flights = sns.load_dataset('flights')
 multi = flights.set_index(['year', 'month']).unstack()  # MultiIndex example
-pokemon = pd.read_csv(os.path.join(cwd, "data/pokemon.csv"))
+pokemon = pd.read_csv(r'https://gist.githubusercontent.com/adamerose/'
+                      r'400cb7025fa33ff4534f0b032b26321c/raw/6013206a582db794ed89fdf5e2c7567372489025/pokemon.csv')
 
 tuples = [('A', 'one', 'x'), ('A', 'one', 'y'), ('A', 'two', 'x'), ('A', 'two', 'y'),
           ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')]
