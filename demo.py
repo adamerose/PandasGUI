@@ -1,23 +1,27 @@
-import pandas as pd
-import seaborn as sns
-from pandasgui import show
+case = 3
 
-import warnings
-
-# warnings.filterwarnings('error')
-
-case = 1
-
+# Simple example
 if case == 1:
-    # Sample data sets
-    from pandasgui.datasets import iris, flights, multi, pokemon
+    from pandasgui import show
+    import pandas as pd
 
-    show(iris, flights, multi)
+    example_df = pd.DataFrame(pd.np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]),
+                              columns=['a', 'b', 'c'])
+    show(example_df)
 
+# Advanced example
 if case == 2:
-    # View all Seaborn data sets
-    datasets = {}
-    for name in sns.get_dataset_names():
-        datasets[name] = sns.load_dataset(name)
+    from pandasgui import show
+    import seaborn as sns
 
-    show(**datasets)
+    flights = sns.load_dataset('flights')
+    multi = flights.set_index(['year', 'month']).unstack()  # MultiIndex example
+    if __name__ == '__main__':  # This is needed when starting a new process. Not necessary in interactive console.
+        show(flights, flightsReshaped=multi, nonblocking=True)
+
+# View all example datasets
+if case == 3:
+    from pandasgui import show
+    from pandasgui.datasets import all_datasets
+
+    show(**all_datasets)

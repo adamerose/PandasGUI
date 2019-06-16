@@ -20,14 +20,14 @@ pip install git+https://github.com/adamerose/pandasgui.git
 
 
 ## Usage
-View the *iris* and *flights* DataFrames in PandasGUI
+Create a simple DataFrame and view it in the GUI
 ```python
-import seaborn as sns
+import pandas as pd
 from pandasgui import show
 
-iris = sns.load_dataset('iris')
-flights = sns.load_dataset('flights')
-show(iris,flights)
+example_df = pd.DataFrame(pd.np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]),
+                          columns=['a', 'b', 'c'])
+show(example_df)
 
 ```
 
@@ -38,7 +38,8 @@ from pandasgui import show
 
 flights = sns.load_dataset('flights')
 multi = flights.set_index(['year', 'month']).unstack()  # MultiIndex example
-show(flights, flightsReshaped=multi, nonblocking=True)
+if __name__ == '__main__':  # This is needed when starting a new process. Not necessary in interactive console.
+    show(flights, flightsReshaped=multi, nonblocking=True)
 
 ```
 
