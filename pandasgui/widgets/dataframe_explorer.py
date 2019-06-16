@@ -76,9 +76,10 @@ class DataFrameExplorer(QtWidgets.QTabWidget):
             self.update_plot()
 
         def update_plot(self):
+            plt.ioff()
             col = self.picker.currentText()
 
-            fig = plt.figure()
+            plt.figure()
 
             arr = self.df[col].dropna()
             if self.df[col].dtype.name in ['object', 'bool', 'category']:
