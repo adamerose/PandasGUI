@@ -1,3 +1,8 @@
+"""
+Defines the DataFrameViewer class to display DataFrames as a table. The DataFrameViewer is made up of three separate
+QTableWidgets... DataTableView for the DataFrame's contents, and two HeaderView widgets for the column and index headers
+"""
+
 from PyQt5 import QtGui, QtCore, QtWidgets
 from PyQt5.QtCore import QAbstractItemModel, QModelIndex, QSize, QRect, Qt, QPoint, QItemSelectionModel
 from PyQt5.QtGui import QPainter, QFont, QFontMetrics, QPalette, QBrush, QColor, QTransform
@@ -7,18 +12,17 @@ import numpy as np
 import datetime
 import sys
 
-try:
-    import pyqt_fix
-except:
-    pass
-
 
 class DataFrameViewer(QtWidgets.QWidget):
     """
-    This is a container for the DataTableView and two DataFrameHeaderViews in a QGridLayout
+    Displays a DataFrame as a table.
+
+    Args:
+        df (DataFrame): The DataFrame to display
     """
 
     def __init__(self, df):
+
         super().__init__()
         self._loaded = False
 
@@ -224,7 +228,7 @@ class DataTableModel(QtCore.QAbstractTableModel):
 
 class DataTableView(QtWidgets.QTableView):
     """
-    Displays the DataFrame contents as a table
+    Displays the DataFrame data as a table
     """
 
     def __init__(self, df, parent):

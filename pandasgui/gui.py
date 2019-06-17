@@ -1,17 +1,13 @@
+"""Defines the main PandasGUI class and related functions"""
+
 import inspect
 import sys
 import os
 import pandas as pd
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
-from pandasgui.widgets.dialogs import PivotDialog, ScatterDialog
-from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
-
-# Fix lack of stack trace on PyQt exceptions
-try:
-    import pyqt_fix
-except ImportError:
-    pass
+from pandasgui.widgets import PivotDialog, ScatterDialog
+from pandasgui.widgets import DataFrameExplorer
 
 
 class PandasGUI(QtWidgets.QMainWindow):
@@ -87,8 +83,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Create main Widget
         self.show()
 
-
-
         # Center window on screen
         screen = QtWidgets.QDesktopWidget().screenGeometry()
         size = self.geometry()
@@ -131,7 +125,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.splitter.setSizes([nav_width, self.width() - nav_width])
 
         self.setCentralWidget(self.splitter)
-        self.splitter.setContentsMargins(10,10,10,10)
+        self.splitter.setContentsMargins(10, 10, 10, 10)
 
     def import_dataframe(self, path):
 
@@ -211,7 +205,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         print('stacked_widget', self.stacked_widget.sizeHint())
         print('----------------')
 
-
     class NavWidget(QtWidgets.QTreeWidget):
         def __init__(self, gui):
             super().__init__()
@@ -262,11 +255,15 @@ class PandasGUI(QtWidgets.QMainWindow):
             else:
                 e.ignore()
 
-    def make_nav(self):
-        pass
-
     def add_df_to_nav(self, df_name, parent=None):
-        '''Add DataFrame to nav from df_dicts'''
+        """
+        Add DataFrame to the nav by looking up the DataFrame by name in df_dicts
+
+        Args:
+            df_name (str): Name of the DataFrame
+            parent (QTreeWidgetItem): Parent item in the nav tree hierarchy
+        """
+
         if parent is None:
             parent = self.nav_tree
 
@@ -280,14 +277,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
     def nav_clicked(self):
         """
-        Examines navbar row pressed by user
-        and then changes the dataframe shown.
-
-        Args:
-            location_clicked: Automatically passed during clicked signal.
-                              Instance of QtCore.ModelIndex.
-                              Provides information on the location clicked,
-                              accessible with methods such as row() or data().
+        Show the DataFrameExplorer corresponding to the highlighted nav item.
         """
         try:
             item = self.nav_tree.selectedItems()[0]
@@ -300,7 +290,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.stacked_widget.setCurrentWidget(dfe)
 
     ####################
-    # Dialog functions.
+    # Dialog functions. TODO: Rewrite these all
 
     def pivot_dialog(self):
         default = self.nav_tree.currentItem().data(0, Qt.DisplayRole)
@@ -312,6 +302,15 @@ class PandasGUI(QtWidgets.QMainWindow):
 
 
 def show(*args, nonblocking=False, **kwargs):
+    """
+    Create and show a PandasGUI window with all the DataFrames passed. *args and **kwargs should all be DataFrames
+
+    Args:
+        *args: These should all be DataFrames. The GUI uses stack inspection to get the variable name to use in the GUI
+        nonblocking (bool): Indicates whether the GUI should be started in non-blocking mode (in a separate process)
+        **kwargs: These should all be DataFrames. The key is the desired name and the value is the DataFrame object
+    """
+
     # Get the variable names in the scope show() was called from
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
 
@@ -348,6 +347,18 @@ def show(*args, nonblocking=False, **kwargs):
 
 
 if __name__ == '__main__':
+
+    # Fix lack of stack trace on PyQt exceptions
+    def my_exception_hook(exctype, value, traceback):
+        # Print the error and traceback
+        print(exctype, value, traceback)
+        # Call the normal Exception hook after
+        sys._excepthook(exctype, value, traceback)
+        sys.exit(1)
+
+
+    sys.excepthook = my_exception_hook
+
     try:
         # Get paths of drag & dropped files and prepare to open them in the GUI
         file_paths = sys.argv[1:]
@@ -363,11 +374,13 @@ if __name__ == '__main__':
         # Script was run normally, open sample data sets
         else:
             from pandasgui.datasets import iris, flights, multi, all_datasets
+
             show(**all_datasets)
 
     # Catch errors and call input() so they can be viewed before the console window closes when running with drag n drop
     except Exception as e:
         print(e)
         import traceback
+
         traceback.print_exc()
         input()

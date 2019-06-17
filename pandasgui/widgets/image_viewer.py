@@ -1,5 +1,6 @@
-from PyQt5 import QtWidgets
+"""Widgets for viewing figures"""
 
+from PyQt5 import QtWidgets
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT
 from matplotlib.figure import Figure
@@ -8,7 +9,14 @@ import random
 
 
 class TabbedFigureViewer(QtWidgets.QWidget):
+    """
+    Displays a list of matplotlib Figures in a tabbed viewer
+    Args:
+        figs (List): List of matplotlib Figures
+    """
+
     def __init__(self, figs=[]):
+
         super().__init__()
 
         self.setWindowTitle("Tabbed Image Viewer")
@@ -41,6 +49,7 @@ class TabbedFigureViewer(QtWidgets.QWidget):
         self.move(int((screen.width() - size.width()) / 2), int((screen.height() - size.height()) / 2))
 
     def add_tab(self, fig):
+        """Add a new tab containing a FigureViewer showing fig"""
         image_viewer = FigureViewer(fig)
         # Adds them to the tab_view
         tab = QtWidgets.QWidget()
@@ -68,6 +77,13 @@ class TabbedFigureViewer(QtWidgets.QWidget):
 
 
 class FigureViewer(QtWidgets.QWidget):
+    """
+    Displays a matplotlib figure and toolbar in a widget
+
+    Args:
+        fig (Figure): matplotlib Figure to show
+    """
+
     def __init__(self, fig=Figure()):
         super().__init__()
 
@@ -87,6 +103,7 @@ class FigureViewer(QtWidgets.QWidget):
         self.toolbar.setStyleSheet('background: transparent;')
 
     def setFigure(self, fig):
+        """Replace the current figure shown in the widget with fig"""
         plt.close(self.canvas.figure)
 
         new_canvas = FigureCanvasQTAgg(fig)
@@ -100,6 +117,7 @@ class FigureViewer(QtWidgets.QWidget):
         self.canvas = new_canvas
 
     def setRandomImage(self):
+        """Plot some random data and show it in the widget"""
         data = [random.random() for i in range(10)]
         plt.figure()
         plt.plot(data, '*-')
@@ -180,7 +198,6 @@ def ppt_section_slide(title, subtitle, file_path):
 
 if __name__ == '__main__':
     from pandasgui.datasets import iris, flights, multi, pokemon
-
 
     app = QtWidgets.QApplication([])
 

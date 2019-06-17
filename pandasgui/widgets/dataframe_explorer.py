@@ -1,44 +1,39 @@
+"""DataFrameExplorer"""
+
 from PyQt5 import QtWidgets
 import pandas as pd
 import sys
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-sns.set()
-
-from pandasgui.widgets.dataframe_viewer import DataFrameViewer
-from pandasgui.widgets.image_viewer import FigureViewer
-
-try:
-    import pyqt_fix
-except:
-    pass
-
+from . import DataFrameViewer
+from . import FigureViewer
 
 class DataFrameExplorer(QtWidgets.QTabWidget):
     """
-    This is a container for the DataTableView and two DataFrameHeaderViews in a QGridLayout
+    This is a QTabWidget for analyzing a single DataFrame where the first tab is a DataFrameViewer widget
+
+    Args:
+        df (DataFrame): The DataFrame to display
     """
 
     def __init__(self, df):
+
         super().__init__()
 
         df = df.copy()
         self.df = df
 
         # Creates the tabs
-        dataframe_tab = DataFrameViewer(df)
-        statistics_tab = self.make_statistics_tab(df)
+        self.dataframe_tab = DataFrameViewer(df)
+        self.statistics_tab = self.make_statistics_tab(df)
 
         # Adds them to the tab_view
-        self.addTab(dataframe_tab, "Dataframe")
-        self.addTab(statistics_tab, "Statistics")
+        self.addTab(self.dataframe_tab, "DataFrame")
+        self.addTab(self.statistics_tab, "Statistics")
 
         if not (type(df.index) == pd.MultiIndex or type(df.columns) == pd.MultiIndex):
             histogram_tab = self.make_histogram_tab(df)
             self.addTab(histogram_tab, "Histogram")
-
-        self.dataframe_viewer = DataFrameViewer(df)
 
     def make_statistics_tab(self, df):
         stats_df = pd.DataFrame({
@@ -95,7 +90,6 @@ class DataFrameExplorer(QtWidgets.QTabWidget):
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
 
-    # Sample data sets
     from pandasgui.datasets import iris, flights, multi, pokemon
 
     # Create and show widget

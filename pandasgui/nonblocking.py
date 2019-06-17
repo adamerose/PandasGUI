@@ -1,6 +1,4 @@
-'''
-Creates a nonblocking instance of the Pandas GUI in a separate process. Works in both script & interactive mode
-'''
+"""Creates a non-blocking instance of the Pandas GUI in a separate process. Works in both script & interactive mode"""
 
 import multiprocessing
 
@@ -27,8 +25,8 @@ def show_nonblocking(**kwargs):
 
 
 if __name__ == '__main__':
-    import pandas as pd
     from pandasgui import show
 
     from pandasgui.datasets import iris, flights, multi, pokemon
+
     show(iris, flights, multi, pokemon)

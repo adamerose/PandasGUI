@@ -1,9 +1,11 @@
+"""A ComboBox widget with a search box to filter the contents"""
+
 # https://stackoverflow.com/questions/4827207/how-do-i-filter-the-pyqt-qcombobox-items-based-on-the-text-input
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt, QSortFilterProxyModel
 from PyQt5.QtWidgets import QCompleter, QComboBox
+
 
 class ExtendedComboBox(QComboBox):
     def __init__(self, string_list, parent=None):
@@ -33,7 +35,6 @@ class ExtendedComboBox(QComboBox):
         # or use another model
         # combo.setModel(QStringListModel(string_list))
 
-
     # on selection of an item from the completer, select the corresponding item from combobox
     def on_completer_activated(self, text):
         if text:
@@ -41,13 +42,11 @@ class ExtendedComboBox(QComboBox):
             self.setCurrentIndex(index)
             self.activated[str].emit(self.itemText(index))
 
-
     # on model change, update the models of the filter and completer as well
     def setModel(self, model):
         super(ExtendedComboBox, self).setModel(model)
         self.pFilterModel.setSourceModel(model)
         self.completer.setModel(self.pFilterModel)
-
 
     # on model column change, update the model column of the filter and completer as well
     def setModelColumn(self, column):

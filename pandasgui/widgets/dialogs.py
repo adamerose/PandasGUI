@@ -1,16 +1,15 @@
+"""Dialog box widgets for various GUI functions"""
+
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt
-
+import sys
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import re
 
 from pandasgui.utility import flatten_multiindex
-import sys
 
-
-# %% These classes are all inherited and reused by multiple dialog types (pivot, scatter, etc.)
 
 class DialogGeneric(QtWidgets.QDialog):
     """

@@ -1,4 +1,4 @@
-"""Defines sample datasets to be used"""
+"""Defines sample datasets"""
 
 import seaborn as sns
 import pandas as pd
