@@ -5,7 +5,7 @@ import pandas as pd
 import warnings
 
 __all__ = ['all_datasets',
-           'iris', 'flights', 'multi', 'pokemon', 'multidf']
+           'iris', 'flights', 'multi', 'pokemon', 'multidf', 'multidf_columns', 'multidf_index']
 
 # This warning is given by sns.get_dataset_names
 warnings.filterwarnings('ignore', message='No parser was explicitly specified')
@@ -20,6 +20,8 @@ tuples = [('A', 'one', 'x'), ('A', 'one', 'y'), ('A', 'two', 'x'), ('A', 'two', 
           ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')]
 index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
 multidf = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
+multidf_columns = pd.DataFrame(pd.np.random.randn(8, 8), columns=index[:8])
+multidf_index = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8])
 
 all_datasets = {}
 
@@ -29,3 +31,5 @@ for name in sns.get_dataset_names():
 
 all_datasets['pokemon'] = pokemon
 all_datasets['multidf'] = multidf
+all_datasets['multidf_columns'] = multidf_columns
+all_datasets['multidf_index'] = multidf_index
