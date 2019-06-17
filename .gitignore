@@ -9,6 +9,7 @@ qtdesigner
 Scripts/
 *.spec
 
+
 # PyPI
 build/
 dist/
@@ -16,6 +17,7 @@ Lib/
 src/
 tcl/
 Include/
+pypi.bat
 
 # Pipenv
 Pipfile

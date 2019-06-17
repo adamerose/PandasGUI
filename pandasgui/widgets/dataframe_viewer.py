@@ -378,7 +378,7 @@ class HeaderModel(QtCore.QAbstractTableModel):
                 else:
                     return str(self.df.columns.name)
             elif self.orientation == Qt.Vertical and orientation == Qt.Horizontal:
-                if type(self.df.columns) == pd.MultiIndex:
+                if type(self.df.index) == pd.MultiIndex:
                     return str(self.df.index.names[section])
                 else:
                     return str(self.df.index.name)
@@ -427,7 +427,6 @@ class HeaderView(QtWidgets.QTableView):
             self.horizontalHeader().hide()
             self.verticalHeader().setDisabled(True)
             self.verticalHeader().setHighlightSections(False)  # Selection lags a lot without this
-
 
         else:
             self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
