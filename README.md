@@ -45,6 +45,8 @@ if __name__ == '__main__':  # This is needed when starting a new process. Not ne
 
 ## About
 This project is still in version 0.x.y and subject to major changes. Issues, feedback and forks are welcome. 
+Latest changes will be on the develop branch, and this will be occasionally merged to master as a release with a
+tag indicating the version number, and this will be what is available on PyPi.
 
 ## Features
 - View DataFrames and Series
