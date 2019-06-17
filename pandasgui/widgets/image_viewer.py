@@ -1,12 +1,14 @@
 """Widgets for viewing figures"""
 
 from PyQt5 import QtWidgets
+import matplotlib
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib.backends.backend_qt4agg import NavigationToolbar2QT
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import random
 
+matplotlib.use('Qt5Agg')
 
 class TabbedFigureViewer(QtWidgets.QWidget):
     """
@@ -98,7 +100,7 @@ class FigureViewer(QtWidgets.QWidget):
         self.setLayout(self.layout)
         self.layout.addWidget(self.toolbar)
         self.layout.addWidget(self.canvas)
-        self.layout.addWidget(self.button)
+        # self.layout.addWidget(self.button)
 
         self.toolbar.setStyleSheet('background: transparent;')
 
