@@ -10,22 +10,24 @@ from pandasgui.widgets import PivotDialog, ScatterDialog
 from pandasgui.widgets import DataFrameExplorer
 
 
+
 class PandasGUI(QtWidgets.QMainWindow):
 
-    def __init__(self, nonblocking=False, **kwargs):
+    def __init__(self, **kwargs):
         """
         Args:
-            *args (): Tuple of DataFrame objects
             **kwargs (): Dict of (key, value) pairs of
                          {'DataFrame name': DataFrame object}
         """
 
-        if nonblocking:
-            print("Opening PandasGUI (nonblocking mode)...")
-        else:
-            print("Opening PandasGUI...")
-        super().__init__()
+        # Get an application instance
         self.app = QtWidgets.QApplication.instance()
+        if self.app:
+            print('Using existing QApplication instance')
+        if not self.app:
+            self.app = QtWidgets.QApplication(sys.argv)
+
+        super().__init__()
 
         # https://stackoverflow.com/a/27178019/3620725
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
@@ -42,6 +44,9 @@ class PandasGUI(QtWidgets.QMainWindow):
         # This is a truncated version of the dataframe for displaying
         self.df_dicts = {}
 
+        # This ensures there it always a reference to this widget and it doesn't get garbage collected
+        self._reference = self
+
         # setupUI() class variable initialization.
         self.main_layout = None
         self.stacked_widget = None
@@ -57,10 +62,6 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         # Adds keyword arguments to df_dict.
         for i, (df_name, df_object) in enumerate(kwargs.items()):
-
-            if type(df_object) == pd.Series:
-                df_object = df_object.to_frame()
-                print(f'"{df_name}" was automatically converted from Series to DataFrame for viewing')
             self.df_dicts[df_name] = {}
             self.df_dicts[df_name]['dataframe'] = df_object
 
@@ -73,11 +74,8 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Generates the user interface.
         self.setupUI()
 
-        # Window settings
-        if nonblocking:
-            self.setWindowTitle('PandasGUI (nonblocking)')
-        else:
-            self.setWindowTitle('PandasGUI')
+
+        self.setWindowTitle('PandasGUI')
         self.app.setWindowIcon(QtGui.QIcon('images/icon.png'))
 
         # Create main Widget
@@ -141,6 +139,18 @@ class PandasGUI(QtWidgets.QMainWindow):
         '''
         Add a new DataFrame to the GUI
         '''
+
+        if type(df_object) != pd.DataFrame:
+            try:
+                df_object = pd.DataFrame(df_object)
+                print(f'Automatically converted "{df_name}" from type {type(df_object)} to DataFrame')
+            except:
+                print(f'Could not convert "{df_name}" from type {type(df_object)} to DataFrame')
+                return
+
+        # Non-string column indices causes problems when pulling them from a GUI dropdown (which will give str)
+        if type(df_object.columns) != pd.MultiIndex:
+            df_object.columns = df_object.columns.astype(str)
 
         self.df_dicts[df_name] = {}
         self.df_dicts[df_name] = {}
@@ -301,13 +311,13 @@ class PandasGUI(QtWidgets.QMainWindow):
         win = ScatterDialog(self.df_dicts, default=default, gui=self)
 
 
-def show(*args, nonblocking=False, **kwargs):
+def show(*args, block=True, **kwargs):
     """
     Create and show a PandasGUI window with all the DataFrames passed. *args and **kwargs should all be DataFrames
 
     Args:
         *args: These should all be DataFrames. The GUI uses stack inspection to get the variable name to use in the GUI
-        nonblocking (bool): Indicates whether the GUI should be started in non-blocking mode (in a separate process)
+        block (bool): Indicates whether to run app._exec on the PyQt application to block further execution of script
         **kwargs: These should all be DataFrames. The key is the desired name and the value is the DataFrame object
     """
 
@@ -330,20 +340,12 @@ def show(*args, nonblocking=False, **kwargs):
         print("Warning! Duplicate DataFrame names were given, duplicates were ignored.")
     kwargs = {**kwargs, **dataframes}
 
-    # Run the GUI in a separate process
-    if nonblocking:
-        from pandasgui.nonblocking import show_nonblocking
-        show_nonblocking(**kwargs)
-        return
+    pandas_gui = PandasGUI(**kwargs)
 
-    # Create the application and PandasGUI window
-    app = QtWidgets.QApplication.instance()
-    if app:
-        print('Using existing QApplication instance')
-    if not app:
-        app = QtWidgets.QApplication(sys.argv)
-    win = PandasGUI(**kwargs)
-    app.exec_()
+    if block:
+        pandas_gui.app.exec_()
+
+    return pandas_gui
 
 
 if __name__ == '__main__':
@@ -355,7 +357,6 @@ if __name__ == '__main__':
         # Call the normal Exception hook after
         sys._excepthook(exctype, value, traceback)
         sys.exit(1)
-
 
     sys.excepthook = my_exception_hook
 
@@ -375,7 +376,7 @@ if __name__ == '__main__':
         else:
             from pandasgui.datasets import iris, flights, multi, all_datasets
 
-            show(**all_datasets)
+            show(**all_datasets, block=True)
 
     # Catch errors and call input() so they can be viewed before the console window closes when running with drag n drop
     except Exception as e:
@@ -383,4 +384,3 @@ if __name__ == '__main__':
         import traceback
 
         traceback.print_exc()
-        input()

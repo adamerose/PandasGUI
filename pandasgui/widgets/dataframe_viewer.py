@@ -26,9 +26,11 @@ class DataFrameViewer(QtWidgets.QWidget):
         super().__init__()
         self._loaded = False
 
-        if type(df) == pd.Series:
+        if not type(df) == pd.DataFrame:
+            orig_type = type(df)
             df = df.to_frame()
-            print(f'DataFrame was automatically converted from Series to DataFrame for viewing')
+            print(f'DataFrame was automatically converted from {orig_type} to DataFrame for viewing')
+
 
         df = df.copy()
 

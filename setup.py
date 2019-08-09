@@ -16,5 +16,6 @@ setup(name='pandasgui',
       install_requires=[
           'pandas',
           'PyQt5',
-          'seaborn']
+          'seaborn',
+          'plotly']
       )

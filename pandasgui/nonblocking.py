@@ -1,3 +1,5 @@
+# This file isn't used. Keeping it for reference in case I want to re-add the separate process functionality
+
 """Creates a non-blocking instance of the Pandas GUI in a separate process. Works in both script & interactive mode"""
 
 import multiprocessing
