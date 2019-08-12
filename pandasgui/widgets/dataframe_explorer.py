@@ -5,8 +5,8 @@ import pandas as pd
 import sys
 import matplotlib.pyplot as plt
 import seaborn as sns
-from . import DataFrameViewer
-from . import FigureViewer
+from pandasgui.widgets import DataFrameViewer
+from pandasgui.widgets import FigureViewer
 
 class DataFrameExplorer(QtWidgets.QTabWidget):
     """

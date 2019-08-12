@@ -10,7 +10,6 @@ from pandasgui.widgets import PivotDialog, ScatterDialog
 from pandasgui.widgets import DataFrameExplorer
 
 
-
 class PandasGUI(QtWidgets.QMainWindow):
 
     def __init__(self, **kwargs):
@@ -73,7 +72,6 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         # Generates the user interface.
         self.setupUI()
-
 
         self.setWindowTitle('PandasGUI')
         self.app.setWindowIcon(QtGui.QIcon('images/icon.png'))
@@ -357,6 +355,7 @@ if __name__ == '__main__':
         # Call the normal Exception hook after
         sys._excepthook(exctype, value, traceback)
         sys.exit(1)
+
 
     sys.excepthook = my_exception_hook
 
