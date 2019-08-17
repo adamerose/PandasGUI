@@ -10,6 +10,13 @@ from pandasgui.widgets import PivotDialog, ScatterDialog
 from pandasgui.widgets import DataFrameExplorer
 
 
+def except_hook(cls, exception, traceback):
+    sys.__excepthook__(cls, exception, traceback)
+
+
+sys.excepthook = except_hook
+
+
 class PandasGUI(QtWidgets.QMainWindow):
 
     def __init__(self, **kwargs):
@@ -43,7 +50,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         # This is a truncated version of the dataframe for displaying
         self.df_dicts = {}
 
-        # This ensures there it always a reference to this widget and it doesn't get garbage collected
+        # This ensures there is always a reference to this widget and it doesn't get garbage collected
         self._reference = self
 
         # setupUI() class variable initialization.
@@ -91,9 +98,6 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         self.main_layout = QtWidgets.QHBoxLayout()
 
-        # Make the menu bar
-        self.make_menu_bar()
-
         # This holds the DataFrameExplorer for each DataFrame
         self.stacked_widget = QtWidgets.QStackedWidget()
 
@@ -119,9 +123,11 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         nav_width = self.nav_tree.sizeHint().width()
         self.splitter.setSizes([nav_width, self.width() - nav_width])
-
-        self.setCentralWidget(self.splitter)
         self.splitter.setContentsMargins(10, 10, 10, 10)
+
+        # QMainWindow setup
+        self.make_menu_bar()
+        self.setCentralWidget(self.splitter)
 
     def import_dataframe(self, path):
 
@@ -155,8 +161,9 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.df_dicts[df_name]['dataframe'] = df_object
 
         dfe = DataFrameExplorer(df_object)
-        self.df_dicts[df_name]['dataframe_explorer'] = dfe
         self.stacked_widget.addWidget(dfe)
+
+        self.df_dicts[df_name]['dataframe_explorer'] = dfe
         self.add_df_to_nav(df_name)
 
     ####################

@@ -6,15 +6,22 @@ import plotly
 # If QtWebEngineWidgets is imported while a QApplication instance already exists it will fail, so we have to
 try:
     from PyQt5 import QtWebEngineWidgets
-except ImportError:
-    from PyQt5 import sip
-    app = QApplication.instance()
-    app.quit()
-    sip.delete(app)
-    del app
-    from PyQt5 import QtWebEngineWidgets
-    # Without remaking the QApplication you will get an unrecoverable crash on the next attempted usage of it
-    app = QApplication([])
+except ImportError as e:
+    if e.msg == "QtWebEngineWidgets must be imported before a QCoreApplication instance is created":
+        print("Killing QApplication to reimport QtWebEngineWidgets")
+        from PyQt5 import sip
+
+        app = QApplication.instance()
+        app.quit()
+        sip.delete(app)
+        del app
+        from PyQt5 import QtWebEngineWidgets
+
+        # Without remaking the QApplication you will get an unrecoverable crash on the next attempted usage of it
+        app = QApplication([])
+    else:
+        raise e
+
 
 class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
     def __init__(self, fig, exec=False):
@@ -34,6 +41,7 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
 
     def closeEvent(self, event):
         os.remove(self.file_path)
+
 
 if __name__ == "__main__":
     import numpy as np

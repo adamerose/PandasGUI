@@ -23,14 +23,15 @@ class DataFrameExplorer(QtWidgets.QTabWidget):
         df = df.copy()
         self.df = df
 
-        # Creates the tabs
-        self.dataframe_tab = DataFrameViewer(df)
-        self.statistics_tab = self.make_statistics_tab(df)
-
-        # Adds them to the tab_view
+        # DataFrame tab
+        self.dataframe_tab = DataFrameViewer(self.df)
         self.addTab(self.dataframe_tab, "DataFrame")
+
+        # Statistics tab
+        self.statistics_tab = self.make_statistics_tab(df)
         self.addTab(self.statistics_tab, "Statistics")
 
+        # Histogram tab
         if not (type(df.index) == pd.MultiIndex or type(df.columns) == pd.MultiIndex):
             histogram_tab = self.make_histogram_tab(df)
             self.addTab(histogram_tab, "Histogram")
