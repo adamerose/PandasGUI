@@ -16,6 +16,7 @@ def except_hook(cls, exception, traceback):
 
 sys.excepthook = except_hook
 
+instance_list = []
 
 class PandasGUI(QtWidgets.QMainWindow):
 
@@ -34,6 +35,9 @@ class PandasGUI(QtWidgets.QMainWindow):
             self.app = QtWidgets.QApplication(sys.argv)
 
         super().__init__()
+        # This ensures there is always a reference to this widget and it doesn't get garbage collected
+        global instance_list
+        instance_list.append(self)
 
         # https://stackoverflow.com/a/27178019/3620725
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
