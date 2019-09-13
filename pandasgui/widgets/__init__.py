@@ -1,6 +1,7 @@
 """Reusable PyQt widgets"""
 
-__all__ = ['DataFrameExplorer', 'DataFrameViewer', 'FigureViewer', 'TabbedFigureViewer', 'PivotDialog', 'ScatterDialog']
+__all__ = ['DataFrameExplorer', 'DataFrameViewer', 'FigureViewer', 'TabbedFigureViewer', 'PivotDialog',
+           'ScatterDialog', 'PlotlyViewer']
 
 from pandasgui.widgets.image_viewer import FigureViewer, TabbedFigureViewer
 from pandasgui.widgets.plotly_viewer import PlotlyViewer

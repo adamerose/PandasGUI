@@ -8,7 +8,7 @@ __all__ = ['all_datasets',
            'iris', 'flights', 'multi', 'pokemon', 'multidf', 'multidf_columns', 'multidf_index']
 
 # This warning is given by sns.get_dataset_names
-warnings.filterwarnings('ignore', message='No parser was explicitly specified')
+warnings.filterwarnings('ignore', message='.*No parser was explicitly specified.*')
 
 iris = sns.load_dataset('iris')
 flights = sns.load_dataset('flights')

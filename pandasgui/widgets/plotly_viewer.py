@@ -1,8 +1,27 @@
 import os, sys
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QUrl
-from PyQt5 import QtWebEngineWidgets
 import plotly
+
+# If QtWebEngineWidgets is imported while a QApplication instance already exists it will fail, so we have to
+try:
+    from PyQt5 import QtWebEngineWidgets
+except ImportError as e:
+    if e.msg == "QtWebEngineWidgets must be imported before a QCoreApplication instance is created":
+        print("Killing QApplication to reimport QtWebEngineWidgets")
+        from PyQt5 import sip
+
+        app = QApplication.instance()
+        app.quit()
+        sip.delete(app)
+        del app
+        from PyQt5 import QtWebEngineWidgets
+
+        # Without remaking the QApplication you will get an unrecoverable crash on the next attempted usage of it
+        app = QApplication([])
+    else:
+        raise e
+
 
 class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
     def __init__(self, fig, exec=False):
@@ -23,7 +42,8 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
     def closeEvent(self, event):
         os.remove(self.file_path)
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     import numpy as np
     import plotly.graph_objs as go
     import plotly.offline
@@ -33,4 +53,4 @@ if __name__=="__main__":
                     marker={'size': 30, 'color': np.random.rand(100), 'opacity': 0.6,
                             'colorscale': 'Viridis'});
 
-    win = PlotlyViewer(fig)
+    win = PlotlyViewer(fig, exec=True)

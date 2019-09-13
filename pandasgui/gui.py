@@ -9,6 +9,11 @@ from PyQt5.QtCore import Qt
 from pandasgui.widgets import PivotDialog, ScatterDialog
 from pandasgui.widgets import DataFrameExplorer
 
+# Provides proper stacktrace if PyQt crashes
+sys.excepthook = lambda cls, exception, traceback: sys.__excepthook__(cls, exception, traceback)
+
+# Holds references to all created PandasGUI windows so they don't get garbage collected
+instance_list = []
 
 
 class PandasGUI(QtWidgets.QMainWindow):
@@ -18,7 +23,27 @@ class PandasGUI(QtWidgets.QMainWindow):
         Args:
             **kwargs (): Dict of (key, value) pairs of
                          {'DataFrame name': DataFrame object}
+
+
+        self.df_dicts is a dictionary of all dataframes in the GUI.
+        {dataframe name: objects}
+
+        The objects are their own dictionary of:
+        {'dataframe': DataFrame object
+        'view': DataFrameViewer object
+        'model': DataFrameModel object
+        'dataframe_explorer': DataFrameExplorer object}
+        'display_df': DataFrame object
+        This is a truncated version of the dataframe for displaying
+
         """
+
+        # Property initialization
+        self.df_dicts = {}
+        # Set in setupUI()
+        self.stacked_widget = None
+        self.splitter = None
+        self.nav_tree = None
 
         # Get an application instance
         self.app = QtWidgets.QApplication.instance()
@@ -29,72 +54,41 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         super().__init__()
 
+        # This ensures there is always a reference to this widget and it doesn't get garbage collected
+        global instance_list
+        instance_list.append(self)
+
         # https://stackoverflow.com/a/27178019/3620725
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
-        # self.df_dicts is a dictionary of all dataframes in the GUI.
-        # {dataframe name: objects}
-
-        # The objects are their own dictionary of:
-        # {'dataframe': DataFrame object
-        # 'view': DataFrameViewer object
-        # 'model': DataFrameModel object
-        # 'dataframe_explorer': DataFrameExplorer object}
-        # 'display_df': DataFrame object
-        # This is a truncated version of the dataframe for displaying
-        self.df_dicts = {}
-
-        # This ensures there it always a reference to this widget and it doesn't get garbage collected
-        self._reference = self
-
-        # setupUI() class variable initialization.
-        self.main_layout = None
-        self.stacked_widget = None
-        self.df_shown = None
-        self.splitter = None
-        self.main_widget = None
-
-        # Nav bar class variable initialization.
-        self.nav_tree = None
-
-        # Tab widget class variable initialization.
-        self.headers_highlighted = None
-
-        # Adds keyword arguments to df_dict.
+        # Adds DataFrames listed in kwargs to df_dict.
         for i, (df_name, df_object) in enumerate(kwargs.items()):
             self.df_dicts[df_name] = {}
             self.df_dicts[df_name]['dataframe'] = df_object
 
-        # Set window size to percentage of screen
+        # Generates all UI contents
+        self.setupUI()
+
+        # %% Window settings
+        # Set size
         screen = QtWidgets.QDesktopWidget().screenGeometry()
         percentage_of_screen = 0.7
         size = tuple((pd.np.array([screen.width(), screen.height()]) * percentage_of_screen).astype(int))
         self.resize(QtCore.QSize(*size))
-
-        # Generates the user interface.
-        self.setupUI()
-
-
-        self.setWindowTitle('PandasGUI')
-        self.app.setWindowIcon(QtGui.QIcon('images/icon.png'))
-
-        # Create main Widget
-        self.show()
-
         # Center window on screen
         screen = QtWidgets.QDesktopWidget().screenGeometry()
         size = self.geometry()
         self.move(int((screen.width() - size.width()) / 2), int((screen.height() - size.height()) / 2))
+        # Title and logo
+        self.setWindowTitle('PandasGUI')
+        self.app.setWindowIcon(QtGui.QIcon('images/icon.png'))
+
+        self.show()
 
     def setupUI(self):
         """
-        Creates and adds all widgets to main_layout.
+        Creates and adds all widgets to GUI.
         """
-
-        self.main_layout = QtWidgets.QHBoxLayout()
-
-        # Make the menu bar
-        self.make_menu_bar()
 
         # This holds the DataFrameExplorer for each DataFrame
         self.stacked_widget = QtWidgets.QStackedWidget()
@@ -121,9 +115,11 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         nav_width = self.nav_tree.sizeHint().width()
         self.splitter.setSizes([nav_width, self.width() - nav_width])
-
-        self.setCentralWidget(self.splitter)
         self.splitter.setContentsMargins(10, 10, 10, 10)
+
+        # QMainWindow setup
+        self.make_menu_bar()
+        self.setCentralWidget(self.splitter)
 
     def import_dataframe(self, path):
 
@@ -157,8 +153,9 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.df_dicts[df_name]['dataframe'] = df_object
 
         dfe = DataFrameExplorer(df_object)
-        self.df_dicts[df_name]['dataframe_explorer'] = dfe
         self.stacked_widget.addWidget(dfe)
+
+        self.df_dicts[df_name]['dataframe_explorer'] = dfe
         self.add_df_to_nav(df_name)
 
     ####################
@@ -320,7 +317,11 @@ def show(*args, block=True, **kwargs):
         block (bool): Indicates whether to run app._exec on the PyQt application to block further execution of script
         **kwargs: These should all be DataFrames. The key is the desired name and the value is the DataFrame object
     """
-
+    # Remove reserved rewords
+    try:
+        kwargs.pop('block')
+    except:
+        pass
     # Get the variable names in the scope show() was called from
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
 
@@ -345,8 +346,6 @@ def show(*args, block=True, **kwargs):
     if block:
         pandas_gui.app.exec_()
 
-    return pandas_gui
-
 
 if __name__ == '__main__':
 
@@ -357,6 +356,7 @@ if __name__ == '__main__':
         # Call the normal Exception hook after
         sys._excepthook(exctype, value, traceback)
         sys.exit(1)
+
 
     sys.excepthook = my_exception_hook
 

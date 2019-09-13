@@ -8,7 +8,7 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import random
 
-matplotlib.use('Qt5Agg')
+# matplotlib.use('Qt5Agg')
 
 class TabbedFigureViewer(QtWidgets.QWidget):
     """
