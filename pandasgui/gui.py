@@ -312,6 +312,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         default = self.nav_tree.currentItem().data(0, Qt.DisplayRole)
         win = ScatterDialog(self.df_dicts, default=default, gui=self)
 
+
 def show(*args, nonblocking=False, **kwargs):
     """
     Create and show a PandasGUI window with all the DataFrames passed. *args and **kwargs should all be DataFrames
