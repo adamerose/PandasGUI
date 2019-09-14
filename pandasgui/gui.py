@@ -8,7 +8,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 from pandasgui.widgets import PivotDialog, ScatterDialog
 from pandasgui.widgets import DataFrameExplorer
-
+from pandasgui.widgets import Find_Toolbar
 
 class PandasGUI(QtWidgets.QMainWindow):
 
@@ -55,10 +55,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Tab widget class variable initialization.
         self.headers_highlighted = None
 
-        # search function variable initialization
-        self.search_matches = []
-        self.search_selection = None
-
         # Adds keyword arguments to df_dict.
         for i, (df_name, df_object) in enumerate(kwargs.items()):
 
@@ -99,11 +95,12 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         self.main_layout = QtWidgets.QHBoxLayout()
 
+        # makes the find toolbar
+        self.findBar = Find_Toolbar(self)
+        self.addToolBar(self.findBar)
+
         # Make the menu bar
         self.make_menu_bar()
-
-        # makes the find and replace toolbar
-        self.make_find_bar()
 
         # This holds the DataFrameExplorer for each DataFrame
         self.stacked_widget = QtWidgets.QStackedWidget()
@@ -173,7 +170,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         editMenu = menubar.addMenu('&Edit')
         findAction = QtWidgets.QAction('&Find', self)
         findAction.setShortcut('Ctrl+F')
-        findAction.triggered.connect(lambda: self.findBar.show())
+        findAction.triggered.connect(self.findBar.show_find_bar)
         editMenu.addAction(findAction)
 
         styleMenu = menubar.addMenu('&Set Style')
@@ -219,107 +216,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         print('nav_tree', self.nav_tree.sizeHint())
         print('stacked_widget', self.stacked_widget.sizeHint())
         print('----------------')
-    
-    def find(self, text):
-        # get selected dataframe data
-        current_df = self.stacked_widget.currentWidget().dataframe_tab
-        df_data = current_df.dataView
-        model = df_data.model()
-
-        # clear from last search results
-        self.search_matches = []
-        df_data.selectionModel().clear()
-
-        if not text: return
-
-        for i in range(model.columnCount()):
-            start = model.index(0, i)
-            # gives list of indices of cells with successful match
-            matches = model.match(start, QtCore.Qt.DisplayRole,
-                                  text, -1, QtCore.Qt.MatchContains)
-            self.search_matches.extend(matches)
-
-        if self.search_matches:
-            # highlight appropriate cell
-            self.search_selection = 0
-            df_data.selectionModel().select(self.search_matches[self.search_selection],
-                                            QtCore.QItemSelectionModel.Select)
-            df_data.scrollTo(self.search_matches[self.search_selection])
-    
-    def select_next_match(self):
-        if self.search_matches:
-            # loop around to the first match if user hits last match
-            if self.search_selection == len(self.search_matches)-1:
-                self.search_selection = 0
-            else:
-                self.search_selection +=1
-
-            # highlight appropriate cell
-            current_df = self.stacked_widget.currentWidget().dataframe_tab
-            df_data = current_df.dataView
-            df_data.selectionModel().clear()
-            df_data.selectionModel().select(self.search_matches[self.search_selection],
-                                            QtCore.QItemSelectionModel.Select)
-            df_data.scrollTo(self.search_matches[self.search_selection])
-    
-    def select_previous_match(self):
-        if self.search_matches:
-            # loop around to the last match if user hits first match
-            if self.search_selection >= 0:
-                self.search_selection -=1
-            else:
-                self.search_selection = len(self.search_matches)-1
-
-            # highlight appropriate cell
-            current_df = self.stacked_widget.currentWidget().dataframe_tab
-            df_data = current_df.dataView
-            df_data.selectionModel().clear()
-            df_data.selectionModel().select(self.search_matches[self.search_selection],
-                                            QtCore.QItemSelectionModel.Select)
-            df_data.scrollTo(self.search_matches[self.search_selection])
-    
-    def make_find_bar(self):
-        self.findBar = self.addToolBar('Find')
-
-        # main toolbar
-        find_replace_widget = QtWidgets.QWidget()
-        find_replace_layout = QtWidgets.QHBoxLayout()
-        find_replace_layout.setContentsMargins(0, 0, 0, 0)
-        find_replace_layout.setSpacing(0)
-        find_replace_widget.setLayout(find_replace_layout)
-
-        # textedit portion of toolbar
-        find_box = QtWidgets.QLineEdit()
-        find_box.setPlaceholderText('Find')
-        find_box.textChanged.connect(self.find)
-        find_replace_layout.addWidget(find_box)
-
-        self.images_folder = os.path.join('pandasgui', 'images')
-        # go up a match
-        previous_match_button = QtWidgets.QPushButton()
-        up_arrow_icon = QtGui.QIcon(os.path.join(self.images_folder, 'up-arrow.png'))
-        previous_match_button.setIcon(up_arrow_icon)
-        previous_match_button.clicked.connect(self.select_previous_match)
-        find_replace_layout.addWidget(previous_match_button)
-
-        # go down a match
-        next_match_button = QtWidgets.QPushButton()
-        down_arrow_icon = QtGui.QIcon(os.path.join(self.images_folder, 'down-arrow.png'))
-        next_match_button.setIcon(down_arrow_icon)
-        next_match_button.clicked.connect(self.select_next_match)
-        find_replace_layout.addWidget(next_match_button)
-
-        # button to close find toolbar
-        self.close_find_button = QtWidgets.QPushButton()
-        close_icon = QtGui.QIcon(os.path.join(self.images_folder, 'cancel.png'))
-        self.close_find_button.setIcon(close_icon)
-        self.close_find_button.clicked.connect(lambda: self.findBar.hide())
-
-        find_replace_layout.addWidget(self.close_find_button)
-
-        self.findBar.addWidget(find_replace_widget)
-
-        self.findBar.hide()
 
     class NavWidget(QtWidgets.QTreeWidget):
         def __init__(self, gui):
@@ -416,6 +312,32 @@ class PandasGUI(QtWidgets.QMainWindow):
         default = self.nav_tree.currentItem().data(0, Qt.DisplayRole)
         win = ScatterDialog(self.df_dicts, default=default, gui=self)
 
+# class ButtonLineEdit(QtWidgets.QLineEdit):
+#     buttonClicked = QtCore.pyqtSignal(bool)
+
+#     def __init__(self, icon_file, parent=None):
+#         super(ButtonLineEdit, self).__init__(parent)
+
+#         self.button = QtWidgets.QToolButton(self)
+#         self.button.setIcon(QtGui.QIcon(icon_file))
+#         # self.button.setStyleSheet('border: none;')
+#         self.button.setCursor(QtCore.Qt.PointingHandCursor)
+#         self.button.setCheckable(True)
+#         self.button.clicked.connect(self.buttonClicked.emit)
+
+#         frameWidth = self.style().pixelMetric(QtWidgets.QStyle.PM_DefaultFrameWidth)
+#         buttonSize = self.button.sizeHint()
+
+#         self.setStyleSheet('QLineEdit {padding-right: %dpx; }' % (buttonSize.width() + frameWidth + 1))
+#         self.setMinimumSize(max(self.minimumSizeHint().width(), buttonSize.width() + frameWidth*2 + 2),
+#                             max(self.minimumSizeHint().height(), buttonSize.height() + frameWidth*2 + 2))
+
+#     def resizeEvent(self, event):
+#         buttonSize = self.button.sizeHint()
+#         frameWidth = self.style().pixelMetric(QtWidgets.QStyle.PM_DefaultFrameWidth)
+#         self.button.move(self.rect().right() - frameWidth - buttonSize.width(),
+#                         (self.rect().bottom() - buttonSize.height() + 1)/2)
+#         super(ButtonLineEdit, self).resizeEvent(event)
 
 def show(*args, nonblocking=False, **kwargs):
     """
@@ -491,8 +413,8 @@ if __name__ == '__main__':
         else:
             from pandasgui.datasets import iris, flights, multi, all_datasets
 
-            show(**all_datasets)
-            # show(flights)
+            # show(**all_datasets)
+            show(flights)
 
     # Catch errors and call input() so they can be viewed before the console window closes when running with drag n drop
     except Exception as e:

@@ -22,6 +22,9 @@ if case == 2:
 # View all example datasets
 if case == 3:
     from pandasgui import show
-    from pandasgui.datasets import all_datasets
+    from pandasgui.datasets import all_datasets, flights
 
-    show(**all_datasets)
+    # show(**all_datasets)
+    show(flights)
+
+113
