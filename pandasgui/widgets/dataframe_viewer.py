@@ -11,6 +11,7 @@ import pandas as pd
 import numpy as np
 import datetime
 import sys
+import threading
 
 
 class DataFrameViewer(QtWidgets.QWidget):
@@ -284,34 +285,23 @@ class DataTableView(QtWidgets.QTableView):
         print(self.model().df)
 
     def copy(self):
-        # Set up clipboard object
-        app = QtWidgets.QApplication.instance()
-        if not app:
-            app = QtWidgets.QApplication(sys.argv)
-        clipboard = app.clipboard()
+        """
+        Copy the selected cells to clipboard in an Excel-pasteable format
+        """
 
-        text = ""
-
-        last_row = None
+        # Get the bounds using the top left and bottom right selected cells
         indexes = self.selectionModel().selection().indexes()
 
-        for ix in indexes:
-            if last_row is None:
-                last_row = ix.row()
+        rows = [ix.row() for ix in indexes]
+        cols = [ix.column() for ix in indexes]
 
-            value = str(self.model().data(self.model().index(ix.row(), ix.column())))
+        df = self.model().df.iloc[min(rows):max(rows) + 1, min(cols):max(cols) + 1]
 
-            if text == "":
-                # First item
-                pass
-            elif ix.row() != last_row:
-                # New row
-                text += '\n'
-                last_row = ix.row()
-            else:
-                text += '\t'
+        # If I try to use Pyperclip without starting new thread large values give access denied error
+        def thread_function(df):
+            df.to_clipboard(index=False, header=False)
 
-            text += value
+        threading.Thread(target=thread_function, args=(df,)).start()
 
         clipboard.setText(text)
 
