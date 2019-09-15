@@ -2,6 +2,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 import os
 from functools import reduce
+import pkg_resources
 
 class Find_Toolbar(QtWidgets.QToolBar):
     def __init__(self, parent):
@@ -13,12 +14,12 @@ class Find_Toolbar(QtWidgets.QToolBar):
                     DataFrame shown to the user.
         """
         super().__init__(parent=parent)
-        self.images_folder = os.path.join('pandasgui', 'images')
 
         # global variable initialization
         self.search_matches = []
         self.search_selection = None
         self.match_flags = [QtCore.Qt.MatchContains]
+        self.image_folder = '../images'
 
         # main toolbar widget
         find_toolbar_widget = QtWidgets.QWidget()
@@ -35,20 +36,32 @@ class Find_Toolbar(QtWidgets.QToolBar):
 
         # add match modification
         self.match_flags = [QtCore.Qt.MatchContains]
-        match_case_icon = QtGui.QIcon(os.path.join(self.images_folder, 'case-match.png'))
+        match_case_icon_raw_path = self.image_folder + '/case-match.png'
+        match_case_icon_path = pkg_resources.resource_filename(__name__,
+                                                               match_case_icon_raw_path)
+        match_case_icon = QtGui.QIcon(match_case_icon_path)
         self.find_textbox.add_button(match_case_icon, connection=self.toggle_match_case,
                                      tooltip='Match Case')
-        regex_icon = QtGui.QIcon(os.path.join(self.images_folder, 'curly-brackets.png'))
+        regex_icon_raw_path = self.image_folder + '/curly-brackets.png'
+        regex_icon_path = pkg_resources.resource_filename(__name__,
+                                                          regex_icon_raw_path)       
+        regex_icon = QtGui.QIcon(regex_icon_path)
         self.find_textbox.add_button(regex_icon, connection=self.toggle_regex,
                                      tooltip='Use Regular Expression')
-        whole_word_icon = QtGui.QIcon(os.path.join(self.images_folder, 'match-exactly.png'))
+        match_exactly_icon_raw_path = self.image_folder + '/match-exactly.png'
+        match_exactly_icon_path = pkg_resources.resource_filename(__name__,
+                                                                  match_exactly_icon_raw_path)       
+        whole_word_icon = QtGui.QIcon(match_exactly_icon_path)
         self.find_textbox.add_button(whole_word_icon, connection=self.toggle_match_exactly,
                                      tooltip='Match Exactly')
         find_toolbar_layout.addWidget(self.find_textbox)
 
         # go up a match
         previous_match_button = QtWidgets.QPushButton()
-        up_arrow_icon = QtGui.QIcon(os.path.join(self.images_folder, 'up-arrow.png'))
+        up_arrow_icon_raw_path = self.image_folder + '/up-arrow.png'
+        up_arrow_icon_path = pkg_resources.resource_filename(__name__,
+                                                             up_arrow_icon_raw_path) 
+        up_arrow_icon = QtGui.QIcon(up_arrow_icon_path)
         previous_match_button.setIcon(up_arrow_icon)
         previous_match_button.setToolTip('Previous match (Shift + Enter)')
         previous_match_button.setShortcut('Shift+Return')
@@ -57,7 +70,10 @@ class Find_Toolbar(QtWidgets.QToolBar):
 
         # go down a match
         next_match_button = QtWidgets.QPushButton()
-        down_arrow_icon = QtGui.QIcon(os.path.join(self.images_folder, 'down-arrow.png'))
+        down_arrow_icon_raw_path = self.image_folder + '/down-arrow.png'
+        down_arrow_icon_path = pkg_resources.resource_filename(__name__,
+                                                               down_arrow_icon_raw_path) 
+        down_arrow_icon = QtGui.QIcon(down_arrow_icon_path)
         next_match_button.setIcon(down_arrow_icon)
         next_match_button.setToolTip('Next match (Enter)')
         next_match_button.setShortcut('Return')
@@ -66,7 +82,10 @@ class Find_Toolbar(QtWidgets.QToolBar):
 
         # close find toolbar
         close_find_button = QtWidgets.QPushButton()
-        close_icon = QtGui.QIcon(os.path.join(self.images_folder, 'cancel.png'))
+        cancel_icon_raw_path = self.image_folder + '/cancel.png'
+        cancel_icon_path = pkg_resources.resource_filename(__name__,
+                                                           cancel_icon_raw_path) 
+        close_icon = QtGui.QIcon(cancel_icon_path)
         close_find_button.setIcon(close_icon)
         close_find_button.clicked.connect(self.hide_find_bar)
         find_toolbar_layout.addWidget(close_find_button)

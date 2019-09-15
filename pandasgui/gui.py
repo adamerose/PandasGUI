@@ -9,6 +9,7 @@ from PyQt5.QtCore import Qt
 from pandasgui.widgets import PivotDialog, ScatterDialog
 from pandasgui.widgets import DataFrameExplorer
 from pandasgui.widgets import Find_Toolbar
+import pkg_resources
 
 class PandasGUI(QtWidgets.QMainWindow):
 
@@ -19,7 +20,6 @@ class PandasGUI(QtWidgets.QMainWindow):
             **kwargs (): Dict of (key, value) pairs of
                          {'DataFrame name': DataFrame object}
         """
-
         if nonblocking:
             print("Opening PandasGUI (nonblocking mode)...")
         else:
@@ -78,7 +78,10 @@ class PandasGUI(QtWidgets.QMainWindow):
             self.setWindowTitle('PandasGUI (nonblocking)')
         else:
             self.setWindowTitle('PandasGUI')
-        self.app.setWindowIcon(QtGui.QIcon('images/icon.png'))
+        pdgui_icon = 'images/icon.png'
+        pdgui_icon_path = pkg_resources.resource_filename(__name__, pdgui_icon)
+
+        self.app.setWindowIcon(QtGui.QIcon(pdgui_icon_path))
 
         # Create main Widget
         self.show()
