@@ -20,6 +20,7 @@ class PandasGUI(QtWidgets.QMainWindow):
             **kwargs (): Dict of (key, value) pairs of
                          {'DataFrame name': DataFrame object}
         """
+
         if nonblocking:
             print("Opening PandasGUI (nonblocking mode)...")
         else:
