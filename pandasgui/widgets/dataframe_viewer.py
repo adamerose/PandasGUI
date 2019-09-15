@@ -31,7 +31,6 @@ class DataFrameViewer(QtWidgets.QWidget):
             df = df.to_frame()
             print(f'DataFrame was automatically converted from {orig_type} to DataFrame for viewing')
 
-
         df = df.copy()
 
         # Set up DataFrame TableView and Model
@@ -108,12 +107,18 @@ class DataFrameViewer(QtWidgets.QWidget):
         event.accept()
 
     def auto_size_column(self, column_index):
+        """
+        Set the size of column at column_index to fix its contents
+        """
         padding = 20
 
         self.columnHeader.resizeColumnToContents(column_index)
         width = self.columnHeader.columnWidth(column_index)
 
-        for i in range(min(100, self.dataView.model().rowCount())):
+        # Iterate over the column's rows and check the width of each to determine the max width for the column
+        # Only check the first N rows for performance. If there is larger content in cells below it will be cut off
+        N = 100
+        for i in range(min(N, self.dataView.model().rowCount())):
             mi = self.dataView.model().index(i, column_index)
             text = self.dataView.model().data(mi)
             w = self.dataView.fontMetrics().boundingRect(text).width()
@@ -253,8 +258,17 @@ class DataTableView(QtWidgets.QTableView):
         self.setAlternatingRowColors(True)
 
     def on_selectionChanged(self):
+        """
+        Runs when cells are selected in the main table. This logic highlights the correct cells in the vertical and
+        horizontal headers when a data cell is selected
+        """
         columnHeader = self.parent.columnHeader
         indexHeader = self.parent.indexHeader
+
+        # The two blocks below check what columns or rows are selected in the data table and highlights the
+        # corresponding ones in the two headers. The if statements check for focus on headers, because if the user
+        # clicks a header that will auto-select all cells in that row or column which will trigger this function
+        # and cause and infinite loop
 
         if not columnHeader.hasFocus():
             selection = self.selectionModel().selection()
@@ -445,21 +459,27 @@ class HeaderView(QtWidgets.QTableView):
 
     # Header
     def on_selectionChanged(self):
+        """
+        Runs when cells are selected in the Header. This selects columns in the data table when the header is clicked,
+        and then calls selectAbove()
+        """
         # Check focus so we don't get recursive loop, since headers trigger selection of data cells and vice versa
         if self.hasFocus():
             dataView = self.parent.dataView
 
             # Set selection mode so selecting one row or column at a time adds to selection each time
-
-            if self.orientation == Qt.Horizontal:
+            if self.orientation == Qt.Horizontal:  # This case is for the horizontal header
+                # Get the header's selected columns
                 selection = self.selectionModel().selection()
 
+                # Removes the higher levels so that only the lowest level of the header affects the data table selection
                 last_row_ix = self.df.columns.nlevels - 1
                 last_col_ix = self.model().columnCount() - 1
                 higher_levels = QtCore.QItemSelection(self.model().index(0, 0),
                                                       self.model().index(last_row_ix - 1, last_col_ix))
-
                 selection.merge(higher_levels, QtCore.QItemSelectionModel.Deselect)
+
+                # Select the cells in the data view
                 dataView.selectionModel().select(selection,
                                                  QtCore.QItemSelectionModel.Columns | QtCore.QItemSelectionModel.ClearAndSelect)
             if self.orientation == Qt.Vertical:
@@ -469,8 +489,8 @@ class HeaderView(QtWidgets.QTableView):
                 last_col_ix = self.df.index.nlevels - 1
                 higher_levels = QtCore.QItemSelection(self.model().index(0, 0),
                                                       self.model().index(last_row_ix, last_col_ix - 1))
-
                 selection.merge(higher_levels, QtCore.QItemSelectionModel.Deselect)
+
                 dataView.selectionModel().select(selection,
                                                  QtCore.QItemSelectionModel.Rows | QtCore.QItemSelectionModel.ClearAndSelect)
 
