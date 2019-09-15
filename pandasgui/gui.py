@@ -8,6 +8,10 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 from pandasgui.widgets import PivotDialog, ScatterDialog
 from pandasgui.widgets import DataFrameExplorer
+from pandasgui.utility import fix_ipython
+
+# This makes it so PyQt5 windows don't become unresponsive in IPython outside app._exec() loops
+fix_ipython()
 
 # Provides proper stacktrace if PyQt crashes
 sys.excepthook = lambda cls, exception, traceback: sys.__excepthook__(cls, exception, traceback)

@@ -4,6 +4,16 @@ import pandas as pd
 import numpy as np
 
 
+# This makes it so PyQt5 windows don't become unresponsive in IPython outside app._exec() loops
+def fix_ipython():
+    try:
+        from IPython import get_ipython
+        ipython = get_ipython()
+        ipython.magic("gui qt5")
+    except ImportError:
+        pass
+
+
 # %% Reshaping
 
 def pivot(df, keys, categories, data):
