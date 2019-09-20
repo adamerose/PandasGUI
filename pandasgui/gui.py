@@ -10,7 +10,6 @@ from pandasgui.widgets import PivotDialog, ScatterDialog
 from pandasgui.widgets import DataFrameExplorer
 from pandasgui.widgets import FindToolbar
 import pkg_resources
-import multiprocessing as mp
 
 class PandasGUI(QtWidgets.QMainWindow):
 
@@ -353,7 +352,6 @@ def show(*args, nonblocking=False, **kwargs):
         show_nonblocking(**kwargs)
         return
 
-    mp.freeze_support()
     # Create the application and PandasGUI window
     app = QtWidgets.QApplication.instance()
     if app:

@@ -5,7 +5,6 @@ from functools import reduce, partial
 import pkg_resources
 import numpy as np
 import threading
-import time
 import re
 
 class FindToolbar(QtWidgets.QToolBar):
