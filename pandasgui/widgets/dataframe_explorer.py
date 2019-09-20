@@ -39,7 +39,7 @@ class DataFrameExplorer(QtWidgets.QTabWidget):
     def make_statistics_tab(self, df):
         stats_df = pd.DataFrame({
             'Type': df.dtypes.replace('object', 'string'),
-            'Count': df.count(numeric_only=True),
+            'Count': df.count(),
             'Mean': df.mean(numeric_only=True),
             'StdDev': df.std(numeric_only=True),
             'Min': df.min(numeric_only=True),
