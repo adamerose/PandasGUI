@@ -9,7 +9,8 @@ def fix_ipython():
     try:
         from IPython import get_ipython
         ipython = get_ipython()
-        ipython.magic("gui qt5")
+        if ipython is not None:
+            ipython.magic("gui qt5")
     except ImportError:
         pass
 
