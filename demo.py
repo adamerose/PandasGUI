@@ -1,18 +1,14 @@
 # View all example datasets
-import mytimer
 from pandasgui import show
 import numpy as np
 import pandas as pd
 import seaborn as sns
 
-mytimer.tick()
 # Example 1 - Basic usage
 df = pd.DataFrame(np.random.rand(5, 5), columns=['col1', 'col2', 'col3', 'col4', 'col5'],
                   index=['A', 'B', 'C', 'D', 'E'])
-show(df, block=False)
-show(df, block=True)
-mytimer.tock()
 
+show(df)
 
 # Example 2 - View all Seaborn datasets
 all_datasets = {}
