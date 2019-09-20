@@ -1,10 +1,15 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 import os
-from functools import reduce
+from functools import reduce, partial
 import pkg_resources
+import numpy as np
+from multiprocessing import Pool
+import threading
+import time
+import re
 
-class Find_Toolbar(QtWidgets.QToolBar):
+class FindToolbar(QtWidgets.QToolBar):
     def __init__(self, parent):
         """
         Creates modified toolbar with only a find textbox and match modification.
@@ -16,9 +21,12 @@ class Find_Toolbar(QtWidgets.QToolBar):
         super().__init__(parent=parent)
 
         # global variable initialization
+        self.findThread = None
         self.search_matches = []
         self.search_selection = None
-        self.match_flags = [QtCore.Qt.MatchContains]
+        self.match_flags = {'regex': False,
+                            'case': False,
+                            'whole word': False}
         self.image_folder = '../images'
 
         # main toolbar widget
@@ -32,29 +40,53 @@ class Find_Toolbar(QtWidgets.QToolBar):
         
         self.find_textbox = ButtonLineEdit(content_margins=(0, 0, 5, 0))
         self.find_textbox.setPlaceholderText('Find')
-        self.find_textbox.textChanged.connect(self.find)
+        self.find_textbox.textChanged.connect(self.query)
 
         # add match modification
-        self.match_flags = [QtCore.Qt.MatchContains]
+        # add match case button
         match_case_icon_raw_path = self.image_folder + '/case-match.png'
         match_case_icon_path = pkg_resources.resource_filename(__name__,
                                                                match_case_icon_raw_path)
         match_case_icon = QtGui.QIcon(match_case_icon_path)
-        self.find_textbox.add_button(match_case_icon, connection=self.toggle_match_case,
-                                     tooltip='Match Case')
+        self.match_case_button = QtWidgets.QToolButton(self.find_textbox)
+        self.match_case_button.setIcon(match_case_icon)
+        self.match_case_button.setToolTip('Match Case')
+        self.match_case_button.setCursor(QtCore.Qt.PointingHandCursor)
+        self.match_case_button.setCheckable(True)
+        self.match_case_button.clicked.connect(self.toggle_match_case)
+        self.find_textbox.add_button(self.match_case_button)
+
+        # add match regex button
         regex_icon_raw_path = self.image_folder + '/curly-brackets.png'
         regex_icon_path = pkg_resources.resource_filename(__name__,
                                                           regex_icon_raw_path)       
         regex_icon = QtGui.QIcon(regex_icon_path)
-        self.find_textbox.add_button(regex_icon, connection=self.toggle_regex,
-                                     tooltip='Use Regular Expression')
+        self.match_regex_button = QtWidgets.QToolButton(self.find_textbox)
+        self.match_regex_button.setIcon(regex_icon)
+        self.match_regex_button.setToolTip('Use Regular Expression')
+        self.match_regex_button.setCursor(QtCore.Qt.PointingHandCursor)
+        self.match_regex_button.setCheckable(True)
+        self.match_regex_button.clicked.connect(self.toggle_regex)
+        self.find_textbox.add_button(self.match_regex_button)        
+
+        # add match exactly button
         match_exactly_icon_raw_path = self.image_folder + '/match-exactly.png'
         match_exactly_icon_path = pkg_resources.resource_filename(__name__,
                                                                   match_exactly_icon_raw_path)       
         whole_word_icon = QtGui.QIcon(match_exactly_icon_path)
-        self.find_textbox.add_button(whole_word_icon, connection=self.toggle_match_exactly,
-                                     tooltip='Match Exactly')
+        self.match_exactly_button = QtWidgets.QToolButton(self.find_textbox)
+        self.match_exactly_button.setIcon(whole_word_icon)
+        self.match_exactly_button.setToolTip('Match Exactly')
+        self.match_exactly_button.setCursor(QtCore.Qt.PointingHandCursor)
+        self.match_exactly_button.setCheckable(True)
+        self.match_exactly_button.clicked.connect(self.toggle_match_exactly)
+        self.find_textbox.add_button(self.match_exactly_button)
         find_toolbar_layout.addWidget(self.find_textbox)
+
+        self.matches_found_label = QtWidgets.QLabel('Matches Found: 0')
+        self.matches_found_label.setContentsMargins(0, 0, 7, 0)
+        find_toolbar_layout.addWidget(self.matches_found_label)
+
 
         # go up a match
         previous_match_button = QtWidgets.QPushButton()
@@ -87,6 +119,7 @@ class Find_Toolbar(QtWidgets.QToolBar):
                                                            cancel_icon_raw_path) 
         close_icon = QtGui.QIcon(cancel_icon_path)
         close_find_button.setIcon(close_icon)
+        close_find_button.setToolTip('Close Find Bar')
         close_find_button.clicked.connect(self.hide_find_bar)
         find_toolbar_layout.addWidget(close_find_button)
 
@@ -94,34 +127,42 @@ class Find_Toolbar(QtWidgets.QToolBar):
         
         # hide toolbar
         self.setFixedHeight(0)
-    
-    def find(self, text):
+
+    @QtCore.pyqtSlot(str)
+    def query(self, text):
         # get current dataframe data
         current_df = self.parent().stacked_widget.currentWidget().dataframe_tab
-        df_data = current_df.dataView
-        model = df_data.model()
+        df_dataView = current_df.dataView
+        self.current_model = df_dataView.model()
+        df = self.current_model.df
 
         # clear matches and selection from last search results
+        if self.findThread: self.findThread.stop()
         self.search_matches = []
-        df_data.selectionModel().clear()
+        df_dataView.selectionModel().clear()
+        self.matches_found_label.setText('Matches Found: 0')
+        self.search_selection = None
 
         if not text: return
 
-        # match algorithm. Iterate through the columns and then rows to find matches.
-        for i in range(model.columnCount()):
-            start = model.index(0, i)
-            # Qt.MatchFlags requires that binary OR is recursively applied to all flags
-            combined_match_flags = reduce(lambda x, y: x | y, self.match_flags)
-            # gives list of indices of cells with successful match
-            matches = model.match(start, QtCore.Qt.DisplayRole,
-                                  text, -1, QtCore.Qt.MatchFlags(combined_match_flags))
-            self.search_matches.extend(matches)
+        self.findThread = FindThread(df, text, self.match_flags)
+        self.findThread.matches.connect(self.update_matches)
+        self.findThread.start()
+    
+    @QtCore.pyqtSlot(list)
+    def update_matches(self, cells_matched):
+        match_idxs = [self.current_model.index(row, col) for row, col in cells_matched]
+        self.search_matches.extend(match_idxs)
 
-        if self.search_matches:
+        matches_found = 'Matches Found: ' + str(len(self.search_matches))
+        self.matches_found_label.setText(matches_found)
+
+        if self.search_matches and self.search_selection is None:
             # highlight first match
             self.search_selection = 0
             self.highlight_match()
-        
+
+    @QtCore.pyqtSlot()
     def show_find_bar(self):
         if self.height() == 0:
             animation_duration = 200
@@ -136,6 +177,10 @@ class Find_Toolbar(QtWidgets.QToolBar):
 
             showAnimation.start()
 
+            self.find_textbox.setText('')
+            self.find_textbox.setFocus()
+
+    @QtCore.pyqtSlot()
     def hide_find_bar(self):
         if self.height() == 30:
             hideAnimation = QtCore.QVariantAnimation(self)
@@ -146,7 +191,10 @@ class Find_Toolbar(QtWidgets.QToolBar):
             hideAnimation.valueChanged.connect(lambda val: self.setFixedHeight(val))
 
             hideAnimation.start()
+
+            if self.findThread: self.findThread.stop()
     
+    @QtCore.pyqtSlot()
     def select_next_match(self):
         if self.search_matches:
             # loop around to the first match if user hits last match
@@ -157,6 +205,7 @@ class Find_Toolbar(QtWidgets.QToolBar):
 
             self.highlight_match()
     
+    @QtCore.pyqtSlot()
     def select_previous_match(self):
         if self.search_matches:
             # loop around to the last match if user hits first match
@@ -166,6 +215,33 @@ class Find_Toolbar(QtWidgets.QToolBar):
                 self.search_selection -=1
 
             self.highlight_match()
+    
+    @QtCore.pyqtSlot()
+    def toggle_match_case(self):
+        self.match_flags['case'] = not self.match_flags['case']
+        
+        if self.find_textbox.text():
+            self.query(self.find_textbox.text())
+
+    @QtCore.pyqtSlot()
+    def toggle_regex(self):
+        self.match_flags['regex'] = not self.match_flags['regex']
+        if self.match_flags['whole word']:
+            self.match_flags['whole word'] = False
+            self.match_exactly_button.setChecked(False)
+        
+        if self.find_textbox.text():
+            self.query(self.find_textbox.text())
+
+    @QtCore.pyqtSlot()
+    def toggle_match_exactly(self):
+        self.match_flags['whole word'] = not self.match_flags['whole word']
+        if self.match_flags['regex']:
+            self.match_flags['regex'] = False
+            self.match_regex_button.setChecked(False)
+        
+        if self.find_textbox.text():
+            self.query(self.find_textbox.text())
     
     def highlight_match(self):
         current_df = self.parent().stacked_widget.currentWidget().dataframe_tab
@@ -177,38 +253,6 @@ class Find_Toolbar(QtWidgets.QToolBar):
         df_data.selectionModel().select(self.search_matches[self.search_selection],
                                         QtCore.QItemSelectionModel.Select)
         df_data.scrollTo(self.search_matches[self.search_selection])
-    
-    def toggle_match_case(self):
-        if QtCore.Qt.MatchCaseSensitive in self.match_flags:
-            self.match_flags.remove(QtCore.Qt.MatchCaseSensitive)
-        else:
-            self.match_flags.append(QtCore.Qt.MatchCaseSensitive)
-        
-        if self.find_textbox.text():
-            self.find(self.find_textbox.text())
-
-    def toggle_regex(self):
-        if QtCore.Qt.MatchRegExp in self.match_flags:
-            self.match_flags.remove(QtCore.Qt.MatchRegExp)
-            self.match_flags.append(QtCore.Qt.MatchContains)
-        else:
-            self.match_flags.append(QtCore.Qt.MatchRegExp)
-            if QtCore.Qt.MatchContains in self.match_flags:
-                self.match_flags.remove(QtCore.Qt.MatchContains)
-        
-        if self.find_textbox.text():
-            self.find(self.find_textbox.text())
-
-    def toggle_match_exactly(self):
-        if QtCore.Qt.MatchExactly in self.match_flags:
-            self.match_flags.remove(QtCore.Qt.MatchExactly)
-            self.match_flags.append(QtCore.Qt.MatchContains)
-        else:
-            self.match_flags.append(QtCore.Qt.MatchExactly)
-            self.match_flags.remove(QtCore.Qt.MatchContains)
-        
-        if self.find_textbox.text():
-            self.find(self.find_textbox.text())
 
 class ButtonLineEdit(QtWidgets.QLineEdit):
     buttonClicked = QtCore.pyqtSignal(bool)
@@ -236,15 +280,8 @@ class ButtonLineEdit(QtWidgets.QLineEdit):
             button.move(self.rect().right() - frameWidth - buttonSize.width()*(i+1) - right_margin,
                         (self.rect().bottom() - buttonSize.height() + 1)/2 - bottom_margin)
         super(ButtonLineEdit, self).resizeEvent(event)
-    
-    def add_button(self, icon, connection, tooltip=None, checkable=True):
-        button = QtWidgets.QToolButton(self)
-        button.setIcon(icon)
-        if tooltip: button.setToolTip(tooltip)
-        button.setCursor(QtCore.Qt.PointingHandCursor)
-        button.setCheckable(checkable)
-        button.clicked.connect(connection)
 
+    def add_button(self, button):
         self.buttons.append(button)
 
         # makes sure text doesn't type behind the buttons
@@ -258,3 +295,88 @@ class ButtonLineEdit(QtWidgets.QLineEdit):
         self.setMinimumSize(max(self.minimumSizeHint().width(), totalWidth + frameWidth*2 + 2),
                             max(self.minimumSizeHint().height(), maxHeight + frameWidth*2 + 2))
 
+
+class FindThread(QtCore.QThread):
+    matches = QtCore.pyqtSignal(list)
+
+    def __init__(self, df, text, match_flags, parent=None):
+        QtCore.QThread.__init__(self, parent=parent)
+        self.isRunning = True
+        self.df = df
+        self.text = text
+        self.match_flags = match_flags
+        self.max_chunk_size = 10000
+        self.chunks = self.split_chunks()
+    
+    def split_chunks(self):
+        chunks = []
+        for col_idx, col_name in enumerate(self.df.columns):
+            column = self.df[col_name].copy()
+            while len(column) > 0:
+                chunk = column.iloc[:self.max_chunk_size]
+                chunks.append(chunk)
+                column = column.iloc[self.max_chunk_size:]
+        return chunks
+    
+    def get_matches(self, chunk):
+        '''
+        Gets row numbers of matches.
+        '''
+        if self.match_flags['whole word']:
+            if self.match_flags['case']:
+                rows_with_match = chunk[chunk == self.text]               
+            else:
+                rows_with_match = chunk[chunk.astype(str).str.lower() == self.text.lower()]
+        else:
+            pd_match_flags = self.match_flags.copy()
+            pd_match_flags.pop('whole word')
+            check_for_match = chunk.astype(str).str.contains(self.text,
+                                                             **pd_match_flags)
+            rows_with_match = chunk[check_for_match]
+
+        return rows_with_match
+
+    def run(self):
+        col_idx = 0
+        # since the chunks don't preserve row number, need to keep track of
+        # chunks processed to get row number
+        chunks_in_column = 0
+        for chunk in self.chunks:
+            try:
+                # gives series with dtype bool
+                rows_with_match = self.get_matches(chunk)
+                # gives indicies where the series is True
+                row_idx_with_match = [chunk.index.get_loc(i)
+                                      + chunks_in_column*self.max_chunk_size
+                                      for i in rows_with_match.index]
+                # print(chunk.index.get_loc(rows_with_match.index))
+                # output list of table coordinates where match is found
+                coords_with_match = [(row_idx, col_idx)
+                                    for row_idx in row_idx_with_match]
+
+                # check if a stop is requested
+                # (in case the user types another letter)
+                if self.isRunning:
+                    self.matches.emit(coords_with_match)
+                else:
+                    break
+                    
+                chunks_in_column += 1
+                
+                # if the last index of the chunk is equal to the last index
+                # of the whole dataframe, move to the next column
+                if chunk.index[-1] == self.df.index[-1]:
+                    col_idx += 1
+                    chunks_in_column = 0
+
+                # waits 50 milliseconds to process gui interactions,
+                # so the gui does not freeze
+                time.sleep(0.05)
+            except re.error:
+                break
+        self.isRunning = False
+
+    def stop(self):
+        self.isRunning = False
+        self.quit()
+        self.wait()

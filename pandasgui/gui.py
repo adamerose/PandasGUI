@@ -8,8 +8,9 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 from pandasgui.widgets import PivotDialog, ScatterDialog
 from pandasgui.widgets import DataFrameExplorer
-from pandasgui.widgets import Find_Toolbar
+from pandasgui.widgets import FindToolbar
 import pkg_resources
+import multiprocessing as mp
 
 class PandasGUI(QtWidgets.QMainWindow):
 
@@ -100,7 +101,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.main_layout = QtWidgets.QHBoxLayout()
 
         # makes the find toolbar
-        self.findBar = Find_Toolbar(self)
+        self.findBar = FindToolbar(self)
         self.addToolBar(self.findBar)
 
         # Make the menu bar
@@ -352,6 +353,7 @@ def show(*args, nonblocking=False, **kwargs):
         show_nonblocking(**kwargs)
         return
 
+    mp.freeze_support()
     # Create the application and PandasGUI window
     app = QtWidgets.QApplication.instance()
     if app:

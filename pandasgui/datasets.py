@@ -19,9 +19,10 @@ pokemon = pd.read_csv(r'https://gist.githubusercontent.com/adamerose/'
 tuples = [('A', 'one', 'x'), ('A', 'one', 'y'), ('A', 'two', 'x'), ('A', 'two', 'y'),
           ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')]
 index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second', 'third'])
-multidf = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8], columns=index[:8])
-multidf_columns = pd.DataFrame(pd.np.random.randn(8, 8), columns=index[:8])
-multidf_index = pd.DataFrame(pd.np.random.randn(8, 8), index=index[:8])
+pd.np.random.seed(42)
+multidf = pd.DataFrame(pd.np.random.randint(0, 10, (8, 8)), index=index[:8], columns=index[:8])
+multidf_columns = pd.DataFrame(pd.np.random.randint(0, 10, (8, 8)), columns=index[:8])
+multidf_index = pd.DataFrame(pd.np.random.randint(0, 10, (8, 8)), index=index[:8])
 
 all_datasets = {}
 
