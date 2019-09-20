@@ -4,7 +4,6 @@ import os
 from functools import reduce, partial
 import pkg_resources
 import numpy as np
-from multiprocessing import Pool
 import threading
 import time
 import re
@@ -37,12 +36,13 @@ class FindToolbar(QtWidgets.QToolBar):
         find_toolbar_widget.setLayout(find_toolbar_layout)
 
         # textedit portion of toolbar
-        
         self.find_textbox = ButtonLineEdit(content_margins=(0, 0, 5, 0))
         self.find_textbox.setPlaceholderText('Find')
         self.find_textbox.textChanged.connect(self.query)
 
+        ####################
         # add match modification
+
         # add match case button
         match_case_icon_raw_path = self.image_folder + '/case-match.png'
         match_case_icon_path = pkg_resources.resource_filename(__name__,
@@ -87,8 +87,10 @@ class FindToolbar(QtWidgets.QToolBar):
         self.matches_found_label.setContentsMargins(0, 0, 7, 0)
         find_toolbar_layout.addWidget(self.matches_found_label)
 
+        ####################
+        # Main toolbar buttons
 
-        # go up a match
+        # go to next match
         previous_match_button = QtWidgets.QPushButton()
         up_arrow_icon_raw_path = self.image_folder + '/up-arrow.png'
         up_arrow_icon_path = pkg_resources.resource_filename(__name__,
@@ -100,7 +102,7 @@ class FindToolbar(QtWidgets.QToolBar):
         previous_match_button.clicked.connect(self.select_previous_match)
         find_toolbar_layout.addWidget(previous_match_button)
 
-        # go down a match
+        # go to previous match
         next_match_button = QtWidgets.QPushButton()
         down_arrow_icon_raw_path = self.image_folder + '/down-arrow.png'
         down_arrow_icon_path = pkg_resources.resource_filename(__name__,
@@ -130,32 +132,46 @@ class FindToolbar(QtWidgets.QToolBar):
 
     @QtCore.pyqtSlot(str)
     def query(self, text):
+        '''
+        Query operation done each time user changes the text.
+
+        Args:
+            text: text to search for.
+        '''
         # get current dataframe data
         current_df = self.parent().stacked_widget.currentWidget().dataframe_tab
-        df_dataView = current_df.dataView
-        self.current_model = df_dataView.model()
+        self.current_dataView = current_df.dataView
+        self.current_model = self.current_dataView.model()
         df = self.current_model.df
 
         # clear matches and selection from last search results
         if self.findThread: self.findThread.stop()
         self.search_matches = []
-        df_dataView.selectionModel().clear()
+        self.current_dataView.selectionModel().clear()
         self.matches_found_label.setText('Matches Found: 0')
         self.search_selection = None
 
         if not text: return
-
+        
+        # Initialize findThread
         self.findThread = FindThread(df, text, self.match_flags)
         self.findThread.matches.connect(self.update_matches)
         self.findThread.start()
     
     @QtCore.pyqtSlot(list)
     def update_matches(self, cells_matched):
+        '''
+        PyQt Slot that updates the matches found each time it gets a signal.
+
+        Args:
+            cells_matched: list of tuples - (row, col). Type QtCore.pyqtSignal(list).
+        '''
+        # converts list of tuples to list of QtCore.QModelIndex for easy selection.
         match_idxs = [self.current_model.index(row, col) for row, col in cells_matched]
         self.search_matches.extend(match_idxs)
 
-        matches_found = 'Matches Found: ' + str(len(self.search_matches))
-        self.matches_found_label.setText(matches_found)
+        matches_found_text = 'Matches Found: ' + str(len(self.search_matches))
+        self.matches_found_label.setText(matches_found_text)
 
         if self.search_matches and self.search_selection is None:
             # highlight first match
@@ -176,22 +192,27 @@ class FindToolbar(QtWidgets.QToolBar):
             showAnimation.valueChanged.connect(lambda val: self.setFixedHeight(val))
 
             showAnimation.start()
-
+            
+            # clear the last search, and set cursor on the QLineEdit
             self.find_textbox.setText('')
             self.find_textbox.setFocus()
 
     @QtCore.pyqtSlot()
     def hide_find_bar(self):
         if self.height() == 30:
+            animation_duration = 200
+            full_toolbar_height = 30
+
             hideAnimation = QtCore.QVariantAnimation(self)
             hideAnimation.setEasingCurve(QtCore.QEasingCurve.InOutQuad)
-            hideAnimation.setDuration(200)
-            hideAnimation.setStartValue(30)
+            hideAnimation.setDuration(animation_duration)
+            hideAnimation.setStartValue(full_toolbar_height)
             hideAnimation.setEndValue(0)
             hideAnimation.valueChanged.connect(lambda val: self.setFixedHeight(val))
 
             hideAnimation.start()
 
+            # stop any running findThread
             if self.findThread: self.findThread.stop()
     
     @QtCore.pyqtSlot()
@@ -244,15 +265,12 @@ class FindToolbar(QtWidgets.QToolBar):
             self.query(self.find_textbox.text())
     
     def highlight_match(self):
-        current_df = self.parent().stacked_widget.currentWidget().dataframe_tab
-        df_data = current_df.dataView
-
         # clear last seletion
-        df_data.selectionModel().clear()
+        self.current_dataView.selectionModel().clear()
 
-        df_data.selectionModel().select(self.search_matches[self.search_selection],
+        self.current_dataView.selectionModel().select(self.search_matches[self.search_selection],
                                         QtCore.QItemSelectionModel.Select)
-        df_data.scrollTo(self.search_matches[self.search_selection])
+        self.current_dataView.scrollTo(self.search_matches[self.search_selection])
 
 class ButtonLineEdit(QtWidgets.QLineEdit):
     buttonClicked = QtCore.pyqtSignal(bool)
@@ -282,6 +300,12 @@ class ButtonLineEdit(QtWidgets.QLineEdit):
         super(ButtonLineEdit, self).resizeEvent(event)
 
     def add_button(self, button):
+        '''
+        Adds a button to the right side of the QLineEdit.
+
+        Args:
+            button: Type QtWidgets.QPushButton or QtWidgets.QToolButton
+        '''
         self.buttons.append(button)
 
         # makes sure text doesn't type behind the buttons
@@ -300,6 +324,15 @@ class FindThread(QtCore.QThread):
     matches = QtCore.pyqtSignal(list)
 
     def __init__(self, df, text, match_flags, parent=None):
+        '''
+        Thread to search DataFrame for a string.
+
+        Args:
+            df: Type pd.DataFrame
+            text: Text to search for. Type string.
+            match_flags: User enabled match flags. Can match case, regex, or exact.
+                         Type dict.
+        '''
         QtCore.QThread.__init__(self, parent=parent)
         self.isRunning = True
         self.df = df
@@ -309,6 +342,14 @@ class FindThread(QtCore.QThread):
         self.chunks = self.split_chunks()
     
     def split_chunks(self):
+        '''
+        Splits each Series in the DataFrame into many Series.
+        Number of chunks outputted depends on size of each column
+        and self.max_chunk_size.
+
+        Returns:
+            chunks: List of pd.Series.
+        '''
         chunks = []
         for col_idx, col_name in enumerate(self.df.columns):
             column = self.df[col_name].copy()
@@ -321,6 +362,9 @@ class FindThread(QtCore.QThread):
     def get_matches(self, chunk):
         '''
         Gets row numbers of matches.
+
+        Args:
+            chunk: Type pd.Series
         '''
         if self.match_flags['whole word']:
             if self.match_flags['case']:
