@@ -8,6 +8,8 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 from pandasgui.widgets import PivotDialog, ScatterDialog
 from pandasgui.widgets import DataFrameExplorer
+from pandasgui.widgets import FindToolbar
+import pkg_resources
 
 # Provides proper stacktrace if PyQt crashes
 sys.excepthook = lambda cls, exception, traceback: sys.__excepthook__(cls, exception, traceback)
@@ -81,7 +83,9 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.move(int((screen.width() - size.width()) / 2), int((screen.height() - size.height()) / 2))
         # Title and logo
         self.setWindowTitle('PandasGUI')
-        self.app.setWindowIcon(QtGui.QIcon('images/icon.png'))
+        pdgui_icon = 'images/icon.png'
+        pdgui_icon_path = pkg_resources.resource_filename(__name__, pdgui_icon)
+        self.app.setWindowIcon(QtGui.QIcon(pdgui_icon_path))
 
         self.show()
 
@@ -116,6 +120,10 @@ class PandasGUI(QtWidgets.QMainWindow):
         nav_width = self.nav_tree.sizeHint().width()
         self.splitter.setSizes([nav_width, self.width() - nav_width])
         self.splitter.setContentsMargins(10, 10, 10, 10)
+
+        # makes the find toolbar
+        self.findBar = FindToolbar(self)
+        self.addToolBar(self.findBar)
 
         # QMainWindow setup
         self.make_menu_bar()
@@ -168,6 +176,14 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Create a menu for setting the GUI style.
         # Uses radio-style buttons in a QActionGroup.
         menubar = self.menuBar()
+
+        # Creates an edit menu
+        editMenu = menubar.addMenu('&Edit')
+        findAction = QtWidgets.QAction('&Find', self)
+        findAction.setShortcut('Ctrl+F')
+        findAction.triggered.connect(self.findBar.show_find_bar)
+        editMenu.addAction(findAction)
+        
         styleMenu = menubar.addMenu('&Set Style')
         styleGroup = QtWidgets.QActionGroup(styleMenu, exclusive=True)
 
