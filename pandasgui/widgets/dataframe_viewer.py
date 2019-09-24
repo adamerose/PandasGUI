@@ -22,7 +22,10 @@ class DataFrameViewer(QtWidgets.QWidget):
         df (DataFrame): The DataFrame to display
     """
 
-    def __init__(self, df):
+    def __init__(self, df, inplace=True):
+
+        if not inplace:
+            df = df.copy()
 
         super().__init__()
         self._loaded = False
@@ -31,8 +34,6 @@ class DataFrameViewer(QtWidgets.QWidget):
             orig_type = type(df)
             df = df.to_frame()
             print(f'DataFrame was automatically converted from {orig_type} to DataFrame for viewing')
-
-        df = df.copy()
 
         # Set up DataFrame TableView and Model
         self.dataView = DataTableView(df, parent=self)
@@ -253,7 +254,8 @@ class DataTableModel(QtCore.QAbstractTableModel):
 
             # Float formatting
             if isinstance(cell, (float, np.floating)):
-                return "{:.4f}".format(cell)
+                if not role == QtCore.Qt.ToolTipRole:
+                    return "{:.4f}".format(cell)
 
             return str(cell)
 
@@ -311,6 +313,8 @@ class DataTableView(QtWidgets.QTableView):
         # self.setWordWrap(True)
         # self.resizeRowsToContents()
         self.setAlternatingRowColors(True)
+        self.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        self.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
 
     def on_selectionChanged(self):
         """
@@ -475,6 +479,8 @@ class HeaderView(QtWidgets.QTableView):
         self.setWordWrap(False)
         self.setFont(QtGui.QFont("Times", weight=QtGui.QFont.Bold))
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        self.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
 
         # Link selection to DataTable
         self.selectionModel().selectionChanged.connect(self.on_selectionChanged)
