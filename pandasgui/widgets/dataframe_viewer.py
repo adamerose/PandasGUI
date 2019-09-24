@@ -110,7 +110,7 @@ class DataFrameViewer(QtWidgets.QWidget):
 
     def auto_size_column(self, column_index):
         """
-        Set the size of column at column_index to fix its contents
+        Set the size of column at column_index to fit its contents
         """
         padding = 20
 
@@ -553,7 +553,6 @@ class HeaderView(QtWidgets.QTableView):
                 N = 1
 
             for level in range(N):  # Iterates over the levels
-
                 # Find how many segments the MultiIndex has
                 if type(df.columns) == pd.MultiIndex:
                     arr = [df.columns[i][level] for i in range(len(df.columns))]
