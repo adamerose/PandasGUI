@@ -105,6 +105,21 @@ class DataFrameViewer(QtWidgets.QWidget):
         if not self._loaded:
             for column_index in range(self.columnHeader.model().columnCount()):
                 self.auto_size_column(column_index)
+            
+            # iterate over rows to get a default starting row height
+            # only uses first N rows for performance.
+            N = 100
+            default_row_height = 30
+            for row_index in range(self.indexHeader.model().rowCount())[:N]:
+                self.auto_size_row(row_index)
+                height = self.indexHeader.rowHeight(row_index)
+                default_row_height = max(default_row_height, height)
+            
+            # set limit for default row height
+            default_row_height = min(default_row_height, 200)
+            self.indexHeader.verticalHeader().setDefaultSectionSize(default_row_height)
+            self.dataView.verticalHeader().setDefaultSectionSize(default_row_height)
+
         self._loaded = True
         event.accept()
 
@@ -120,20 +135,58 @@ class DataFrameViewer(QtWidgets.QWidget):
         # Iterate over the column's rows and check the width of each to determine the max width for the column
         # Only check the first N rows for performance. If there is larger content in cells below it will be cut off
         N = 100
-        for i in range(min(N, self.dataView.model().rowCount())):
+        for i in range(self.dataView.model().rowCount())[:N]:
             mi = self.dataView.model().index(i, column_index)
             text = self.dataView.model().data(mi)
             w = self.dataView.fontMetrics().boundingRect(text).width()
 
-            if w > width:
-                width = w
+            width = max(width, w)
 
         width += padding
+
+        # add maximum allowable column width so column is never too big.
+        max_allowable_width = 500
+        width = min(width, max_allowable_width)
+
         self.columnHeader.setColumnWidth(column_index, width)
         self.dataView.setColumnWidth(column_index, width)
 
         self.dataView.updateGeometry()
         self.columnHeader.updateGeometry()
+    
+    def auto_size_row(self, row_index):
+        """
+        Set the size of row at row_index to fix its contents
+        """
+        padding = 20
+
+        self.indexHeader.resizeRowToContents(row_index)
+        height = self.indexHeader.rowHeight(row_index)
+
+        # Iterate over the row's columns and check the width of each to determine the max height for the row
+        # Only check the first N columns for performance.
+        N = 100
+        for i in range(min(N, self.dataView.model().columnCount())):
+            mi = self.dataView.model().index(row_index, i)
+            cell_width = self.columnHeader.columnWidth(i)
+            text = self.dataView.model().data(mi)
+            # Gets row height at a constrained width (the column width).
+            # This constrained width, with the flag of Qt.TextWordWrap
+            # gets the height the cell would have to be to fit the text.
+            constrained_rect = QtCore.QRect(0, 0, cell_width, 0)
+            h = self.dataView.fontMetrics().boundingRect(constrained_rect,
+                                                         Qt.TextWordWrap,
+                                                         text).height()
+
+            height = max(height, h)
+
+        height += padding
+
+        self.indexHeader.setRowHeight(row_index, height)
+        self.dataView.setRowHeight(row_index, height)
+
+        self.dataView.updateGeometry()
+        self.indexHeader.updateGeometry()
 
     def keyPressEvent(self, event):
 
@@ -257,7 +310,8 @@ class DataTableView(QtWidgets.QTableView):
         self.selectionModel().selectionChanged.connect(self.on_selectionChanged)
 
         # Settings
-        self.setWordWrap(False)
+        # self.setWordWrap(True)
+        # self.resizeRowsToContents()
         self.setAlternatingRowColors(True)
         self.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
@@ -411,9 +465,9 @@ class HeaderView(QtWidgets.QTableView):
         self.table = parent.dataView
         self.setModel(HeaderModel(df, orientation))
         # These are used during column resizing
-        self.column_being_resized = None
+        self.header_being_resized = None
         self.resize_start_position = None
-        self.initial_column_width = None
+        self.initial_header_size = None
 
         # Handled by self.eventFilter()
         self.setMouseTracking(True)
@@ -618,61 +672,100 @@ class HeaderView(QtWidgets.QTableView):
                             self.setSpan(match_start, level, span_size, 1)
                             match_start = None
 
-    # Return the index of the column this x position is on the right edge of
-    def over_column_edge(self, x, margin=3):
-        if self.columnAt(x - margin) != self.columnAt(x + margin):
-            if self.columnAt(x + margin) == 0:
-                # We're at the left edge of the first column
-                return None
+    def over_header_edge(self, mouse_position, margin=3):
+
+        # Return the index of the column this x position is on the right edge of
+        if self.orientation == Qt.Horizontal:
+            x = mouse_position
+            if self.columnAt(x - margin) != self.columnAt(x + margin):
+                if self.columnAt(x + margin) == 0:
+                    # We're at the left edge of the first column
+                    return None
+                else:
+                    return self.columnAt(x - margin)
             else:
-                return self.columnAt(x - margin)
-        else:
-            return None
+                return None
+
+        # Return the index of the row this y position is on the top edge of
+        elif self.orientation == Qt.Vertical:
+            y = mouse_position
+            if self.rowAt(y - margin) != self.rowAt(y + margin):
+                if self.rowAt(y + margin) == 0:
+                    # We're at the top edge of the first row
+                    return None
+                else:
+                    return self.rowAt(y - margin)
+            else:
+                return None
 
     def eventFilter(self, object: QtCore.QObject, event: QtCore.QEvent):
 
         # If mouse is on an edge, start the drag resize process
         if event.type() == QtCore.QEvent.MouseButtonPress:
-            x = event.pos().x()
-            if self.over_column_edge(x) is not None:
-                self.column_being_resized = self.over_column_edge(x)
-                self.resize_start_position = x
-                self.initial_column_width = self.columnWidth(self.column_being_resized)
+            if self.orientation == Qt.Horizontal:
+                mouse_position = event.pos().x()
+            elif self.orientation == Qt.Vertical:
+                mouse_position = event.pos().y()
+
+            if self.over_header_edge(mouse_position) is not None:
+                self.header_being_resized = self.over_header_edge(mouse_position)
+                self.resize_start_position = mouse_position
+                if self.orientation == Qt.Horizontal:
+                    self.initial_header_size = self.columnWidth(self.header_being_resized)
+                elif self.orientation == Qt.Vertical:
+                    self.initial_header_size = self.rowHeight(self.header_being_resized)
                 return True
             else:
-                self.column_being_resized = None
+                self.header_being_resized = None
 
         # End the drag process
         if event.type() == QtCore.QEvent.MouseButtonRelease:
-            self.column_being_resized = None
+            self.header_being_resized = None
 
         # Auto size the column that was double clicked
         if event.type() == QtCore.QEvent.MouseButtonDblClick:
-            x = event.pos().x()
-            if self.over_column_edge(x) is not None:
-                column_index = self.over_column_edge(x)
-                self.parent.auto_size_column(column_index)
+            if self.orientation == Qt.Horizontal:
+                mouse_position = event.pos().x()
+            elif self.orientation == Qt.Vertical:
+                mouse_position = event.pos().y()
+
+            if self.over_header_edge(mouse_position) is not None:
+                header_index = self.over_header_edge(mouse_position)
+                if self.orientation == Qt.Horizontal:
+                    self.parent.auto_size_column(header_index)
+                elif self.orientation == Qt.Vertical:
+                    self.parent.auto_size_row(header_index)
                 return True
 
         # Handle active drag resizing
         if event.type() == QtCore.QEvent.MouseMove:
-            x = event.pos().x()
+            if self.orientation == Qt.Horizontal:
+                mouse_position = event.pos().x()
+            elif self.orientation == Qt.Vertical:
+                mouse_position = event.pos().y()
 
             # If this is None, there is no drag resize happening
-            if self.column_being_resized is not None:
-                width = self.initial_column_width + (x - self.resize_start_position)
-                if width > 10:
-                    self.setColumnWidth(self.column_being_resized, width)
+            if self.header_being_resized is not None:
+
+                size = self.initial_header_size + (mouse_position - self.resize_start_position)
+                if size > 10:
                     if self.orientation == Qt.Horizontal:
-                        self.parent.dataView.setColumnWidth(self.column_being_resized, width)
+                        self.setColumnWidth(self.header_being_resized, size)
+                        self.parent.dataView.setColumnWidth(self.header_being_resized, size)
+                    if self.orientation == Qt.Vertical:
+                        self.setRowHeight(self.header_being_resized, size)
+                        self.parent.dataView.setRowHeight(self.header_being_resized, size)
 
                     self.updateGeometry()
                     self.parent.dataView.updateGeometry()
                 return True
 
             # Set the cursor shape
-            if self.over_column_edge(x) is not None:
-                self.viewport().setCursor(QtGui.QCursor(Qt.SplitHCursor))
+            if self.over_header_edge(mouse_position) is not None:
+                if self.orientation == Qt.Horizontal:
+                    self.viewport().setCursor(QtGui.QCursor(Qt.SplitHCursor))
+                elif self.orientation == Qt.Vertical:
+                    self.viewport().setCursor(QtGui.QCursor(Qt.SplitVCursor))
             else:
                 self.viewport().setCursor(QtGui.QCursor(Qt.ArrowCursor))
 
