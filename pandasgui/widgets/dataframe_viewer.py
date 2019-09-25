@@ -28,6 +28,7 @@ class DataFrameViewer(QtWidgets.QWidget):
             df = df.copy()
 
         super().__init__()
+        # Indicates whether the widget has been shown yet. Set to True in
         self._loaded = False
 
         if not type(df) == pd.DataFrame:
@@ -102,21 +103,26 @@ class DataFrameViewer(QtWidgets.QWidget):
             item.setItemDelegate(NoFocusDelegate())
 
     def showEvent(self, event: QtGui.QShowEvent):
+        """
+        Initialize column and row sizes on the first time the widget is shown
+        """
         if not self._loaded:
+            # Set column widths
             for column_index in range(self.columnHeader.model().columnCount()):
                 self.auto_size_column(column_index)
-            
-            # iterate over rows to get a default starting row height
-            # only uses first N rows for performance.
+
+            # Set row heights
+            # Just sets a single uniform row height based on the first N rows for performance.
             N = 100
             default_row_height = 30
             for row_index in range(self.indexHeader.model().rowCount())[:N]:
                 self.auto_size_row(row_index)
                 height = self.indexHeader.rowHeight(row_index)
                 default_row_height = max(default_row_height, height)
-            
-            # set limit for default row height
-            default_row_height = min(default_row_height, 200)
+
+            # Set limit for default row height
+            default_row_height = min(default_row_height, 100)
+
             self.indexHeader.verticalHeader().setDefaultSectionSize(default_row_height)
             self.dataView.verticalHeader().setDefaultSectionSize(default_row_height)
 
@@ -153,7 +159,7 @@ class DataFrameViewer(QtWidgets.QWidget):
 
         self.dataView.updateGeometry()
         self.columnHeader.updateGeometry()
-    
+
     def auto_size_row(self, row_index):
         """
         Set the size of row at row_index to fix its contents
@@ -729,6 +735,7 @@ class HeaderView(QtWidgets.QTableView):
             elif self.orientation == Qt.Vertical:
                 mouse_position = event.pos().y()
 
+            # Find which column or row edge the mouse was over and auto size it
             if self.over_header_edge(mouse_position) is not None:
                 header_index = self.over_header_edge(mouse_position)
                 if self.orientation == Qt.Horizontal:
