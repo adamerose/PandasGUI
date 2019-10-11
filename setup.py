@@ -18,5 +18,6 @@ setup(name='pandasgui',
           'PyQt5',
           'PyQtWebEngine',
           'seaborn',
-          'plotly']
+          'plotly',
+          'setuptools']
       )
