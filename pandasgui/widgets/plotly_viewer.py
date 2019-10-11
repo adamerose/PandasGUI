@@ -2,6 +2,7 @@ import os, sys
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QUrl
+import plotly
 
 instance_list = []
 
@@ -49,6 +50,7 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
     def closeEvent(self, event):
         os.remove(self.file_path)
 
+
 def view(fig, block=False):
     pv = PlotlyViewer(fig)
 
@@ -61,8 +63,9 @@ if __name__ == "__main__":
     import plotly.graph_objs as go
     import plotly.offline
     from pandasgui.utility import fix_ipython
+
     fix_ipython()
-    
+
     fig = go.Figure()
     fig.add_scatter(x=np.random.rand(100), y=np.random.rand(100), mode='markers',
                     marker={'size': 30, 'color': np.random.rand(100), 'opacity': 0.6,
