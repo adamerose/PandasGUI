@@ -3,6 +3,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QUrl
 import plotly
+import tempfile
 
 instance_list = []
 
@@ -37,18 +38,16 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
         global instance_list
         instance_list.append(self)
 
-        # self.file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "temp.html"))
-        self.file_path = os.path.join(os.getcwd(), 'temp.html')
+        # Store the Plotly html in a temp file to load into the webview.
+        # NOTE - QWebEngineView.setHtml doesn't work with data over 2 MB, that's why I use a temp file instead
+        self.temp_file = tempfile.TemporaryFile(mode='w', suffix='.html')
+        self.temp_file.write(fig.to_html())
         self.setWindowTitle("Plotly Viewer")
 
-        plotly.offline.plot(fig, filename=self.file_path, auto_open=False)
-        self.load(QUrl.fromLocalFile(self.file_path))
+        self.load(QUrl.fromLocalFile(self.temp_file.name))
 
         self.resize(640, 480)
         self.show()
-
-    def closeEvent(self, event):
-        os.remove(self.file_path)
 
 
 def view(fig, block=False):
@@ -61,7 +60,6 @@ def view(fig, block=False):
 if __name__ == "__main__":
     import numpy as np
     import plotly.graph_objs as go
-    import plotly.offline
     from pandasgui.utility import fix_ipython
 
     fix_ipython()
