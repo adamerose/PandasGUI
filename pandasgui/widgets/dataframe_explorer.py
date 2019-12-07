@@ -33,7 +33,7 @@ class DataFrameExplorer(QtWidgets.QTabWidget):
 
         # Histogram tab
         if not (type(df.index) == pd.MultiIndex or type(df.columns) == pd.MultiIndex):
-            histogram_tab = self.make_histogram_tab(df)
+            histogram_tab = self.HistogramTab(df)
             self.addTab(histogram_tab, "Histogram")
 
     def make_statistics_tab(self, df):
@@ -48,9 +48,6 @@ class DataFrameExplorer(QtWidgets.QTabWidget):
         w = DataFrameViewer(stats_df)
         w.setAutoFillBackground(True)
         return w
-
-    def make_histogram_tab(self, df):
-        return self.HistogramTab(df)
 
     class HistogramTab(QtWidgets.QWidget):
         def __init__(self, df):
