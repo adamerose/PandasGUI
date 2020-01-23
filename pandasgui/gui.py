@@ -394,9 +394,9 @@ if __name__ == '__main__':
 
         # Script was run normally, open sample data sets
         else:
-            from pandasgui.datasets import iris, flights, multi, all_datasets
+            from pandasgui.datasets import all_datasets
 
-            show(**all_datasets, block=True)
+            show(**all_datasets)
 
     # Catch errors and call input() so they can be viewed before the console window closes when running with drag n drop
     except Exception as e:
