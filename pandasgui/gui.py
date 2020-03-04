@@ -189,7 +189,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         editMenu.addAction(findAction)
 
         styleMenu = menubar.addMenu('&Set Style')
-        styleGroup = QtWidgets.QActionGroup(styleMenu, exclusive=True)
+        styleGroup = QtWidgets.QActionGroup(styleMenu)
 
         # Add an option to the menu for each GUI style that exist for the user's system
         for style in QtWidgets.QStyleFactory.keys():
