@@ -5,8 +5,8 @@ import pandas as pd
 import sys
 import matplotlib.pyplot as plt
 import seaborn as sns
-from pandasgui.widgets import DataFrameViewer
-from pandasgui.widgets import FigureViewer
+from pandasgui.widgets import DataFrameViewer, GraphBuilder
+import traceback
 
 class DataFrameExplorer(QtWidgets.QTabWidget):
     """
@@ -31,10 +31,9 @@ class DataFrameExplorer(QtWidgets.QTabWidget):
         self.statistics_tab = self.make_statistics_tab(df)
         self.addTab(self.statistics_tab, "Statistics")
 
-        # Histogram tab
+        # Graph builder
         if not (type(df.index) == pd.MultiIndex or type(df.columns) == pd.MultiIndex):
-            histogram_tab = self.HistogramTab(df)
-            self.addTab(histogram_tab, "Histogram")
+            self.addTab(GraphBuilder(df), "Histogram")
 
     def make_statistics_tab(self, df):
         stats_df = pd.DataFrame({
@@ -48,40 +47,6 @@ class DataFrameExplorer(QtWidgets.QTabWidget):
         w = DataFrameViewer(stats_df)
         w.setAutoFillBackground(True)
         return w
-
-    class HistogramTab(QtWidgets.QWidget):
-        def __init__(self, df):
-            super().__init__()
-
-            self.df = df.copy()
-
-            self.picker = QtWidgets.QComboBox()
-            self.picker.addItems(df.columns)
-            self.picker.currentIndexChanged.connect(self.update_plot)
-            self.figure_viewer = FigureViewer()
-
-            self.layout = QtWidgets.QVBoxLayout()
-
-            self.layout.addWidget(self.picker)
-            self.layout.addWidget(self.figure_viewer)
-
-            self.setLayout(self.layout)
-            self.update_plot()
-
-        def update_plot(self):
-            plt.ioff()
-            col = self.picker.currentText()
-
-            plt.figure()
-
-            arr = self.df[col].dropna()
-            if self.df[col].dtype.name in ['object', 'bool', 'category']:
-                ax = sns.countplot(y=arr, color='grey', order=arr.value_counts().iloc[:10].index)
-
-            else:
-                ax = sns.distplot(arr, color='black', hist_kws=dict(color='grey', alpha=1))
-
-            self.figure_viewer.setFigure(ax.figure)
 
 
 # Examples

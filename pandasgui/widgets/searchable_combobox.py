@@ -1,15 +1,15 @@
 """A ComboBox widget with a search box to filter the contents"""
 
-# https://stackoverflow.com/questions/4827207/how-do-i-filter-the-pyqt-qcombobox-items-based-on-the-text-input
+# https://stackoverflow.com/a/7693234/3620725
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt, QSortFilterProxyModel
 from PyQt5.QtWidgets import QCompleter, QComboBox
 
 
-class ExtendedComboBox(QComboBox):
+class SearchableComboBox(QComboBox):
     def __init__(self, string_list, parent=None):
-        super(ExtendedComboBox, self).__init__(parent)
+        super(SearchableComboBox, self).__init__(parent)
 
         self.setFocusPolicy(Qt.StrongFocus)
         self.setEditable(True)
@@ -32,8 +32,6 @@ class ExtendedComboBox(QComboBox):
         # either fill the standard model of the combobox
         self.addItems(string_list)
 
-        # or use another model
-        # combo.setModel(QStringListModel(string_list))
 
     # on selection of an item from the completer, select the corresponding item from combobox
     def on_completer_activated(self, text):
@@ -42,9 +40,10 @@ class ExtendedComboBox(QComboBox):
             self.setCurrentIndex(index)
             self.activated[str].emit(self.itemText(index))
 
+
     # on model change, update the models of the filter and completer as well
     def setModel(self, model):
-        super(ExtendedComboBox, self).setModel(model)
+        super(SearchableComboBox, self).setModel(model)
         self.pFilterModel.setSourceModel(model)
         self.completer.setModel(self.pFilterModel)
 
@@ -52,20 +51,18 @@ class ExtendedComboBox(QComboBox):
     def setModelColumn(self, column):
         self.completer.setCompletionColumn(column)
         self.pFilterModel.setFilterKeyColumn(column)
-        super(ExtendedComboBox, self).setModelColumn(column)
+        super(SearchableComboBox, self).setModelColumn(column)
 
 
 if __name__ == "__main__":
     import sys
     from PyQt5.QtWidgets import QApplication
-    from PyQt5.QtCore import QStringListModel
 
     app = QApplication(sys.argv)
-
     string_list = ['hola muchachos', 'adios amigos', 'hello world', 'good bye']
-
-    combo = ExtendedComboBox(string_list)
-
+    combo = SearchableComboBox(string_list)
+    combo.currentIndexChanged.connect(lambda ix: print(combo.itemText(ix)))
+    print(combo.findChildren(QtWidgets.QWidget))
     combo.resize(300, 40)
     combo.show()
 
