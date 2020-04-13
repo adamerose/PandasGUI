@@ -8,6 +8,7 @@ mpg = pd.read_csv('https://raw.githubusercontent.com/adamerose/datasets/master/m
 pokemon = pd.read_csv('https://raw.githubusercontent.com/adamerose/datasets/master/pokemon.csv')
 tips = pd.read_csv('https://raw.githubusercontent.com/adamerose/datasets/master/tips.csv')
 titanic = pd.read_csv('https://raw.githubusercontent.com/adamerose/datasets/master/titanic.csv')
+flights = pd.read_csv('https://raw.githubusercontent.com/adamerose/datasets/master/flights.csv')
 
 multi_index = pd.MultiIndex.from_tuples([('A', 'one', 'x'), ('A', 'one', 'y'), ('A', 'two', 'x'), ('A', 'two', 'y'),
                                          ('B', 'one', 'x'), ('B', 'one', 'y'), ('B', 'two', 'x'), ('B', 'two', 'y')],
@@ -20,5 +21,6 @@ all_datasets = {
     "pokemon": pokemon,
     "tips": tips,
     "titanic": titanic,
+    "flights": flights,
     "multi_df": multi_df,
 }
