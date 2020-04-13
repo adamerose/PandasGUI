@@ -14,6 +14,13 @@ import sys
 import threading
 
 
+class DataFrameStore:
+    def __init__(self, df):
+        self.df_store.df = df
+
+    def set_df(self, df):
+        self.df_store.df = df
+
 class DataFrameViewer(QtWidgets.QWidget):
     """
     Displays a DataFrame as a table.
@@ -232,27 +239,27 @@ class DataTableModel(QtCore.QAbstractTableModel):
 
     def __init__(self, df, parent=None):
         super().__init__(parent)
-        self.df = df
+        self.df_store = DataFrameStore(df)
 
     def headerData(self, section, orientation, role=None):
         # Headers for DataTableView are hidden. Header data is shown in HeaderView
         pass
 
     def columnCount(self, parent=None):
-        if type(self.df) == pd.Series:
+        if type(self.df_store.df) == pd.Series:
             return 1
         else:
-            return self.df.columns.shape[0]
+            return self.df_store.df.columns.shape[0]
 
     def rowCount(self, parent=None):
-        return len(self.df)
+        return len(self.df_store.df)
 
     # Returns the data from the DataFrame
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole or role == QtCore.Qt.ToolTipRole:
             row = index.row()
             col = index.column()
-            cell = self.df.iloc[row, col]
+            cell = self.df_store.df.iloc[row, col]
 
             # NaN case
             if pd.isnull(cell):
@@ -268,7 +275,7 @@ class DataTableModel(QtCore.QAbstractTableModel):
         elif role == QtCore.Qt.ToolTipRole:
             row = index.row()
             col = index.column()
-            cell = self.df.iloc[row, col]
+            cell = self.df_store.df.iloc[row, col]
 
             # NaN case
             if pd.isnull(cell):
@@ -286,7 +293,7 @@ class DataTableModel(QtCore.QAbstractTableModel):
             row = index.row()
             col = index.column()
             try:
-                self.df.iat[row, col] = value
+                self.df_store.df.iat[row, col] = value
             except Exception as e:
                 print(e)
                 return False
@@ -403,20 +410,20 @@ class HeaderModel(QtCore.QAbstractTableModel):
 
     def __init__(self, df, orientation, parent=None):
         super().__init__(parent)
-        self.df = df
+        self.df_store.df = df
         self.orientation = orientation
 
     def columnCount(self, parent=None):
         if self.orientation == Qt.Horizontal:
-            return self.df.columns.shape[0]
+            return self.df_store.df.columns.shape[0]
         else:  # Vertical
-            return self.df.index.nlevels
+            return self.df_store.df.index.nlevels
 
     def rowCount(self, parent=None):
         if self.orientation == Qt.Horizontal:
-            return self.df.columns.nlevels
+            return self.df_store.df.columns.nlevels
         elif self.orientation == Qt.Vertical:
-            return self.df.index.shape[0]
+            return self.df_store.df.index.shape[0]
 
     def data(self, index, role=None):
         row = index.row()
@@ -426,32 +433,32 @@ class HeaderModel(QtCore.QAbstractTableModel):
 
             if self.orientation == Qt.Horizontal:
 
-                if type(self.df.columns) == pd.MultiIndex:
-                    return str(self.df.columns.values[col][row])
+                if type(self.df_store.df.columns) == pd.MultiIndex:
+                    return str(self.df_store.df.columns.values[col][row])
                 else:
-                    return str(self.df.columns.values[col])
+                    return str(self.df_store.df.columns.values[col])
 
             elif self.orientation == Qt.Vertical:
 
-                if type(self.df.index) == pd.MultiIndex:
-                    return str(self.df.index.values[row][col])
+                if type(self.df_store.df.index) == pd.MultiIndex:
+                    return str(self.df_store.df.index.values[row][col])
                 else:
-                    return str(self.df.index.values[row])
+                    return str(self.df_store.df.index.values[row])
 
     # The headers of this table will show the level names of the MultiIndex
     def headerData(self, section, orientation, role=None):
         if role in [QtCore.Qt.DisplayRole, QtCore.Qt.ToolTipRole]:
 
             if self.orientation == Qt.Horizontal and orientation == Qt.Vertical:
-                if type(self.df.columns) == pd.MultiIndex:
-                    return str(self.df.columns.names[section])
+                if type(self.df_store.df.columns) == pd.MultiIndex:
+                    return str(self.df_store.df.columns.names[section])
                 else:
-                    return str(self.df.columns.name)
+                    return str(self.df_store.df.columns.name)
             elif self.orientation == Qt.Vertical and orientation == Qt.Horizontal:
-                if type(self.df.index) == pd.MultiIndex:
-                    return str(self.df.index.names[section])
+                if type(self.df_store.df.index) == pd.MultiIndex:
+                    return str(self.df_store.df.index.names[section])
                 else:
-                    return str(self.df.index.name)
+                    return str(self.df_store.df.index.name)
             else:
                 return None  # These cells should be hidden anyways
 
@@ -466,7 +473,7 @@ class HeaderView(QtWidgets.QTableView):
 
         # Setup
         self.orientation = orientation
-        self.df = df
+        self.df_store.df = df
         self.parent = parent
         self.table = parent.dataView
         self.setModel(HeaderModel(df, orientation))
@@ -474,6 +481,9 @@ class HeaderView(QtWidgets.QTableView):
         self.header_being_resized = None
         self.resize_start_position = None
         self.initial_header_size = None
+
+        # Events
+        self.clicked.connect(self.on_clicked)
 
         # Handled by self.eventFilter()
         self.setMouseTracking(True)
@@ -513,6 +523,11 @@ class HeaderView(QtWidgets.QTableView):
     def test(self):
         print('test')
 
+    def on_clicked(self, ix: QModelIndex):
+        self.model().df
+        print('test')
+        print(ix.column())
+
     # Header
     def on_selectionChanged(self):
         """
@@ -529,7 +544,7 @@ class HeaderView(QtWidgets.QTableView):
                 selection = self.selectionModel().selection()
 
                 # Removes the higher levels so that only the lowest level of the header affects the data table selection
-                last_row_ix = self.df.columns.nlevels - 1
+                last_row_ix = self.df_store.df.columns.nlevels - 1
                 last_col_ix = self.model().columnCount() - 1
                 higher_levels = QtCore.QItemSelection(self.model().index(0, 0),
                                                       self.model().index(last_row_ix - 1, last_col_ix))
@@ -542,7 +557,7 @@ class HeaderView(QtWidgets.QTableView):
                 selection = self.selectionModel().selection()
 
                 last_row_ix = self.model().rowCount() - 1
-                last_col_ix = self.df.index.nlevels - 1
+                last_col_ix = self.df_store.df.index.nlevels - 1
                 higher_levels = QtCore.QItemSelection(self.model().index(0, 0),
                                                       self.model().index(last_row_ix, last_col_ix - 1))
                 selection.merge(higher_levels, QtCore.QItemSelectionModel.Deselect)
@@ -556,10 +571,10 @@ class HeaderView(QtWidgets.QTableView):
     # This should happen after every selection change
     def selectAbove(self):
         if self.orientation == Qt.Horizontal:
-            if self.df.columns.nlevels == 1:
+            if self.df_store.df.columns.nlevels == 1:
                 return
         else:
-            if self.df.index.nlevels == 1:
+            if self.df_store.df.index.nlevels == 1:
                 return
 
         for ix in self.selectedIndexes():
@@ -826,16 +841,17 @@ class TrackingSpacer(QtWidgets.QFrame):
         return QtCore.QSize(width, height)
 
 
+
 # Examples
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
 
-    from pandasgui.datasets import iris, flights, multi, pokemon, multidf
+    from pandasgui.datasets import iris, flights, pokemon, multi_df
 
     # view = DataFrameViewer(pokemon)
     # view.show()
 
-    view2 = DataFrameViewer(multidf)
+    view2 = DataFrameViewer(flights)
     view2.show()
 
     sys.exit(app.exec_())
