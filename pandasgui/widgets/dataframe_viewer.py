@@ -21,12 +21,7 @@ class DataFrameStore:
 
     def set_df(self, df):
         self.df = df
-        for model in self.models:
-            model.dataChanged.emit(model.index(0, 0), model.index(model.rowCount(), model.columnCount()))
 
-    # Add a qt data model to call dataChanged on when data is changed
-    def add_model(self, model):
-        self.models.append(model)
 
 
 class DataFrameViewer(QtWidgets.QWidget):
@@ -231,6 +226,11 @@ class DataFrameViewer(QtWidgets.QWidget):
         print(self.dataView.sizeHint())
         print(self.dataView.horizontalScrollBar().sizeHint())
 
+    def data_changed(self):
+        # Call dataChanged on all models for all data
+        for model in [self.dataView.model(), self.columnHeader.model(), self.indexHeader.model()]:
+            model.dataChanged.emit(model.index(0, 0), model.index(model.rowCount(), model.columnCount()))
+
 
 # Remove dotted border on cell focus.  https://stackoverflow.com/a/55252650/3620725
 class NoFocusDelegate(QtWidgets.QStyledItemDelegate):
@@ -248,7 +248,6 @@ class DataTableModel(QtCore.QAbstractTableModel):
     def __init__(self, df_store, parent=None):
         super().__init__(parent)
         self.df_store = df_store
-        df_store.add_model(self)
 
     def headerData(self, section, orientation, role=None):
         # Headers for DataTableView are hidden. Header data is shown in HeaderView
@@ -417,7 +416,6 @@ class HeaderModel(QtCore.QAbstractTableModel):
     def __init__(self, df_store, orientation, parent=None):
         super().__init__(parent)
         self.df_store = df_store
-        df_store.add_model(self)
         self.orientation = orientation
 
     def columnCount(self, parent=None):
@@ -535,6 +533,7 @@ class HeaderView(QtWidgets.QTableView):
             df_sorted = df.sort_values(df.columns[ix.column()], kind='mergesort')
 
             self.df_store.set_df(df_sorted)
+            self.parent.data_changed()
 
     # Header
     def on_selectionChanged(self):
