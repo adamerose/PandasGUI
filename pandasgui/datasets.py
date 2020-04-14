@@ -1,7 +1,7 @@
 """Defines sample datasets for use in testing and demos"""
 import pandas as pd
 
-__all__ = ['all_datasets', 'iris', 'mpg', 'pokemon', 'tips', 'titanic', 'multi_df']
+__all__ = ['all_datasets', 'iris', 'mpg', 'pokemon', 'tips', 'titanic', 'flights', 'simple', 'multi_df']
 
 iris = pd.read_csv('https://raw.githubusercontent.com/adamerose/datasets/master/iris.csv')
 mpg = pd.read_csv('https://raw.githubusercontent.com/adamerose/datasets/master/mpg.csv')
@@ -15,6 +15,7 @@ multi_index = pd.MultiIndex.from_tuples([('A', 'one', 'x'), ('A', 'one', 'y'), (
                                         names=['first', 'second', 'third'])
 multi_df = pd.DataFrame(pd.np.random.randn(8, 8), index=multi_index, columns=multi_index)
 
+simple = pd.DataFrame({'a': [1, 2, 3], 'b': [10, 20, 30], 'c': [300, 200, 100]})
 all_datasets = {
     "iris": iris,
     "mpg": mpg,
@@ -22,5 +23,6 @@ all_datasets = {
     "tips": tips,
     "titanic": titanic,
     "flights": flights,
+    "simple": simple,
     "multi_df": multi_df,
 }
