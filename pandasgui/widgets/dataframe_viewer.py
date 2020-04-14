@@ -16,10 +16,18 @@ import threading
 
 class DataFrameStore:
     def __init__(self, df):
-        self.df_store.df = df
+        self.df = df
+        self.models = []
 
     def set_df(self, df):
-        self.df_store.df = df
+        self.df = df
+        for model in self.models:
+            model.dataChanged.emit(model.index(0, 0), model.index(model.rowCount(), model.columnCount()))
+
+    # Add a qt data model to call dataChanged on when data is changed
+    def add_model(self, model):
+        self.models.append(model)
+
 
 class DataFrameViewer(QtWidgets.QWidget):
     """
@@ -29,10 +37,7 @@ class DataFrameViewer(QtWidgets.QWidget):
         df (DataFrame): The DataFrame to display
     """
 
-    def __init__(self, df, inplace=True):
-
-        if not inplace:
-            df = df.copy()
+    def __init__(self, df):
 
         super().__init__()
         # Indicates whether the widget has been shown yet. Set to True in
@@ -43,12 +48,15 @@ class DataFrameViewer(QtWidgets.QWidget):
             df = df.to_frame()
             print(f'DataFrame was automatically converted from {orig_type} to DataFrame for viewing')
 
+        # Put the df in a wrapper
+        df_store = DataFrameStore(df)
+
         # Set up DataFrame TableView and Model
-        self.dataView = DataTableView(df, parent=self)
+        self.dataView = DataTableView(df_store, parent=self)
 
         # Create headers
-        self.columnHeader = HeaderView(parent=self, df=df, orientation=Qt.Horizontal)
-        self.indexHeader = HeaderView(parent=self, df=df, orientation=Qt.Vertical)
+        self.columnHeader = HeaderView(parent=self, df_store=df_store, orientation=Qt.Horizontal)
+        self.indexHeader = HeaderView(parent=self, df_store=df_store, orientation=Qt.Vertical)
 
         # Set up layout
         self.gridLayout = QtWidgets.QGridLayout()
@@ -237,9 +245,10 @@ class DataTableModel(QtCore.QAbstractTableModel):
     Model for DataTableView to connect for DataFrame data
     """
 
-    def __init__(self, df, parent=None):
+    def __init__(self, df_store, parent=None):
         super().__init__(parent)
-        self.df_store = DataFrameStore(df)
+        self.df_store = df_store
+        df_store.add_model(self)
 
     def headerData(self, section, orientation, role=None):
         # Headers for DataTableView are hidden. Header data is shown in HeaderView
@@ -307,12 +316,12 @@ class DataTableView(QtWidgets.QTableView):
     Displays the DataFrame data as a table
     """
 
-    def __init__(self, df, parent):
+    def __init__(self, df_store, parent):
         super().__init__(parent)
         self.parent = parent
 
         # Create and set model
-        model = DataTableModel(df)
+        model = DataTableModel(df_store)
         self.setModel(model)
 
         # Hide the headers. The DataFrame headers (index & columns) will be displayed in the DataFrameHeaderViews
@@ -352,9 +361,6 @@ class DataTableView(QtWidgets.QTableView):
             indexHeader.selectionModel().select(selection,
                                                 QItemSelectionModel.Rows | QItemSelectionModel.ClearAndSelect)
 
-    def print(self):
-        print(self.model().df)
-
     def copy(self):
         """
         Copy the selected cells to clipboard in an Excel-pasteable format
@@ -366,7 +372,7 @@ class DataTableView(QtWidgets.QTableView):
         rows = [ix.row() for ix in indexes]
         cols = [ix.column() for ix in indexes]
 
-        df = self.model().df.iloc[min(rows):max(rows) + 1, min(cols):max(cols) + 1]
+        df = self.df_store.df.iloc[min(rows):max(rows) + 1, min(cols):max(cols) + 1]
 
         # If I try to use Pyperclip without starting new thread large values give access denied error
         def thread_function(df):
@@ -408,9 +414,10 @@ class HeaderModel(QtCore.QAbstractTableModel):
     Model for HeaderView
     """
 
-    def __init__(self, df, orientation, parent=None):
+    def __init__(self, df_store, orientation, parent=None):
         super().__init__(parent)
-        self.df_store.df = df
+        self.df_store = df_store
+        df_store.add_model(self)
         self.orientation = orientation
 
     def columnCount(self, parent=None):
@@ -468,15 +475,15 @@ class HeaderView(QtWidgets.QTableView):
     Displays the DataFrame index or columns depending on orientation
     """
 
-    def __init__(self, parent: DataFrameViewer, df, orientation):
+    def __init__(self, parent: DataFrameViewer, df_store, orientation):
         super().__init__(parent)
 
         # Setup
         self.orientation = orientation
-        self.df_store.df = df
+        self.df_store = df_store
         self.parent = parent
         self.table = parent.dataView
-        self.setModel(HeaderModel(df, orientation))
+        self.setModel(HeaderModel(df_store, orientation))
         # These are used during column resizing
         self.header_being_resized = None
         self.resize_start_position = None
@@ -520,13 +527,14 @@ class HeaderView(QtWidgets.QTableView):
         # Set initial size
         self.resize(self.sizeHint())
 
-    def test(self):
-        print('test')
-
     def on_clicked(self, ix: QModelIndex):
-        self.model().df
-        print('test')
-        print(ix.column())
+        # When a header is clicked, sort the DataFrame by that column
+        if self.orientation == Qt.Horizontal:
+            df = self.df_store.df
+
+            df_sorted = df.sort_values(df.columns[ix.column()], kind='mergesort')
+
+            self.df_store.set_df(df_sorted)
 
     # Header
     def on_selectionChanged(self):
@@ -616,7 +624,7 @@ class HeaderView(QtWidgets.QTableView):
 
     # This sets spans to group together adjacent cells with the same values
     def setSpans(self):
-        df = self.model().df
+        df = self.df_store.df
 
         # Find spans for horizontal HeaderView
         if self.orientation == Qt.Horizontal:
@@ -841,17 +849,14 @@ class TrackingSpacer(QtWidgets.QFrame):
         return QtCore.QSize(width, height)
 
 
-
 # Examples
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
 
-    from pandasgui.datasets import iris, flights, pokemon, multi_df
+    from pandasgui.datasets import iris, flights, pokemon, multi_df, simple
 
     # view = DataFrameViewer(pokemon)
     # view.show()
 
-    view2 = DataFrameViewer(flights)
+    view2 = DataFrameViewer(pokemon)
     view2.show()
-
-    sys.exit(app.exec_())
