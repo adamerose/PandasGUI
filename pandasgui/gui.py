@@ -5,6 +5,7 @@ import sys
 import os
 import pkg_resources
 import pandas as pd
+from pydantic import BaseModel
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 from pandasgui.widgets import PivotDialog, ScatterDialog
@@ -22,6 +23,10 @@ sys.excepthook = lambda cls, exception, traceback: sys.__excepthook__(cls, excep
 instance_list = []
 
 
+# todo - convert PandasGUI.df_dicts to pydantic
+class RootStore(BaseModel):
+    pass
+
 class PandasGUI(QtWidgets.QMainWindow):
 
     def __init__(self, **kwargs):
@@ -36,11 +41,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         The objects are their own dictionary of:
         {'dataframe': DataFrame object
-        'view': DataFrameViewer object
-        'model': DataFrameModel object
         'dataframe_explorer': DataFrameExplorer object}
-        'display_df': DataFrame object
-        This is a truncated version of the dataframe for displaying
 
         """
 
