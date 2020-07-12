@@ -5,12 +5,14 @@ import sys
 import os
 import pkg_resources
 import pandas as pd
+from pydantic import BaseModel
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 from pandasgui.widgets import PivotDialog, ScatterDialog
 from pandasgui.widgets import DataFrameExplorer
 from pandasgui.widgets import FindToolbar
 from pandasgui.utility import fix_ipython
+from pandasgui.store import store
 
 # This makes it so PyQt5 windows don't become unresponsive in IPython outside app._exec() loops
 fix_ipython()
@@ -36,11 +38,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         The objects are their own dictionary of:
         {'dataframe': DataFrame object
-        'view': DataFrameViewer object
-        'model': DataFrameModel object
         'dataframe_explorer': DataFrameExplorer object}
-        'display_df': DataFrame object
-        This is a truncated version of the dataframe for displaying
 
         """
 
@@ -328,7 +326,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         win = ScatterDialog(self.df_dicts, default=default, gui=self)
 
 
-def show(*args, block=True, **kwargs):
+def show(*args, settings: dict = {}, **kwargs):
     """
     Create and show a PandasGUI window with all the DataFrames passed. *args and **kwargs should all be DataFrames
 
@@ -337,11 +335,10 @@ def show(*args, block=True, **kwargs):
         block (bool): Indicates whether to run app._exec on the PyQt application to block further execution of script
         **kwargs: These should all be DataFrames. The key is the desired name and the value is the DataFrame object
     """
-    # Remove reserved rewords
-    try:
-        kwargs.pop('block')
-    except:
-        pass
+
+    for key, value in settings.items():
+        setattr(store.settings, key, value)
+
     # Get the variable names in the scope show() was called from
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
 
@@ -363,7 +360,7 @@ def show(*args, block=True, **kwargs):
 
     pandas_gui = PandasGUI(**kwargs)
 
-    if block:
+    if store.settings.block:
         pandas_gui.app.exec_()
 
 
@@ -394,9 +391,8 @@ if __name__ == '__main__':
 
         # Script was run normally, open sample data sets
         else:
-            from pandasgui.datasets import iris, flights, multi, all_datasets
-
-            show(**all_datasets, block=True)
+            from pandasgui.datasets import all_datasets
+            show(**all_datasets, settings={'block': True})
 
     # Catch errors and call input() so they can be viewed before the console window closes when running with drag n drop
     except Exception as e:

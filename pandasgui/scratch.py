@@ -1,13 +1,13 @@
-# Get an application instance
-from PyQt5 import QtWidgets, QtCore
-from pandasgui import show
 import pandas as pd
-import numpy as np
+import seaborn as sns
 
-app = QtWidgets.QApplication([])
+def run_forecasts()
 
-for i in range(10):
-    df = pd.DataFrame(np.random.rand(5, 5), columns=['col1', 'col2', 'col3', 'col4', 'col5'],
-                      index=['A', 'B', 'C', 'D', 'E'])
-    show(df, block=False)
-app.exec_()
+def generate_dashboard():
+    df = pd.read_csv("raw_yield_data.csv")
+
+    #region Add columns
+    df = run_forecasts(df)
+    df['Week'] =
+
+    #endregion
