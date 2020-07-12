@@ -9,17 +9,16 @@ from PyQt5.QtGui import QPainter, QFont, QFontMetrics, QPalette, QBrush, QColor,
 from PyQt5.QtWidgets import QSizePolicy
 import pandas as pd
 import numpy as np
-import datetime
 import sys
 import threading
-
+from pandasgui.store import store
 
 class DataFrameStore:
     def __init__(self, df):
         self.df = df
         self.models = []
 
-    def set_df(self, df):
+    def update(self, df):
         self.df = df
 
 
@@ -292,8 +291,10 @@ class DataTableModel(QtCore.QAbstractTableModel):
             return str(cell)
 
     def flags(self, index):
-        # Set the table to be editable
-        return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+        if store.settings.editable:
+            return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+        else:
+            return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
 
     # Set data in the DataFrame. Required if table is editable
     def setData(self, index, value, role=None):
@@ -532,7 +533,7 @@ class HeaderView(QtWidgets.QTableView):
 
             df_sorted = df.sort_values(df.columns[ix.column()], kind='mergesort')
 
-            self.df_store.set_df(df_sorted)
+            self.df_store.update(df_sorted)
             self.parent.data_changed()
 
     # Header
@@ -859,3 +860,4 @@ if __name__ == '__main__':
 
     view2 = DataFrameViewer(pokemon)
     view2.show()
+    app.exec_()

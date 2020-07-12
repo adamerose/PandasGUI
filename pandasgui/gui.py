@@ -12,6 +12,7 @@ from pandasgui.widgets import PivotDialog, ScatterDialog
 from pandasgui.widgets import DataFrameExplorer
 from pandasgui.widgets import FindToolbar
 from pandasgui.utility import fix_ipython
+from pandasgui.store import store
 
 # This makes it so PyQt5 windows don't become unresponsive in IPython outside app._exec() loops
 fix_ipython()
@@ -22,10 +23,6 @@ sys.excepthook = lambda cls, exception, traceback: sys.__excepthook__(cls, excep
 # Holds references to all created PandasGUI windows so they don't get garbage collected
 instance_list = []
 
-
-# todo - convert PandasGUI.df_dicts to pydantic
-class RootStore(BaseModel):
-    pass
 
 class PandasGUI(QtWidgets.QMainWindow):
 
@@ -329,7 +326,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         win = ScatterDialog(self.df_dicts, default=default, gui=self)
 
 
-def show(*args, block=True, minimal=False, **kwargs):
+def show(*args, settings: dict = {}, **kwargs):
     """
     Create and show a PandasGUI window with all the DataFrames passed. *args and **kwargs should all be DataFrames
 
@@ -338,11 +335,10 @@ def show(*args, block=True, minimal=False, **kwargs):
         block (bool): Indicates whether to run app._exec on the PyQt application to block further execution of script
         **kwargs: These should all be DataFrames. The key is the desired name and the value is the DataFrame object
     """
-    # Remove reserved rewords
-    try:
-        kwargs.pop('block')
-    except:
-        pass
+
+    for key, value in settings.items():
+        setattr(store.settings, key, value)
+
     # Get the variable names in the scope show() was called from
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
 
@@ -364,7 +360,7 @@ def show(*args, block=True, minimal=False, **kwargs):
 
     pandas_gui = PandasGUI(**kwargs)
 
-    if block:
+    if store.settings.block:
         pandas_gui.app.exec_()
 
 
@@ -396,7 +392,6 @@ if __name__ == '__main__':
         # Script was run normally, open sample data sets
         else:
             from pandasgui.datasets import all_datasets
-
             show(**all_datasets)
 
     # Catch errors and call input() so they can be viewed before the console window closes when running with drag n drop
