@@ -1,6 +1,5 @@
 from pandasgui.utility import fix_ipython, fix_pyqt
 
-from pandasgui.widgets.bokeh_viewer import BokehViewer
 from pandasgui.widgets.plotly_viewer import PlotlyViewer
 from pandasgui.utility import flatten_multiindex
 from pandasgui.datasets import pokemon
@@ -13,6 +12,7 @@ import plotly.express as px
 
 class GraphBuilder(QtWidgets.QWidget):
     def __init__(self, df):
+        df = df.copy()
         df.columns = flatten_multiindex(df.columns)
 
         super().__init__()

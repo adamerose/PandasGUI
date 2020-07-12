@@ -5,7 +5,6 @@ import sys
 import os
 import pkg_resources
 import pandas as pd
-from pydantic import BaseModel
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 from pandasgui.widgets import PivotDialog, ScatterDialog

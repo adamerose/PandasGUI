@@ -25,22 +25,18 @@ Create a simple DataFrame and view it in the GUI
 import pandas as pd
 from pandasgui import show
 
-example_df = pd.DataFrame(pd.np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]),
+example_df = pd.DataFrame(([[1, 2, 3], [4, 5, 6], [7, 8, 9]]),
                           columns=['a', 'b', 'c'])
 show(example_df)
-
 ```
 
-Example of MultiIndex support, renaming, and nonblocking mode. Nonblocking mode opens the GUI in a separate process and allows you to continue running code in the console
+MultiIndexes are supported. And you can pass DataFrames as a kwarg if you want to show a name other than your variable.
 ```python
-import seaborn as sns
 from pandasgui import show
+from pandasgui.datasets import flights
 
-flights = sns.load_dataset('flights')
 multi = flights.set_index(['year', 'month']).unstack()  # MultiIndex example
-if __name__ == '__main__':  # This is needed when starting a new process. Not necessary in interactive console.
-    show(flights, flightsReshaped=multi, nonblocking=True)
-
+show(flights, flightsReshaped=multi)
 ```
 
 ## About
