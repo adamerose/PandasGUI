@@ -26,33 +26,21 @@ except ImportError as e:
 
 
 class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
-    def __init__(self, fig=None, url=None):
+    def __init__(self, fig=None):
         super().__init__()
 
         if fig:
-            # Configure  settings
-            config = {'responsive': True}
-
-            # Store the Plotly html in a temp file to load into the webview.
-            # NOTE - QWebEngineView.setHtml doesn't work with data over 2 MB, that's why I use a temp file instead
-            self.temp_file = tempfile.TemporaryFile(mode='w', suffix='.html')
-            self.temp_file.write(fig.to_html(config=config))
-            self.temp_file.seek(0)
-
-            self.load(QUrl.fromLocalFile(self.temp_file.name))
-
-
-        elif url:
-            # self.load(QUrl.fromLocalFile(self.temp_file.name))
-            self.load(QUrl(url))
-
-        else:
-            raise TypeError("PlotlyViewer requires either a fig or url argument be provided.")
+            self.set_figure(fig)
 
         self.resize(700, 600)
         self.setWindowTitle("Plotly Viewer")
-        self.show()
 
+    def set_figure(self, fig):
+        config = {'responsive': True}
+        self.temp_file = tempfile.TemporaryFile(mode='w', suffix='.html')
+        self.temp_file.write(to_html(fig, config=config))
+        self.temp_file.seek(0)
+        self.load(QUrl.fromLocalFile(self.temp_file.name))
 
 if __name__ == "__main__":
     # Create a QApplication instance or use the existing one if it exists
