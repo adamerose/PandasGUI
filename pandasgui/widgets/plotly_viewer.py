@@ -5,22 +5,24 @@ from PyQt5.QtCore import QUrl
 from plotly.io import to_html
 import tempfile
 
-# If QtWebEngineWidgets is imported while a QApplication instance already exists it will fail, so we have to
+# If QtWebEngineWidgets is imported while a QApplication instance already exists it will fail, so we have to hack it
 try:
     from PyQt5 import QtWebEngineWidgets
 except ImportError as e:
     if e.msg == "QtWebEngineWidgets must be imported before a QCoreApplication instance is created":
         print("Killing QApplication to reimport QtWebEngineWidgets")
-        from PyQt5 import sip
+        from PyQt5 import QtWidgets
+        app = QtWidgets.QApplication.instance()
+        if app is not None:
+            import sip
 
-        app = QApplication.instance()
-        app.quit()
-        sip.delete(app)
-        del app
+            app.quit()
+            sip.delete(app)
+        import sys
+        from PyQt5 import QtCore, QtWebEngineWidgets
+        QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_ShareOpenGLContexts)
+        app = QtWidgets.QApplication(sys.argv)
         from PyQt5 import QtWebEngineWidgets
-
-        # Without remaking the QApplication you will get an unrecoverable crash on the next attempted usage of it
-        app = QApplication([])
     else:
         raise e
 
@@ -29,16 +31,21 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
     def __init__(self, fig=None):
         super().__init__()
 
-        if fig:
-            self.set_figure(fig)
+        self.temp_file = tempfile.TemporaryFile(mode='w', suffix='.html')
+        self.set_figure(fig)
 
         self.resize(700, 600)
         self.setWindowTitle("Plotly Viewer")
 
-    def set_figure(self, fig):
-        config = {'responsive': True}
-        self.temp_file = tempfile.TemporaryFile(mode='w', suffix='.html')
-        self.temp_file.write(to_html(fig, config=config))
+    def set_figure(self, fig=None):
+        self.temp_file.seek(0)
+
+        if fig:
+            self.temp_file.write(to_html(fig, config={'responsive': True}))
+        else:
+            self.temp_file.write("")
+
+        self.temp_file.truncate()
         self.temp_file.seek(0)
         self.load(QUrl.fromLocalFile(self.temp_file.name))
 

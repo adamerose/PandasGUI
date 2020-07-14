@@ -34,7 +34,7 @@ class DialogGeneric(QtWidgets.QDialog):
         self.setLayout(layout)
 
         # Create column picker
-        self.columnPicker = Picker(destination_names=destination_names)
+        self.columnPicker = Dragger(destination_names=destination_names)
 
         # Create DataFrame picker dropdown
         self.dataframePicker = QtWidgets.QComboBox()
@@ -98,19 +98,19 @@ class DialogGeneric(QtWidgets.QDialog):
         self.columnPicker.setSourceItems(column_names)
 
 
-# Widget for selecting DataFrame columns from the SourceList into multiple destination lists (DestList) for usage in
+# Widget for dragging options source_names into multiple destination lists (DestList) for usage in
 # the dialog function. For example the destinations could be XVariable, Y-Variables, ColorBy for the ScatterPlot dialog
-class Picker(QtWidgets.QWidget):
-    def __init__(self, destination_names=['Default Dest'], column_names=['Default Cols']):
+class Dragger(QtWidgets.QWidget):
+    def __init__(self,  sources: iter = ('Default Cols',), destinations: iter = ('Default Dest',)):
         super().__init__()
 
         # Set up widgets and layout
         layout = QtWidgets.QHBoxLayout()
         self.setLayout(layout)
 
-        self.columnSource = RegexSourceList(column_names)
+        self.columnSource = RegexSourceList(sources)
         self.destinations = []
-        for name in destination_names:
+        for name in destinations:
             self.destinations.append(DestList(name))
 
         # Add items to layout
@@ -125,7 +125,7 @@ class Picker(QtWidgets.QWidget):
 
     def resetItems(self):
         # Clear list
-        self.columnSource.setItems()
+        self.columnSource.setItems([])
 
     def clearDestinationItems(self):
         # Clear tree
@@ -278,7 +278,7 @@ class Categorizer(QtWidgets.QDialog):
         self.names = QtWidgets.QLineEdit()
         self.names.textChanged.connect(self.makePicker)
 
-        self.picker = Picker(['col1', 'col2', 'col3'], df[column].astype(str).unique())
+        self.picker = Dragger(['col1', 'col2', 'col3'], df[column].astype(str).unique())
 
         # Add button
         btnFinish = QtWidgets.QPushButton("Finish")
@@ -300,7 +300,7 @@ class Categorizer(QtWidgets.QDialog):
     def makePicker(self):
         self.layout.removeWidget(self.picker)
         self.df[self.column_name].astype(str).unique()
-        self.picker = Picker(self.names.text().split(','), self.df[self.column_name].astype(str).unique())
+        self.picker = Dragger(self.names.text().split(','), self.df[self.column_name].astype(str).unique())
         print(self.df[self.column_name].astype(str).unique())
         self.layout.addWidget(self.picker)
 
@@ -355,4 +355,11 @@ class ScatterDialog(DialogGeneric):
 
 
 if __name__ == '__main__':
-    pass
+    import sys
+    from PyQt5.QtWidgets import QApplication
+
+    app = QApplication(sys.argv)
+
+    test = Dragger(sources=['a', 'b'], destinations=['x', 'y', 'z'])
+    test.show()
+    sys.exit(app.exec_())
