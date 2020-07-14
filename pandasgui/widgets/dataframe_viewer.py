@@ -43,14 +43,14 @@ class DataFrameViewer(QtWidgets.QWidget):
             print(f'DataFrame was automatically converted from {orig_type} to DataFrame for viewing')
 
         # Put the df in a wrapper
-        df_store = DataFrameStore(df)
+        self.df = df
 
         # Set up DataFrame TableView and Model
-        self.dataView = DataTableView(df_store, parent=self)
+        self.dataView = DataTableView(parent=self)
 
         # Create headers
-        self.columnHeader = HeaderView(parent=self, df_store=df_store, orientation=Qt.Horizontal)
-        self.indexHeader = HeaderView(parent=self, df_store=df_store, orientation=Qt.Vertical)
+        self.columnHeader = HeaderView(parent=self, orientation=Qt.Horizontal)
+        self.indexHeader = HeaderView(parent=self, orientation=Qt.Vertical)
 
         # Set up layout
         self.gridLayout = QtWidgets.QGridLayout()
@@ -110,6 +110,9 @@ class DataFrameViewer(QtWidgets.QWidget):
             item.setContentsMargins(0, 0, 0, 0)
             item.setStyleSheet(item.styleSheet() + "border: 0px solid black;")
             item.setItemDelegate(NoFocusDelegate())
+
+    def update_df(self, df):
+        self.df = df
 
     def showEvent(self, event: QtGui.QShowEvent):
         """
@@ -244,29 +247,28 @@ class DataTableModel(QtCore.QAbstractTableModel):
     Model for DataTableView to connect for DataFrame data
     """
 
-    def __init__(self, df_store, parent=None):
+    def __init__(self, parent):
         super().__init__(parent)
-        self.df_store = df_store
 
     def headerData(self, section, orientation, role=None):
         # Headers for DataTableView are hidden. Header data is shown in HeaderView
         pass
 
     def columnCount(self, parent=None):
-        if type(self.df_store.df) == pd.Series:
+        if type(self.parent().df) == pd.Series:
             return 1
         else:
-            return self.df_store.df.columns.shape[0]
+            return self.parent().df.columns.shape[0]
 
     def rowCount(self, parent=None):
-        return len(self.df_store.df)
+        return len(self.parent().df)
 
     # Returns the data from the DataFrame
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole or role == QtCore.Qt.ToolTipRole:
             row = index.row()
             col = index.column()
-            cell = self.df_store.df.iloc[row, col]
+            cell = self.parent().df.iloc[row, col]
 
             # NaN case
             if pd.isnull(cell):
@@ -282,7 +284,7 @@ class DataTableModel(QtCore.QAbstractTableModel):
         elif role == QtCore.Qt.ToolTipRole:
             row = index.row()
             col = index.column()
-            cell = self.df_store.df.iloc[row, col]
+            cell = self.parent().df.iloc[row, col]
 
             # NaN case
             if pd.isnull(cell):
@@ -302,7 +304,7 @@ class DataTableModel(QtCore.QAbstractTableModel):
             row = index.row()
             col = index.column()
             try:
-                self.df_store.df.iat[row, col] = value
+                self.parent().df.iat[row, col] = value
             except Exception as e:
                 print(e)
                 return False
@@ -316,12 +318,11 @@ class DataTableView(QtWidgets.QTableView):
     Displays the DataFrame data as a table
     """
 
-    def __init__(self, df_store, parent):
+    def __init__(self, parent):
         super().__init__(parent)
-        self.parent = parent
 
         # Create and set model
-        model = DataTableModel(df_store)
+        model = DataTableModel(parent)
         self.setModel(model)
 
         # Hide the headers. The DataFrame headers (index & columns) will be displayed in the DataFrameHeaderViews
@@ -343,8 +344,8 @@ class DataTableView(QtWidgets.QTableView):
         Runs when cells are selected in the main table. This logic highlights the correct cells in the vertical and
         horizontal headers when a data cell is selected
         """
-        columnHeader = self.parent.columnHeader
-        indexHeader = self.parent.indexHeader
+        columnHeader = self.parent().columnHeader
+        indexHeader = self.parent().indexHeader
 
         # The two blocks below check what columns or rows are selected in the data table and highlights the
         # corresponding ones in the two headers. The if statements check for focus on headers, because if the user
@@ -372,15 +373,13 @@ class DataTableView(QtWidgets.QTableView):
         rows = [ix.row() for ix in indexes]
         cols = [ix.column() for ix in indexes]
 
-        df = self.df_store.df.iloc[min(rows):max(rows) + 1, min(cols):max(cols) + 1]
+        df = self.parent().df.iloc[min(rows):max(rows) + 1, min(cols):max(cols) + 1]
 
         # If I try to use Pyperclip without starting new thread large values give access denied error
         def thread_function(df):
             df.to_clipboard(index=False, header=False)
 
         threading.Thread(target=thread_function, args=(df,)).start()
-
-        clipboard.setText(text)
 
     def paste(self):
         # Set up clipboard object
@@ -414,22 +413,21 @@ class HeaderModel(QtCore.QAbstractTableModel):
     Model for HeaderView
     """
 
-    def __init__(self, df_store, orientation, parent=None):
+    def __init__(self, parent, orientation):
         super().__init__(parent)
-        self.df_store = df_store
         self.orientation = orientation
 
     def columnCount(self, parent=None):
         if self.orientation == Qt.Horizontal:
-            return self.df_store.df.columns.shape[0]
+            return self.parent().df.columns.shape[0]
         else:  # Vertical
-            return self.df_store.df.index.nlevels
+            return self.parent().df.index.nlevels
 
     def rowCount(self, parent=None):
         if self.orientation == Qt.Horizontal:
-            return self.df_store.df.columns.nlevels
+            return self.parent().df.columns.nlevels
         elif self.orientation == Qt.Vertical:
-            return self.df_store.df.index.shape[0]
+            return self.parent().df.index.shape[0]
 
     def data(self, index, role=None):
         row = index.row()
@@ -439,32 +437,32 @@ class HeaderModel(QtCore.QAbstractTableModel):
 
             if self.orientation == Qt.Horizontal:
 
-                if type(self.df_store.df.columns) == pd.MultiIndex:
-                    return str(self.df_store.df.columns.values[col][row])
+                if type(self.parent().df.columns) == pd.MultiIndex:
+                    return str(self.parent().df.columns.values[col][row])
                 else:
-                    return str(self.df_store.df.columns.values[col])
+                    return str(self.parent().df.columns.values[col])
 
             elif self.orientation == Qt.Vertical:
 
-                if type(self.df_store.df.index) == pd.MultiIndex:
-                    return str(self.df_store.df.index.values[row][col])
+                if type(self.parent().df.index) == pd.MultiIndex:
+                    return str(self.parent().df.index.values[row][col])
                 else:
-                    return str(self.df_store.df.index.values[row])
+                    return str(self.parent().df.index.values[row])
 
     # The headers of this table will show the level names of the MultiIndex
     def headerData(self, section, orientation, role=None):
         if role in [QtCore.Qt.DisplayRole, QtCore.Qt.ToolTipRole]:
 
             if self.orientation == Qt.Horizontal and orientation == Qt.Vertical:
-                if type(self.df_store.df.columns) == pd.MultiIndex:
-                    return str(self.df_store.df.columns.names[section])
+                if type(self.parent().df.columns) == pd.MultiIndex:
+                    return str(self.parent().df.columns.names[section])
                 else:
-                    return str(self.df_store.df.columns.name)
+                    return str(self.parent().df.columns.name)
             elif self.orientation == Qt.Vertical and orientation == Qt.Horizontal:
-                if type(self.df_store.df.index) == pd.MultiIndex:
-                    return str(self.df_store.df.index.names[section])
+                if type(self.parent().df.index) == pd.MultiIndex:
+                    return str(self.parent().df.index.names[section])
                 else:
-                    return str(self.df_store.df.index.name)
+                    return str(self.parent().df.index.name)
             else:
                 return None  # These cells should be hidden anyways
 
@@ -474,15 +472,13 @@ class HeaderView(QtWidgets.QTableView):
     Displays the DataFrame index or columns depending on orientation
     """
 
-    def __init__(self, parent: DataFrameViewer, df_store, orientation):
+    def __init__(self, parent: DataFrameViewer, orientation):
         super().__init__(parent)
 
         # Setup
         self.orientation = orientation
-        self.df_store = df_store
-        self.parent = parent
         self.table = parent.dataView
-        self.setModel(HeaderModel(df_store, orientation))
+        self.setModel(HeaderModel(parent, orientation))
         # These are used during column resizing
         self.header_being_resized = None
         self.resize_start_position = None
@@ -529,12 +525,12 @@ class HeaderView(QtWidgets.QTableView):
     def on_clicked(self, ix: QModelIndex):
         # When a header is clicked, sort the DataFrame by that column
         if self.orientation == Qt.Horizontal:
-            df = self.df_store.df
+            df = self.parent().df
 
             df_sorted = df.sort_values(df.columns[ix.column()], kind='mergesort')
 
-            self.df_store.update(df_sorted)
-            self.parent.data_changed()
+            self.parent().update_df(df_sorted)
+            self.parent().data_changed()
 
     # Header
     def on_selectionChanged(self):
@@ -544,7 +540,7 @@ class HeaderView(QtWidgets.QTableView):
         """
         # Check focus so we don't get recursive loop, since headers trigger selection of data cells and vice versa
         if self.hasFocus():
-            dataView = self.parent.dataView
+            dataView = self.parent().dataView
 
             # Set selection mode so selecting one row or column at a time adds to selection each time
             if self.orientation == Qt.Horizontal:  # This case is for the horizontal header
@@ -552,7 +548,7 @@ class HeaderView(QtWidgets.QTableView):
                 selection = self.selectionModel().selection()
 
                 # Removes the higher levels so that only the lowest level of the header affects the data table selection
-                last_row_ix = self.df_store.df.columns.nlevels - 1
+                last_row_ix = self.parent().df.columns.nlevels - 1
                 last_col_ix = self.model().columnCount() - 1
                 higher_levels = QtCore.QItemSelection(self.model().index(0, 0),
                                                       self.model().index(last_row_ix - 1, last_col_ix))
@@ -565,7 +561,7 @@ class HeaderView(QtWidgets.QTableView):
                 selection = self.selectionModel().selection()
 
                 last_row_ix = self.model().rowCount() - 1
-                last_col_ix = self.df_store.df.index.nlevels - 1
+                last_col_ix = self.parent().df.index.nlevels - 1
                 higher_levels = QtCore.QItemSelection(self.model().index(0, 0),
                                                       self.model().index(last_row_ix, last_col_ix - 1))
                 selection.merge(higher_levels, QtCore.QItemSelectionModel.Deselect)
@@ -579,10 +575,10 @@ class HeaderView(QtWidgets.QTableView):
     # This should happen after every selection change
     def selectAbove(self):
         if self.orientation == Qt.Horizontal:
-            if self.df_store.df.columns.nlevels == 1:
+            if self.parent().df.columns.nlevels == 1:
                 return
         else:
-            if self.df_store.df.index.nlevels == 1:
+            if self.parent().df.index.nlevels == 1:
                 return
 
         for ix in self.selectedIndexes():
@@ -624,7 +620,7 @@ class HeaderView(QtWidgets.QTableView):
 
     # This sets spans to group together adjacent cells with the same values
     def setSpans(self):
-        df = self.df_store.df
+        df = self.parent().df
 
         # Find spans for horizontal HeaderView
         if self.orientation == Qt.Horizontal:
