@@ -2,7 +2,7 @@
 __pycache__
 pyqt_fix.py
 test.py
-*scratch*
+scratch.py
 *sample_data*
 *.pyc
 qtdesigner
