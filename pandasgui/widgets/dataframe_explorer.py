@@ -37,8 +37,8 @@ class DataFrameExplorer(QtWidgets.QTabWidget):
             traceback.print_exc()
 
         # Histogram tab
-        histogram_tab = GraphBuilder(df)
-        self.addTab(histogram_tab, "Histogram")
+        graph_maker = GraphBuilder(df)
+        self.addTab(graph_maker, "Grapher")
 
     def make_statistics_tab(self, df):
         stats_df = pd.DataFrame({
