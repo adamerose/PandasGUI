@@ -32,14 +32,12 @@ class SearchableComboBox(QComboBox):
         # either fill the standard model of the combobox
         self.addItems(string_list)
 
-
     # on selection of an item from the completer, select the corresponding item from combobox
     def on_completer_activated(self, text):
         if text:
             index = self.findText(text)
             self.setCurrentIndex(index)
             self.activated[str].emit(self.itemText(index))
-
 
     # on model change, update the models of the filter and completer as well
     def setModel(self, model):
@@ -59,7 +57,7 @@ if __name__ == "__main__":
     from PyQt5.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    string_list = ['hola muchachos', 'adios amigos', 'hello world', 'good bye']
+    string_list = ["hola muchachos", "adios amigos", "hello world", "good bye"]
     combo = SearchableComboBox(string_list)
     combo.currentIndexChanged.connect(lambda ix: print(combo.itemText(ix)))
     print(combo.findChildren(QtWidgets.QWidget))
