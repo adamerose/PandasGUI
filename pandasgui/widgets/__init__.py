@@ -1,8 +1,6 @@
 __all__ = [
     "QtWaitingSpinner",
     "FindToolbar",
-    "FigureViewer",
-    "TabbedFigureViewer",
     "PivotDialog",
     "ScatterDialog",
     "PlotlyViewer",
@@ -14,9 +12,6 @@ __all__ = [
 # Basic widgets
 from pandasgui.widgets.spinner import QtWaitingSpinner
 from pandasgui.widgets.find_toolbar import FindToolbar
-
-from pandasgui.widgets.image_viewer import FigureViewer
-from pandasgui.widgets.image_viewer import TabbedFigureViewer
 
 from pandasgui.widgets.dialogs import PivotDialog
 from pandasgui.widgets.dialogs import ScatterDialog

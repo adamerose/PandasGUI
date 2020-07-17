@@ -6,9 +6,9 @@ import sys
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pandasgui.widgets import DataFrameViewer
-from pandasgui.widgets import FigureViewer
 from pandasgui.widgets import GraphBuilder
 import traceback
+
 
 class DataFrameExplorer(QtWidgets.QTabWidget):
     """
@@ -52,7 +52,6 @@ class DataFrameExplorer(QtWidgets.QTabWidget):
         w = DataFrameViewer(stats_df)
         w.setAutoFillBackground(True)
         return w
-
 
 
 # Examples
