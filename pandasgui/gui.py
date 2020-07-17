@@ -1,5 +1,3 @@
-"""Defines the main PandasGUI class and related functions"""
-
 import inspect
 import sys
 import os
@@ -12,6 +10,12 @@ from pandasgui.widgets import DataFrameExplorer
 from pandasgui.widgets import FindToolbar
 from pandasgui.utility import fix_ipython
 from pandasgui.store import store
+import logging
+
+logger = logging.getLogger()
+logging.basicConfig(level=logging.DEBUG, format='%(message)s')
+
+# Global config
 os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "2"
 QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
 
@@ -19,7 +23,8 @@ QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
 fix_ipython()
 
 # Provides proper stacktrace if PyQt crashes
-sys.excepthook = lambda cls, exception, traceback: sys.__excepthook__(cls, exception, traceback)
+sys.excepthook = lambda cls, exception, traceback: sys.__excepthook__(
+    cls, exception, traceback)
 
 # Holds references to all created PandasGUI windows so they don't get garbage collected
 instance_list = []
@@ -78,12 +83,14 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Set size
         screen = QtWidgets.QDesktopWidget().screenGeometry()
         percentage_of_screen = 0.7
-        size = tuple((pd.np.array([screen.width(), screen.height()]) * percentage_of_screen).astype(int))
+        size = tuple((pd.np.array(
+            [screen.width(), screen.height()]) * percentage_of_screen).astype(int))
         self.resize(QtCore.QSize(*size))
         # Center window on screen
         screen = QtWidgets.QDesktopWidget().screenGeometry()
         size = self.geometry()
-        self.move(int((screen.width() - size.width()) / 2), int((screen.height() - size.height()) / 2))
+        self.move(int((screen.width() - size.width()) / 2),
+                  int((screen.height() - size.height()) / 2))
         # Title and logo
         self.setWindowTitle('PandasGUI')
         pdgui_icon = 'images/icon.png'
@@ -150,9 +157,11 @@ class PandasGUI(QtWidgets.QMainWindow):
         if type(df_object) != pd.DataFrame:
             try:
                 df_object = pd.DataFrame(df_object)
-                print(f'Automatically converted "{df_name}" from type {type(df_object)} to DataFrame')
+                print(
+                    f'Automatically converted "{df_name}" from type {type(df_object)} to DataFrame')
             except:
-                print(f'Could not convert "{df_name}" from type {type(df_object)} to DataFrame')
+                print(
+                    f'Could not convert "{df_name}" from type {type(df_object)} to DataFrame')
                 return
 
         # Non-string column indices causes problems when pulling them from a GUI dropdown (which will give str)
@@ -376,7 +385,6 @@ if __name__ == '__main__':
         # Call the normal Exception hook after
         sys._excepthook(exctype, value, traceback)
         sys.exit(1)
-
 
     sys.excepthook = my_exception_hook
 
