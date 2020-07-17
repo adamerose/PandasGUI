@@ -1,24 +1,21 @@
-from threading import Thread
-from pandasgui.widgets.plotly_viewer import PlotlyViewer
-from pandasgui.utility import flatten_multiindex
-from pandasgui.datasets import pokemon, iris
-from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtCore import QThread
-import plotly.express as px
-from PyQt5.QtWidgets import QApplication
 import sys
-from jsonschema import validate
-import pandas as pd
 from dataclasses import dataclass
+from threading import Thread
+
+import pandas as pd
+import plotly.express as px
+from jsonschema import validate
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+from pandasgui.datasets import iris, pokemon
+from pandasgui.utility import flatten_multiindex, get_logger
 from pandasgui.widgets import QtWaitingSpinner
-import time
-import logging
+from pandasgui.widgets.plotly_viewer import PlotlyViewer
 
-logger = logging.getLogger()
-logging.basicConfig(level=logging.DEBUG, format="%(message)s")
+logger = get_logger(__name__)
 
 
-class GraphBuilder(QtWidgets.QWidget):
+class Grapher(QtWidgets.QWidget):
     def __init__(self, df, name="a"):
         super().__init__()
         self.name = name
@@ -372,12 +369,16 @@ if __name__ == "__main__":
 
     fix_ipython()
     fix_pyqt()
-    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+    app = (
+        QtWidgets.QtWidgets,
+        QApplication.instance() or QtWidgets.QtWidgets,
+        QApplication(sys.argv),
+    )
 
-    gb = GraphBuilder(pokemon, "pokemon")
+    gb = Grapher(pokemon, "pokemon")
     gb.show()
 
-    gb2 = GraphBuilder(iris, "iris")
+    gb2 = Grapher(iris, "iris")
     gb2.show()
 
     app.exec_()
