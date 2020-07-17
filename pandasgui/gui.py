@@ -12,6 +12,8 @@ from pandasgui.widgets import DataFrameExplorer
 from pandasgui.widgets import FindToolbar
 from pandasgui.utility import fix_ipython
 from pandasgui.store import store
+os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "2"
+QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
 
 # This makes it so PyQt5 windows don't become unresponsive in IPython outside app._exec() loops
 fix_ipython()
@@ -189,14 +191,16 @@ class PandasGUI(QtWidgets.QMainWindow):
         styleGroup = QtWidgets.QActionGroup(styleMenu)
 
         # Add an option to the menu for each GUI style that exist for the user's system
-        for style in QtWidgets.QStyleFactory.keys():
+        for ix, style in enumerate(QtWidgets.QStyleFactory.keys()):
             styleAction = QtWidgets.QAction(f'&{style}', self, checkable=True)
             styleAction.triggered.connect(
                 lambda state, style=style: self.app.setStyle(style) and self.app.setStyleSheet(""))
             styleGroup.addAction(styleAction)
             styleMenu.addAction(styleAction)
-        # Set the default style
-        styleAction.trigger()
+
+            # Set the default style to the last in the options
+            if ix == len(QtWidgets.QStyleFactory.keys())-1:
+                styleAction.trigger()
 
         # Creates a debug menu.
         debugMenu = menubar.addMenu('&Debug')
