@@ -1,12 +1,13 @@
 """Dialog box widgets for various GUI functions"""
 
-from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtCore import Qt
-import sys
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
 import re
+import sys
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import Qt
 
 from pandasgui.utility import flatten_multiindex
 

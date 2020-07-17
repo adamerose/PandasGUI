@@ -1,13 +1,17 @@
 """DataFrameExplorer"""
 
-from PyQt5 import QtWidgets
-import pandas as pd
 import sys
-import matplotlib.pyplot as plt
-import seaborn as sns
-from pandasgui.widgets import DataFrameViewer
-from pandasgui.widgets import GraphBuilder
 import traceback
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+from PyQt5 import QtWidgets
+
+from pandasgui.utility import get_logger
+from pandasgui.widgets import DataFrameViewer, Grapher
+
+logger = get_logger(__name__)
 
 
 class DataFrameExplorer(QtWidgets.QTabWidget):
@@ -30,14 +34,11 @@ class DataFrameExplorer(QtWidgets.QTabWidget):
         self.addTab(self.dataframe_tab, "DataFrame")
 
         # Statistics tab
-        try:
-            self.statistics_tab = self.make_statistics_tab(df)
-            self.addTab(self.statistics_tab, "Statistics")
-        except:
-            traceback.print_exc()
+        self.statistics_tab = self.make_statistics_tab(df)
+        self.addTab(self.statistics_tab, "Statistics")
 
-        # Histogram tab
-        graph_maker = GraphBuilder(df)
+        # Grapher tab
+        graph_maker = Grapher(df)
         self.addTab(graph_maker, "Grapher")
 
     def make_statistics_tab(self, df):

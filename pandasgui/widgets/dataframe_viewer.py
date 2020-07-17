@@ -1,33 +1,15 @@
-"""
-Defines the DataFrameViewer class to display DataFrames as a table. The DataFrameViewer is made up of three separate
-QTableWidgets... DataTableView for the DataFrame's contents, and two HeaderView widgets for the column and index headers
-"""
-
-from PyQt5 import QtGui, QtCore, QtWidgets
-from PyQt5.QtCore import (
-    QAbstractItemModel,
-    QModelIndex,
-    QSize,
-    QRect,
-    Qt,
-    QPoint,
-    QItemSelectionModel,
-)
-from PyQt5.QtGui import (
-    QPainter,
-    QFont,
-    QFontMetrics,
-    QPalette,
-    QBrush,
-    QColor,
-    QTransform,
-)
-from PyQt5.QtWidgets import QSizePolicy
-import pandas as pd
-import numpy as np
 import sys
 import threading
+
+import numpy as np
+import pandas as pd
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import Qt
+
 from pandasgui.store import store
+from pandasgui.utility import get_logger
+
+logger = get_logger(__name__)
 
 
 class DataFrameStore:
@@ -56,7 +38,7 @@ class DataFrameViewer(QtWidgets.QWidget):
         if not type(df) == pd.DataFrame:
             orig_type = type(df)
             df = df.to_frame()
-            print(
+            logger.info(
                 f"DataFrame was automatically converted from {orig_type} to DataFrame"
                 " for viewing"
             )
@@ -125,7 +107,9 @@ class DataFrameViewer(QtWidgets.QWidget):
             TrackingSpacer(ref_y=self.indexHeader.horizontalHeader()), 1, 2, 1, 1
         )
         self.gridLayout.addItem(
-            QtWidgets.QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Expanding),
+            QtWidgets.QSpacerItem(
+                0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+            ),
             0,
             0,
             1,
@@ -266,11 +250,6 @@ class DataFrameViewer(QtWidgets.QWidget):
             self.debug()
             print("Ctrl + D")
 
-    def debug(self):
-        print(self.columnHeader.sizeHint())
-        print(self.dataView.sizeHint())
-        print(self.dataView.horizontalScrollBar().sizeHint())
-
     def data_changed(self):
         # Call dataChanged on all models for all data
         for model in [
@@ -285,12 +264,15 @@ class DataFrameViewer(QtWidgets.QWidget):
 
 # Remove dotted border on cell focus.  https://stackoverflow.com/a/55252650/3620725
 class NoFocusDelegate(QtWidgets.QStyledItemDelegate):
-    def paint(self, QPainter, QStyleOptionViewItem, QModelIndex):
-        if QStyleOptionViewItem.state & QtWidgets.QStyle.State_HasFocus:
-            QStyleOptionViewItem.state = (
-                QStyleOptionViewItem.state ^ QtWidgets.QStyle.State_HasFocus
-            )
-        super().paint(QPainter, QStyleOptionViewItem, QModelIndex)
+    def paint(
+        self,
+        painter: QtGui.QPainter,
+        item: QtWidgets.QStyleOptionViewItem,
+        ix: QtCore.QModelIndex,
+    ):
+        if item.state & QtWidgets.QStyle.State_HasFocus:
+            item.state = item.state ^ QtWidgets.QStyle.State_HasFocus
+        super().paint(painter, item, ix)
 
 
 class DataTableModel(QtCore.QAbstractTableModel):
@@ -415,13 +397,16 @@ class DataTableView(QtWidgets.QTableView):
             selection = self.selectionModel().selection()
             columnHeader.selectionModel().select(
                 selection,
-                QItemSelectionModel.Columns | QItemSelectionModel.ClearAndSelect,
+                QtCore.QItemSelectionModel.Columns
+                | QtCore.QItemSelectionModel.ClearAndSelect,
             )
 
         if not indexHeader.hasFocus():
             selection = self.selectionModel().selection()
             indexHeader.selectionModel().select(
-                selection, QItemSelectionModel.Rows | QItemSelectionModel.ClearAndSelect
+                selection,
+                QtCore.QItemSelectionModel.Rows
+                | QtCore.QItemSelectionModel.ClearAndSelect,
             )
 
     def copy(self):
@@ -467,7 +452,7 @@ class DataTableView(QtWidgets.QTableView):
         for i in range(self.model().rowCount()):
             height += self.rowHeight(i)
 
-        return QSize(width, height)
+        return QtCore.QSize(width, height)
 
 
 class HeaderModel(QtCore.QAbstractTableModel):
@@ -555,7 +540,11 @@ class HeaderView(QtWidgets.QTableView):
         self.viewport().installEventFilter(self)
 
         # Settings
-        self.setSizePolicy(QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum))
+        self.setSizePolicy(
+            QtWidgets.QSizePolicy(
+                QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum
+            )
+        )
         self.setWordWrap(False)
         self.setFont(QtGui.QFont("Times", weight=QtGui.QFont.Bold))
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -590,7 +579,7 @@ class HeaderView(QtWidgets.QTableView):
         # Set initial size
         self.resize(self.sizeHint())
 
-    def on_clicked(self, ix: QModelIndex):
+    def on_clicked(self, ix: QtCore.QModelIndex):
         # When a header is clicked, sort the DataFrame by that column
         if self.orientation == Qt.Horizontal:
             df = self.parent().df
@@ -909,14 +898,14 @@ class HeaderView(QtWidgets.QTableView):
             width = 2 * self.frameWidth()  # Account for border & padding
             for i in range(self.model().columnCount()):
                 width += self.columnWidth(i)
-        return QSize(width, height)
+        return QtCore.QSize(width, height)
 
     # This is needed because otherwise when the horizontal header is a single row it will add whitespace to be bigger
     def minimumSizeHint(self):
         if self.orientation == Qt.Horizontal:
-            return QSize(0, self.sizeHint().height())
+            return QtCore.QSize(0, self.sizeHint().height())
         else:
-            return QSize(self.sizeHint().width(), 0)
+            return QtCore.QSize(self.sizeHint().width(), 0)
 
 
 # This is a fixed size widget with a size that tracks some other widget

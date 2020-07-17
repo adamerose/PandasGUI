@@ -410,7 +410,6 @@ class FindThread(QtCore.QThread):
                     chunk.index.get_loc(i) + chunks_in_column * self.max_chunk_size
                     for i in rows_with_match.index
                 ]
-                # print(chunk.index.get_loc(rows_with_match.index))
                 # output list of table coordinates where match is found
                 coords_with_match = [
                     (row_idx, col_idx) for row_idx in row_idx_with_match

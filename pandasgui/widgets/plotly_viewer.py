@@ -1,11 +1,15 @@
-import os, sys
-from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import QUrl
-from plotly.io import to_html
+import os
+import sys
 import tempfile
 
-# If QtWebEngineWidgets is imported while a QApplication instance already exists it will fail, so we have to hack it
+from plotly.io import to_html
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import Qt
+
+from pandasgui.utility import get_logger
+
+logger = get_logger(__name__)
+# If QtWebEngineWidgets is imported while a QtWidgets.QApplication instance already exists it will fail, so we have to hack it
 try:
     from PyQt5 import QtWebEngineWidgets
 except ImportError as e:
@@ -13,10 +17,10 @@ except ImportError as e:
         e.msg
         == "QtWebEngineWidgets must be imported before a QCoreApplication instance is created"
     ):
-        print("Killing QApplication to reimport QtWebEngineWidgets")
+        logger.info("Killing QtWidgets.QApplication to reimport QtWebEngineWidgets")
         from PyQt5 import QtWidgets
 
-        app = QtWidgets.QApplication.instance()
+        app = QtWidgets.QtWidgets.QApplication.instance()
         if app is not None:
             import sip
 
@@ -26,7 +30,7 @@ except ImportError as e:
         from PyQt5 import QtCore, QtWebEngineWidgets
 
         QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_ShareOpenGLContexts)
-        app = QtWidgets.QApplication(sys.argv)
+        app = QtWidgets.QtWidgets.QApplication(sys.argv)
         from PyQt5 import QtWebEngineWidgets
     else:
         raise e
@@ -52,12 +56,12 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
 
         self.temp_file.truncate()
         self.temp_file.seek(0)
-        self.load(QUrl.fromLocalFile(self.temp_file.name))
+        self.load(QtCore.QUrl.fromLocalFile(self.temp_file.name))
 
 
 if __name__ == "__main__":
-    # Create a QApplication instance or use the existing one if it exists
-    app = QApplication(sys.argv)
+    # Create a QtWidgets.QApplication instance or use the existing one if it exists
+    app = QtWidgets.QApplication(sys.argv)
 
     import numpy as np
     import plotly.graph_objs as go

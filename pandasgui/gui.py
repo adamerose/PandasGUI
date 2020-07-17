@@ -1,55 +1,32 @@
 import inspect
-import sys
 import os
-import pkg_resources
+import sys
+
 import pandas as pd
+import pkg_resources
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
-from pandasgui.widgets import PivotDialog, ScatterDialog
-from pandasgui.widgets import DataFrameExplorer
-from pandasgui.widgets import FindToolbar
-from pandasgui.utility import fix_ipython
-from pandasgui.store import store
-import logging
 
-logger = logging.getLogger()
-logging.basicConfig(level=logging.DEBUG, format="%(message)s")
+from pandasgui.store import store
+from pandasgui.utility import fix_ipython, fix_pyqt, get_logger
+from pandasgui.widgets import DataFrameExplorer, FindToolbar, PivotDialog, ScatterDialog
+
+logger = get_logger(__name__)
 
 # Global config
 os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "2"
 QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
-
-# This makes it so PyQt5 windows don't become unresponsive in IPython outside app._exec() loops
 fix_ipython()
-
-# Provides proper stacktrace if PyQt crashes
-sys.excepthook = lambda cls, exception, traceback: sys.__excepthook__(
-    cls, exception, traceback
-)
-
-# Holds references to all created PandasGUI windows so they don't get garbage collected
-instance_list = []
+fix_pyqt()
 
 
 class PandasGUI(QtWidgets.QMainWindow):
     def __init__(self, **kwargs):
         """
         Args:
-            **kwargs (): Dict of (key, value) pairs of
-                         {'DataFrame name': DataFrame object}
-
-
-        self.df_dicts is a dictionary of all dataframes in the GUI.
-        {dataframe name: objects}
-
-        The objects are their own dictionary of:
-        {'dataframe': DataFrame object
-        'dataframe_explorer': DataFrameExplorer object}
-
+            kwargs: Dict of DataFrames where key is name & val is the DataFrame object
         """
 
-        # Property initialization
-        self.df_dicts = {}
         # Set in setupUI()
         self.stacked_widget = None
         self.splitter = None
@@ -58,23 +35,19 @@ class PandasGUI(QtWidgets.QMainWindow):
         # Get an application instance
         self.app = QtWidgets.QApplication.instance()
         if self.app:
-            print("Using existing QApplication instance")
+            logger.info("Using existing QApplication instance")
         if not self.app:
             self.app = QtWidgets.QApplication(sys.argv)
 
         super().__init__()
 
-        # This ensures there is always a reference to this widget and it doesn't get garbage collected
-        global instance_list
-        instance_list.append(self)
-
         # https://stackoverflow.com/a/27178019/3620725
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
-        # Adds DataFrames listed in kwargs to df_dict.
+        # Adds DataFrames listed in kwargs to store.
         for i, (df_name, df_object) in enumerate(kwargs.items()):
-            self.df_dicts[df_name] = {}
-            self.df_dicts[df_name]["dataframe"] = df_object
+            store.data[df_name] = {}
+            store.data[df_name]["dataframe"] = df_object
 
         # Generates all UI contents
         self.setupUI()
@@ -118,8 +91,8 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.nav_tree.setHeaderLabels(["Name", "Shape"])
         self.nav_tree.itemSelectionChanged.connect(self.nav_clicked)
 
-        for df_name in self.df_dicts.keys():
-            df_object = self.df_dicts[df_name]["dataframe"]
+        for df_name in store.data.keys():
+            df_object = store.data[df_name]["dataframe"]
             self.add_dataframe(df_name, df_object)
 
         # Make splitter to hold nav and DataFrameExplorers
@@ -152,7 +125,7 @@ class PandasGUI(QtWidgets.QMainWindow):
             self.add_dataframe(df_name, df_object)
 
         else:
-            print("Invalid file: ", path)
+            logger.warning("Invalid file: ", path)
 
     def add_dataframe(self, df_name, df_object):
         """
@@ -162,12 +135,12 @@ class PandasGUI(QtWidgets.QMainWindow):
         if type(df_object) != pd.DataFrame:
             try:
                 df_object = pd.DataFrame(df_object)
-                print(
+                logger.warning(
                     f'Automatically converted "{df_name}" from type {type(df_object)}'
                     " to DataFrame"
                 )
             except:
-                print(
+                logger.warning(
                     f'Could not convert "{df_name}" from type {type(df_object)} to'
                     " DataFrame"
                 )
@@ -177,14 +150,14 @@ class PandasGUI(QtWidgets.QMainWindow):
         if type(df_object.columns) != pd.MultiIndex:
             df_object.columns = df_object.columns.astype(str)
 
-        self.df_dicts[df_name] = {}
-        self.df_dicts[df_name] = {}
-        self.df_dicts[df_name]["dataframe"] = df_object
+        store.data[df_name] = {}
+        store.data[df_name] = {}
+        store.data[df_name]["dataframe"] = df_object
 
         dfe = DataFrameExplorer(df_object)
         self.stacked_widget.addWidget(dfe)
 
-        self.df_dicts[df_name]["dataframe_explorer"] = dfe
+        store.data[df_name]["dataframe_explorer"] = dfe
         self.add_df_to_nav(df_name)
 
     ####################
@@ -242,16 +215,8 @@ class PandasGUI(QtWidgets.QMainWindow):
         chartMenu.addAction(pivotDialogAction)
         """
 
-    # I just use this function for printing various things to console while the GUI is running
     def test(self):
-        print("----------------")
-        print("splitter", self.splitter.size())
-        print("nav_tree", self.nav_tree.size())
-        print("stacked_widget", self.stacked_widget.size())
-        print("splitter", self.splitter.sizeHint())
-        print("nav_tree", self.nav_tree.sizeHint())
-        print("stacked_widget", self.stacked_widget.sizeHint())
-        print("----------------")
+        logger.debug("TEST")
 
     class NavWidget(QtWidgets.QTreeWidget):
         def __init__(self, gui):
@@ -305,7 +270,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
     def add_df_to_nav(self, df_name, parent=None):
         """
-        Add DataFrame to the nav by looking up the DataFrame by name in df_dicts
+        Add DataFrame to the nav by looking up the DataFrame by name in store
 
         Args:
             df_name (str): Name of the DataFrame
@@ -316,7 +281,7 @@ class PandasGUI(QtWidgets.QMainWindow):
             parent = self.nav_tree
 
         # Calculate and format the shape of the DataFrame
-        shape = self.df_dicts[df_name]["dataframe"].shape
+        shape = store.data[df_name]["dataframe"].shape
         shape = str(shape[0]) + " X " + str(shape[1])
 
         item = QtWidgets.QTreeWidgetItem(parent, [df_name, shape])
@@ -334,7 +299,7 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         df_name = item.data(0, Qt.DisplayRole)
 
-        dfe = self.df_dicts[df_name]["dataframe_explorer"]
+        dfe = store.data[df_name]["dataframe_explorer"]
         self.stacked_widget.setCurrentWidget(dfe)
 
     ####################
@@ -342,11 +307,11 @@ class PandasGUI(QtWidgets.QMainWindow):
 
     def pivot_dialog(self):
         default = self.nav_tree.currentItem().data(0, Qt.DisplayRole)
-        win = PivotDialog(self.df_dicts, default=default, gui=self)
+        win = PivotDialog(store.data, default=default, gui=self)
 
     def scatter_dialog(self):
         default = self.nav_tree.currentItem().data(0, Qt.DisplayRole)
-        win = ScatterDialog(self.df_dicts, default=default, gui=self)
+        win = ScatterDialog(store.data, default=default, gui=self)
 
 
 def show(*args, settings: dict = {}, **kwargs):
@@ -378,7 +343,9 @@ def show(*args, settings: dict = {}, **kwargs):
 
     # Add the dictionary of positional args to the kwargs
     if any([key in kwargs.keys() for key in dataframes.keys()]):
-        print("Warning! Duplicate DataFrame names were given, duplicates were ignored.")
+        logger.warning(
+            "Duplicate DataFrame names were provided, duplicates were ignored."
+        )
     kwargs = {**kwargs, **dataframes}
 
     pandas_gui = PandasGUI(**kwargs)
@@ -386,40 +353,10 @@ def show(*args, settings: dict = {}, **kwargs):
     if store.settings.block:
         pandas_gui.app.exec_()
 
+    return pandas_gui
+
 
 if __name__ == "__main__":
+    from pandasgui.datasets import all_datasets
 
-    # Fix lack of stack trace on PyQt exceptions
-    def my_exception_hook(exctype, value, traceback):
-        # Print the error and traceback
-        print(exctype, value, traceback)
-        # Call the normal Exception hook after
-        sys._excepthook(exctype, value, traceback)
-        sys.exit(1)
-
-    sys.excepthook = my_exception_hook
-
-    try:
-        # Get paths of drag & dropped files and prepare to open them in the GUI
-        file_paths = sys.argv[1:]
-        if file_paths:
-            file_dataframes = {}
-            for path in file_paths:
-                if os.path.isfile(path) and path.endswith(".csv"):
-                    df = pd.read_csv(path)
-                    filename = os.path.split(path)[1]
-                    file_dataframes[filename] = df
-            show(**file_dataframes)
-
-        # Script was run normally, open sample data sets
-        else:
-            from pandasgui.datasets import all_datasets
-
-            show(**all_datasets, settings={"block": True})
-
-    # Catch errors and call input() so they can be viewed before the console window closes when running with drag n drop
-    except Exception as e:
-        print(e)
-        import traceback
-
-        traceback.print_exc()
+    show(**all_datasets, settings={"block": True})
