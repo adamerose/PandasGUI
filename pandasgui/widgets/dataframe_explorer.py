@@ -41,21 +41,23 @@ class DataFrameExplorer(QtWidgets.QTabWidget):
         self.addTab(graph_maker, "Grapher")
 
     def make_statistics_tab(self, df):
-        stats_df = pd.DataFrame({
-            'Type': df.dtypes.replace('object', 'string'),
-            'Count': df.count(),
-            'Mean': df.mean(numeric_only=True),
-            'StdDev': df.std(numeric_only=True),
-            'Min': df.min(numeric_only=True),
-            'Max': df.max(numeric_only=True),
-        })
+        stats_df = pd.DataFrame(
+            {
+                "Type": df.dtypes.replace("object", "string"),
+                "Count": df.count(),
+                "Mean": df.mean(numeric_only=True),
+                "StdDev": df.std(numeric_only=True),
+                "Min": df.min(numeric_only=True),
+                "Max": df.max(numeric_only=True),
+            }
+        )
         w = DataFrameViewer(stats_df)
         w.setAutoFillBackground(True)
         return w
 
 
 # Examples
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
 
     from pandasgui.datasets import iris, flights, multi, pokemon

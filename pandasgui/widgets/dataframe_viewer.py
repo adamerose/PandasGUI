@@ -4,14 +4,31 @@ QTableWidgets... DataTableView for the DataFrame's contents, and two HeaderView 
 """
 
 from PyQt5 import QtGui, QtCore, QtWidgets
-from PyQt5.QtCore import QAbstractItemModel, QModelIndex, QSize, QRect, Qt, QPoint, QItemSelectionModel
-from PyQt5.QtGui import QPainter, QFont, QFontMetrics, QPalette, QBrush, QColor, QTransform
+from PyQt5.QtCore import (
+    QAbstractItemModel,
+    QModelIndex,
+    QSize,
+    QRect,
+    Qt,
+    QPoint,
+    QItemSelectionModel,
+)
+from PyQt5.QtGui import (
+    QPainter,
+    QFont,
+    QFontMetrics,
+    QPalette,
+    QBrush,
+    QColor,
+    QTransform,
+)
 from PyQt5.QtWidgets import QSizePolicy
 import pandas as pd
 import numpy as np
 import sys
 import threading
 from pandasgui.store import store
+
 
 class DataFrameStore:
     def __init__(self, df):
@@ -20,7 +37,6 @@ class DataFrameStore:
 
     def update(self, df):
         self.df = df
-
 
 
 class DataFrameViewer(QtWidgets.QWidget):
@@ -40,7 +56,10 @@ class DataFrameViewer(QtWidgets.QWidget):
         if not type(df) == pd.DataFrame:
             orig_type = type(df)
             df = df.to_frame()
-            print(f'DataFrame was automatically converted from {orig_type} to DataFrame for viewing')
+            print(
+                f"DataFrame was automatically converted from {orig_type} to DataFrame"
+                " for viewing"
+            )
 
         # Put the df in a wrapper
         self.df = df
@@ -58,11 +77,19 @@ class DataFrameViewer(QtWidgets.QWidget):
 
         # Link scrollbars
         # Scrolling in data table also scrolls the headers
-        self.dataView.horizontalScrollBar().valueChanged.connect(self.columnHeader.horizontalScrollBar().setValue)
-        self.dataView.verticalScrollBar().valueChanged.connect(self.indexHeader.verticalScrollBar().setValue)
+        self.dataView.horizontalScrollBar().valueChanged.connect(
+            self.columnHeader.horizontalScrollBar().setValue
+        )
+        self.dataView.verticalScrollBar().valueChanged.connect(
+            self.indexHeader.verticalScrollBar().setValue
+        )
         # Scrolling in headers also scrolls the data table
-        self.columnHeader.horizontalScrollBar().valueChanged.connect(self.dataView.horizontalScrollBar().setValue)
-        self.indexHeader.verticalScrollBar().valueChanged.connect(self.dataView.verticalScrollBar().setValue)
+        self.columnHeader.horizontalScrollBar().valueChanged.connect(
+            self.dataView.horizontalScrollBar().setValue
+        )
+        self.indexHeader.verticalScrollBar().valueChanged.connect(
+            self.dataView.verticalScrollBar().setValue
+        )
 
         self.dataView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.dataView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -91,20 +118,34 @@ class DataFrameViewer(QtWidgets.QWidget):
         self.gridLayout.setRowStretch(4, 1)
 
         # These placeholders will ensure the size of the blank spaces beside our headers
-        self.gridLayout.addWidget(TrackingSpacer(ref_x=self.columnHeader.verticalHeader()), 3, 1, 1, 1)
-        self.gridLayout.addWidget(TrackingSpacer(ref_y=self.indexHeader.horizontalHeader()), 1, 2, 1, 1)
-        self.gridLayout.addItem(QtWidgets.QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Expanding), 0, 0, 1, 1)
+        self.gridLayout.addWidget(
+            TrackingSpacer(ref_x=self.columnHeader.verticalHeader()), 3, 1, 1, 1
+        )
+        self.gridLayout.addWidget(
+            TrackingSpacer(ref_y=self.indexHeader.horizontalHeader()), 1, 2, 1, 1
+        )
+        self.gridLayout.addItem(
+            QtWidgets.QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Expanding),
+            0,
+            0,
+            1,
+            1,
+        )
 
         # Styling
         for header in [self.indexHeader, self.columnHeader]:
-            header.setStyleSheet("background-color: white;"
-                                 "selection-color: black;"
-                                 "selection-background-color: #EAEAEA;")
+            header.setStyleSheet(
+                "background-color: white;"
+                "selection-color: black;"
+                "selection-background-color: #EAEAEA;"
+            )
 
-        self.dataView.setStyleSheet("background-color: white;"
-                                    "alternate-background-color: #F4F6F6;"
-                                    "selection-color: black;"
-                                    "selection-background-color: #BBDEFB;")
+        self.dataView.setStyleSheet(
+            "background-color: white;"
+            "alternate-background-color: #F4F6F6;"
+            "selection-color: black;"
+            "selection-background-color: #BBDEFB;"
+        )
 
         for item in [self.dataView, self.columnHeader, self.indexHeader]:
             item.setContentsMargins(0, 0, 0, 0)
@@ -192,9 +233,11 @@ class DataFrameViewer(QtWidgets.QWidget):
             # This constrained width, with the flag of Qt.TextWordWrap
             # gets the height the cell would have to be to fit the text.
             constrained_rect = QtCore.QRect(0, 0, cell_width, 0)
-            h = self.dataView.fontMetrics().boundingRect(constrained_rect,
-                                                         Qt.TextWordWrap,
-                                                         text).height()
+            h = (
+                self.dataView.fontMetrics()
+                .boundingRect(constrained_rect, Qt.TextWordWrap, text)
+                .height()
+            )
 
             height = max(height, h)
 
@@ -211,17 +254,17 @@ class DataFrameViewer(QtWidgets.QWidget):
         QtWidgets.QWidget.keyPressEvent(self, event)
 
         if event.matches(QtGui.QKeySequence.Copy):
-            print('Ctrl + C')
+            print("Ctrl + C")
             self.dataView.copy()
         if event.matches(QtGui.QKeySequence.Paste):
             self.dataView.paste()
-            print('Ctrl + V')
+            print("Ctrl + V")
         if event.key() == Qt.Key_P and (event.modifiers() & Qt.ControlModifier):
             self.dataView.print()
-            print('Ctrl + P')
+            print("Ctrl + P")
         if event.key() == Qt.Key_D and (event.modifiers() & Qt.ControlModifier):
             self.debug()
-            print('Ctrl + D')
+            print("Ctrl + D")
 
     def debug(self):
         print(self.columnHeader.sizeHint())
@@ -230,15 +273,23 @@ class DataFrameViewer(QtWidgets.QWidget):
 
     def data_changed(self):
         # Call dataChanged on all models for all data
-        for model in [self.dataView.model(), self.columnHeader.model(), self.indexHeader.model()]:
-            model.dataChanged.emit(model.index(0, 0), model.index(model.rowCount(), model.columnCount()))
+        for model in [
+            self.dataView.model(),
+            self.columnHeader.model(),
+            self.indexHeader.model(),
+        ]:
+            model.dataChanged.emit(
+                model.index(0, 0), model.index(model.rowCount(), model.columnCount())
+            )
 
 
 # Remove dotted border on cell focus.  https://stackoverflow.com/a/55252650/3620725
 class NoFocusDelegate(QtWidgets.QStyledItemDelegate):
     def paint(self, QPainter, QStyleOptionViewItem, QModelIndex):
         if QStyleOptionViewItem.state & QtWidgets.QStyle.State_HasFocus:
-            QStyleOptionViewItem.state = QStyleOptionViewItem.state ^ QtWidgets.QStyle.State_HasFocus
+            QStyleOptionViewItem.state = (
+                QStyleOptionViewItem.state ^ QtWidgets.QStyle.State_HasFocus
+            )
         super().paint(QPainter, QStyleOptionViewItem, QModelIndex)
 
 
@@ -265,7 +316,11 @@ class DataTableModel(QtCore.QAbstractTableModel):
 
     # Returns the data from the DataFrame
     def data(self, index, role=QtCore.Qt.DisplayRole):
-        if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.EditRole or role == QtCore.Qt.ToolTipRole:
+        if (
+            role == QtCore.Qt.DisplayRole
+            or role == QtCore.Qt.EditRole
+            or role == QtCore.Qt.ToolTipRole
+        ):
             row = index.row()
             col = index.column()
             cell = self.parent().df.iloc[row, col]
@@ -294,7 +349,11 @@ class DataTableModel(QtCore.QAbstractTableModel):
 
     def flags(self, index):
         if store.settings.editable:
-            return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+            return (
+                QtCore.Qt.ItemIsEditable
+                | QtCore.Qt.ItemIsEnabled
+                | QtCore.Qt.ItemIsSelectable
+            )
         else:
             return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
 
@@ -354,13 +413,16 @@ class DataTableView(QtWidgets.QTableView):
 
         if not columnHeader.hasFocus():
             selection = self.selectionModel().selection()
-            columnHeader.selectionModel().select(selection,
-                                                 QItemSelectionModel.Columns | QItemSelectionModel.ClearAndSelect)
+            columnHeader.selectionModel().select(
+                selection,
+                QItemSelectionModel.Columns | QItemSelectionModel.ClearAndSelect,
+            )
 
         if not indexHeader.hasFocus():
             selection = self.selectionModel().selection()
-            indexHeader.selectionModel().select(selection,
-                                                QItemSelectionModel.Rows | QItemSelectionModel.ClearAndSelect)
+            indexHeader.selectionModel().select(
+                selection, QItemSelectionModel.Rows | QItemSelectionModel.ClearAndSelect
+            )
 
     def copy(self):
         """
@@ -373,7 +435,7 @@ class DataTableView(QtWidgets.QTableView):
         rows = [ix.row() for ix in indexes]
         cols = [ix.column() for ix in indexes]
 
-        df = self.parent().df.iloc[min(rows):max(rows) + 1, min(cols):max(cols) + 1]
+        df = self.parent().df.iloc[min(rows) : max(rows) + 1, min(cols) : max(cols) + 1]
 
         # If I try to use Pyperclip without starting new thread large values give access denied error
         def thread_function(df):
@@ -507,17 +569,23 @@ class HeaderView(QtWidgets.QTableView):
 
         # Orientation specific settings
         if orientation == Qt.Horizontal:
-            self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)  # Scrollbar is replaced in DataFrameViewer
+            self.setHorizontalScrollBarPolicy(
+                Qt.ScrollBarAlwaysOff
+            )  # Scrollbar is replaced in DataFrameViewer
             self.horizontalHeader().hide()
             self.verticalHeader().setDisabled(True)
-            self.verticalHeader().setHighlightSections(False)  # Selection lags a lot without this
+            self.verticalHeader().setHighlightSections(
+                False
+            )  # Selection lags a lot without this
 
         else:
             self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             self.verticalHeader().hide()
             self.horizontalHeader().setDisabled(True)
 
-            self.horizontalHeader().setHighlightSections(False)  # Selection lags a lot without this
+            self.horizontalHeader().setHighlightSections(
+                False
+            )  # Selection lags a lot without this
 
         # Set initial size
         self.resize(self.sizeHint())
@@ -527,7 +595,7 @@ class HeaderView(QtWidgets.QTableView):
         if self.orientation == Qt.Horizontal:
             df = self.parent().df
 
-            df_sorted = df.sort_values(df.columns[ix.column()], kind='mergesort')
+            df_sorted = df.sort_values(df.columns[ix.column()], kind="mergesort")
 
             self.parent().update_df(df_sorted)
             self.parent().data_changed()
@@ -543,31 +611,43 @@ class HeaderView(QtWidgets.QTableView):
             dataView = self.parent().dataView
 
             # Set selection mode so selecting one row or column at a time adds to selection each time
-            if self.orientation == Qt.Horizontal:  # This case is for the horizontal header
+            if (
+                self.orientation == Qt.Horizontal
+            ):  # This case is for the horizontal header
                 # Get the header's selected columns
                 selection = self.selectionModel().selection()
 
                 # Removes the higher levels so that only the lowest level of the header affects the data table selection
                 last_row_ix = self.parent().df.columns.nlevels - 1
                 last_col_ix = self.model().columnCount() - 1
-                higher_levels = QtCore.QItemSelection(self.model().index(0, 0),
-                                                      self.model().index(last_row_ix - 1, last_col_ix))
+                higher_levels = QtCore.QItemSelection(
+                    self.model().index(0, 0),
+                    self.model().index(last_row_ix - 1, last_col_ix),
+                )
                 selection.merge(higher_levels, QtCore.QItemSelectionModel.Deselect)
 
                 # Select the cells in the data view
-                dataView.selectionModel().select(selection,
-                                                 QtCore.QItemSelectionModel.Columns | QtCore.QItemSelectionModel.ClearAndSelect)
+                dataView.selectionModel().select(
+                    selection,
+                    QtCore.QItemSelectionModel.Columns
+                    | QtCore.QItemSelectionModel.ClearAndSelect,
+                )
             if self.orientation == Qt.Vertical:
                 selection = self.selectionModel().selection()
 
                 last_row_ix = self.model().rowCount() - 1
                 last_col_ix = self.parent().df.index.nlevels - 1
-                higher_levels = QtCore.QItemSelection(self.model().index(0, 0),
-                                                      self.model().index(last_row_ix, last_col_ix - 1))
+                higher_levels = QtCore.QItemSelection(
+                    self.model().index(0, 0),
+                    self.model().index(last_row_ix, last_col_ix - 1),
+                )
                 selection.merge(higher_levels, QtCore.QItemSelectionModel.Deselect)
 
-                dataView.selectionModel().select(selection,
-                                                 QtCore.QItemSelectionModel.Rows | QtCore.QItemSelectionModel.ClearAndSelect)
+                dataView.selectionModel().select(
+                    selection,
+                    QtCore.QItemSelectionModel.Rows
+                    | QtCore.QItemSelectionModel.ClearAndSelect,
+                )
 
         self.selectAbove()
 
@@ -586,12 +666,16 @@ class HeaderView(QtWidgets.QTableView):
                 # Loop over the rows above this one
                 for row in range(ix.row()):
                     ix2 = self.model().index(row, ix.column())
-                    self.setSelection(self.visualRect(ix2), QtCore.QItemSelectionModel.Select)
+                    self.setSelection(
+                        self.visualRect(ix2), QtCore.QItemSelectionModel.Select
+                    )
             else:
                 # Loop over the columns left of this one
                 for col in range(ix.column()):
                     ix2 = self.model().index(ix.row(), col)
-                    self.setSelection(self.visualRect(ix2), QtCore.QItemSelectionModel.Select)
+                    self.setSelection(
+                        self.visualRect(ix2), QtCore.QItemSelectionModel.Select
+                    )
 
     # Fits columns to contents but with a minimum width and added padding
     def initSize(self):
@@ -736,7 +820,9 @@ class HeaderView(QtWidgets.QTableView):
                 self.header_being_resized = self.over_header_edge(mouse_position)
                 self.resize_start_position = mouse_position
                 if self.orientation == Qt.Horizontal:
-                    self.initial_header_size = self.columnWidth(self.header_being_resized)
+                    self.initial_header_size = self.columnWidth(
+                        self.header_being_resized
+                    )
                 elif self.orientation == Qt.Vertical:
                     self.initial_header_size = self.rowHeight(self.header_being_resized)
                 return True
@@ -773,14 +859,20 @@ class HeaderView(QtWidgets.QTableView):
             # If this is None, there is no drag resize happening
             if self.header_being_resized is not None:
 
-                size = self.initial_header_size + (mouse_position - self.resize_start_position)
+                size = self.initial_header_size + (
+                    mouse_position - self.resize_start_position
+                )
                 if size > 10:
                     if self.orientation == Qt.Horizontal:
                         self.setColumnWidth(self.header_being_resized, size)
-                        self.parent.dataView.setColumnWidth(self.header_being_resized, size)
+                        self.parent.dataView.setColumnWidth(
+                            self.header_being_resized, size
+                        )
                     if self.orientation == Qt.Vertical:
                         self.setRowHeight(self.header_being_resized, size)
-                        self.parent.dataView.setRowHeight(self.header_being_resized, size)
+                        self.parent.dataView.setRowHeight(
+                            self.header_being_resized, size
+                        )
 
                     self.updateGeometry()
                     self.parent.dataView.updateGeometry()
@@ -846,7 +938,7 @@ class TrackingSpacer(QtWidgets.QFrame):
 
 
 # Examples
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
 
     from pandasgui.datasets import iris, flights, pokemon, multi_df, simple
