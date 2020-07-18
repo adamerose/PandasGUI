@@ -1,7 +1,6 @@
 import os
 import sys
 import tempfile
-
 from plotly.io import to_html
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
@@ -40,7 +39,8 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
     def __init__(self, fig=None):
         super().__init__()
 
-        self.temp_file = tempfile.TemporaryFile(mode="w", suffix=".html")
+        # https://stackoverflow.com/a/8577226/3620725
+        self.temp_file = tempfile.TemporaryFile(mode="w", suffix=".html", delete=False)
         self.set_figure(fig)
 
         self.resize(700, 600)
@@ -51,12 +51,17 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
 
         if fig:
             self.temp_file.write(to_html(fig, config={"responsive": True}))
+            # self.temp_file.write("<html><body>hello</body></html>")
         else:
             self.temp_file.write("")
 
         self.temp_file.truncate()
         self.temp_file.seek(0)
         self.load(QtCore.QUrl.fromLocalFile(self.temp_file.name))
+
+    def closeEvent(self, event: QtGui.QCloseEvent) -> None:
+        os.unlink(self.temp_file.name)
+        self.temp_file.close()
 
 
 if __name__ == "__main__":
