@@ -149,7 +149,8 @@ class Worker(QtCore.QThread):
             logger.debug(f"Finished Worker run. {self.func.__name__} {d}")
             self.finished.emit(result)
         except Exception as e:
-            logger.error(e)
+            logger.debug(e)
+            self.finished.emit(None)
 
 
 schemas = DotDict(

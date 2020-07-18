@@ -57,9 +57,8 @@ def fix_ipython():
 def flatten_multiindex(mi, sep=" - ", format=None):
     import pandas as pd
 
-    if type(mi) == pd.core.indexes.base.Index:
-        return mi
-    elif type(mi) == pd.core.indexes.multi.MultiIndex:
+
+    if issubclass(type(mi), pd.core.indexes.multi.MultiIndex):
         # Flatten multi-index headers
         if format == None:
             # Flattern by putting sep between each header value
@@ -88,7 +87,9 @@ def flatten_multiindex(mi, sep=" - ", format=None):
                     # If the segment doesn't contain all placeholders, just join them with sep instead
                     flat_name = sep.join(tuple).strip(sep)
                 flat_index.append(flat_name)
+    elif issubclass(type(mi), pd.core.indexes.base.Index):
+        return mi
     else:
-        raise TypeError
+        raise TypeError(f"Expected Index but got {type(mi)}")
 
     return flat_index
