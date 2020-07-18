@@ -17,7 +17,4 @@ class DataItem:
 @dataclass
 class Store:
     settings: Settings = Settings()
-    data: Dict[DataItem] = field(default_factory=dict)
-
-
-store = Store()
+    data: Dict[(str, DataItem)] = field(default_factory=dict)

@@ -6,32 +6,17 @@ import pandas as pd
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
-from pandasgui.store import store
 from pandasgui.utility import get_logger
 
 logger = get_logger(__name__)
 
 
-class DataFrameStore:
-    def __init__(self, df):
-        self.df = df
-        self.models = []
-
-    def update(self, df):
-        self.df = df
-
-
 class DataFrameViewer(QtWidgets.QWidget):
-    """
-    Displays a DataFrame as a table.
-
-    Args:
-        df (DataFrame): The DataFrame to display
-    """
-
-    def __init__(self, df):
+    def __init__(self, df, editable=True):
 
         super().__init__()
+        self.editable = editable
+
         # Indicates whether the widget has been shown yet. Set to True in
         self._loaded = False
 
@@ -330,7 +315,7 @@ class DataTableModel(QtCore.QAbstractTableModel):
             return str(cell)
 
     def flags(self, index):
-        if store.settings.editable:
+        if self.parent().editable:
             return (
                 QtCore.Qt.ItemIsEditable
                 | QtCore.Qt.ItemIsEnabled

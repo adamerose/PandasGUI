@@ -1,4 +1,4 @@
-# PandasGUI
+# PandasGui
 
 A GUI for viewing and analyzing Pandas DataFrames based on PyQt5.
 

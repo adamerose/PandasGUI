@@ -8,9 +8,9 @@ from jsonschema import validate
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from pandasgui.datasets import iris, pokemon
-from pandasgui.utility import flatten_multiindex, get_logger
-from pandasgui.widgets import QtWaitingSpinner
+from pandasgui.utility import DotDict, flatten_multiindex, get_logger
 from pandasgui.widgets.plotly_viewer import PlotlyViewer
+from pandasgui.widgets.spinner import Spinner
 
 logger = get_logger(__name__)
 
@@ -19,10 +19,9 @@ class Grapher(QtWidgets.QWidget):
     def __init__(self, df, name="a"):
         super().__init__()
         self.name = name
-        df = df.copy()
-        df.columns = flatten_multiindex(df.columns)
+        self.df = df.copy()
 
-        self.df = df
+        self.df.columns = flatten_multiindex(self.df.columns)
         self.prev_kwargs = (
             {}
         )  # This is for carrying plot arg selections forward to new plottypes
@@ -53,7 +52,7 @@ class Grapher(QtWidgets.QWidget):
         self.schema_layout_outer.addWidget(self.reset_button)
         self.schema_layout_outer.addStretch()
 
-        self.spinner = QtWaitingSpinner()
+        self.spinner = Spinner()
         self.spinner.setParent(self.figure_viewer)
 
         self.layout = QtWidgets.QHBoxLayout()
@@ -154,18 +153,6 @@ class Worker(QtCore.QThread):
             self.finished.emit(result)
         except Exception as e:
             logger.error(e, exc_info=True)
-
-
-class DotDict(dict):
-    __getattr__ = dict.__getitem__
-    __setattr__ = dict.__setitem__
-    __delattr__ = dict.__delitem__
-
-    def __init__(self, dct):
-        for key, value in dct.items():
-            if hasattr(value, "keys"):
-                value = DotDict(value)
-            self[key] = value
 
 
 schemas = DotDict(
@@ -369,11 +356,7 @@ if __name__ == "__main__":
 
     fix_ipython()
     fix_pyqt()
-    app = (
-        QtWidgets.QtWidgets,
-        QApplication.instance() or QtWidgets.QtWidgets,
-        QApplication(sys.argv),
-    )
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
 
     gb = Grapher(pokemon, "pokemon")
     gb.show()
