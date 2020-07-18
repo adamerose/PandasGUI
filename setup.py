@@ -18,7 +18,6 @@ setup(
         "pandas",
         "PyQt5",
         "PyQtWebEngine",
-        "seaborn",
         "plotly",
         "setuptools",
     ],

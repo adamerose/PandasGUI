@@ -3,9 +3,7 @@
 import re
 import sys
 
-import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
@@ -382,9 +380,6 @@ class ScatterDialog(DialogGeneric):
             c = dict["Color By"][0]
         except IndexError:
             c = None
-
-        sns.scatterplot(x, y, c, data=df)
-        plt.show()
 
 
 if __name__ == "__main__":
