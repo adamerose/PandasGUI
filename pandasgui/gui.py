@@ -7,61 +7,66 @@ import pkg_resources
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
-from pandasgui.store import store
+from pandasgui.store import Store
 from pandasgui.utility import fix_ipython, fix_pyqt, get_logger
-from pandasgui.widgets import DataFrameExplorer, FindToolbar, PivotDialog, ScatterDialog
+from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
+from pandasgui.widgets.find_toolbar import FindToolbar
 
 logger = get_logger(__name__)
 
-# Global config
-os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "2"
-QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
+# Enables PyQt event loop in iPython
 fix_ipython()
-fix_pyqt()
 
 
-class PandasGUI(QtWidgets.QMainWindow):
-    def __init__(self, **kwargs):
+class PandasGui(QtWidgets.QMainWindow):
+    def __init__(self, settings: dict = {}, **kwargs):
         """
         Args:
+            settings: Dict of settings, as defined in pandasgui.store.Settings
             kwargs: Dict of DataFrames where key is name & val is the DataFrame object
         """
 
-        # Set in setupUI()
+        try:  # Enable high DPI. This only works before a QApplication is created
+            QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
+        except:
+            pass
+
+        self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+        self.store = Store()
+        # These get built in init_ui()
         self.stacked_widget = None
         self.splitter = None
         self.nav_tree = None
 
-        # Get an application instance
-        self.app = QtWidgets.QApplication.instance()
-        if self.app:
-            logger.info("Using existing QApplication instance")
-        if not self.app:
-            self.app = QtWidgets.QApplication(sys.argv)
+        # Adds DataFrames listed in kwargs to data store.
+        for i, (df_name, df_object) in enumerate(kwargs.items()):
+            self.store.data[df_name] = {}
+            self.store.data[df_name]["dataframe"] = df_object
+
+        # Add user provided settings to data store
+        for key, value in settings.items():
+            setattr(self.store.settings, key, value)
 
         super().__init__()
+        self.init_app()
+        self.init_ui()
 
-        # https://stackoverflow.com/a/27178019/3620725
-        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        if self.store.settings.block:
+            self.app.exec_()
 
-        # Adds DataFrames listed in kwargs to store.
-        for i, (df_name, df_object) in enumerate(kwargs.items()):
-            store.data[df_name] = {}
-            store.data[df_name]["dataframe"] = df_object
+    # Configure app settings
+    def init_app(self):
 
-        # Generates all UI contents
-        self.setupUI()
-
-        # %% Window settings
-        # Set size
+        # Set window size
         screen = QtWidgets.QDesktopWidget().screenGeometry()
         percentage_of_screen = 0.7
         size = tuple(
             (
-                pd.np.array([screen.width(), screen.height()]) * percentage_of_screen
+                    pd.np.array([screen.width(), screen.height()]) * percentage_of_screen
             ).astype(int)
         )
         self.resize(QtCore.QSize(*size))
+
         # Center window on screen
         screen = QtWidgets.QDesktopWidget().screenGeometry()
         size = self.geometry()
@@ -69,19 +74,19 @@ class PandasGUI(QtWidgets.QMainWindow):
             int((screen.width() - size.width()) / 2),
             int((screen.height() - size.height()) / 2),
         )
-        # Title and logo
-        self.setWindowTitle("PandasGUI")
+
+        # Set window title and icon
+        self.setWindowTitle("PandasGui")
         pdgui_icon = "images/icon.png"
         pdgui_icon_path = pkg_resources.resource_filename(__name__, pdgui_icon)
         self.app.setWindowIcon(QtGui.QIcon(pdgui_icon_path))
-
         self.show()
 
-    def setupUI(self):
-        """
-        Creates and adds all widgets to GUI.
-        """
+        # https://stackoverflow.com/a/27178019/3620725
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
+    # Create and add all widgets to GUI.
+    def init_ui(self):
         # This holds the DataFrameExplorer for each DataFrame
         self.stacked_widget = QtWidgets.QStackedWidget()
 
@@ -91,8 +96,8 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.nav_tree.setHeaderLabels(["Name", "Shape"])
         self.nav_tree.itemSelectionChanged.connect(self.nav_clicked)
 
-        for df_name in store.data.keys():
-            df_object = store.data[df_name]["dataframe"]
+        for df_name in self.store.data.keys():
+            df_object = self.store.data[df_name]["dataframe"]
             self.add_dataframe(df_name, df_object)
 
         # Make splitter to hold nav and DataFrameExplorers
@@ -110,15 +115,14 @@ class PandasGUI(QtWidgets.QMainWindow):
         self.splitter.setContentsMargins(10, 10, 10, 10)
 
         # makes the find toolbar
-        self.findBar = FindToolbar(self)
-        self.addToolBar(self.findBar)
+        self.find_bar = FindToolbar(self)
+        self.addToolBar(self.find_bar)
 
         # QMainWindow setup
         self.make_menu_bar()
         self.setCentralWidget(self.splitter)
 
     def import_dataframe(self, path):
-
         if os.path.isfile(path) and path.endswith(".csv"):
             df_name = os.path.split(path)[1]
             df_object = pd.read_csv(path)
@@ -135,38 +139,29 @@ class PandasGUI(QtWidgets.QMainWindow):
         if type(df_object) != pd.DataFrame:
             try:
                 df_object = pd.DataFrame(df_object)
-                logger.warning(
-                    f'Automatically converted "{df_name}" from type {type(df_object)}'
-                    " to DataFrame"
-                )
+                logger.warning(f'Automatically converted "{df_name}" from type {type(df_object)} to DataFrame')
             except:
-                logger.warning(
-                    f'Could not convert "{df_name}" from type {type(df_object)} to'
-                    " DataFrame"
-                )
+                logger.warning(f'Could not convert "{df_name}" from type {type(df_object)} to DataFrame')
                 return
 
         # Non-string column indices causes problems when pulling them from a GUI dropdown (which will give str)
         if type(df_object.columns) != pd.MultiIndex:
             df_object.columns = df_object.columns.astype(str)
 
-        store.data[df_name] = {}
-        store.data[df_name] = {}
-        store.data[df_name]["dataframe"] = df_object
+        self.store.data[df_name] = {}
+        self.store.data[df_name] = {}
+        self.store.data[df_name]["dataframe"] = df_object
 
         dfe = DataFrameExplorer(df_object)
         self.stacked_widget.addWidget(dfe)
 
-        store.data[df_name]["dataframe_explorer"] = dfe
+        self.store.data[df_name]["dataframe_explorer"] = dfe
         self.add_df_to_nav(df_name)
 
     ####################
     # Menu bar functions
 
     def make_menu_bar(self):
-        """
-        Make the menubar and add it to the QMainWindow
-        """
         # Create a menu for setting the GUI style.
         # Uses radio-style buttons in a QActionGroup.
         menubar = self.menuBar()
@@ -175,7 +170,7 @@ class PandasGUI(QtWidgets.QMainWindow):
         editMenu = menubar.addMenu("&Edit")
         findAction = QtWidgets.QAction("&Find", self)
         findAction.setShortcut("Ctrl+F")
-        findAction.triggered.connect(self.findBar.show_find_bar)
+        findAction.triggered.connect(self.find_bar.show_find_bar)
         editMenu.addAction(findAction)
 
         styleMenu = menubar.addMenu("&Set Style")
@@ -186,7 +181,7 @@ class PandasGUI(QtWidgets.QMainWindow):
             styleAction = QtWidgets.QAction(f"&{style}", self, checkable=True)
             styleAction.triggered.connect(
                 lambda state, style=style: self.app.setStyle(style)
-                and self.app.setStyleSheet("")
+                                           and self.app.setStyleSheet("")
             )
             styleGroup.addAction(styleAction)
             styleMenu.addAction(styleAction)
@@ -200,23 +195,6 @@ class PandasGUI(QtWidgets.QMainWindow):
         testDialogAction = QtWidgets.QAction("&Test", self)
         testDialogAction.triggered.connect(self.test)
         debugMenu.addAction(testDialogAction)
-
-        """
-        # Creates a chart menu.
-        chartMenu = menubar.addMenu('&Plot Charts')
-        scatterDialogAction = QtWidgets.QAction('&Scatter Dialog', self)
-        scatterDialogAction.triggered.connect(self.scatter_dialog)
-        chartMenu.addAction(scatterDialogAction)
-
-        # Creates a reshaping menu.
-        chartMenu = menubar.addMenu('&Reshape Data')
-        pivotDialogAction = QtWidgets.QAction('&Pivot Dialog', self)
-        pivotDialogAction.triggered.connect(self.pivot_dialog)
-        chartMenu.addAction(pivotDialogAction)
-        """
-
-    def test(self):
-        logger.debug("TEST")
 
     class NavWidget(QtWidgets.QTreeWidget):
         def __init__(self, gui):
@@ -269,19 +247,11 @@ class PandasGUI(QtWidgets.QMainWindow):
                 e.ignore()
 
     def add_df_to_nav(self, df_name, parent=None):
-        """
-        Add DataFrame to the nav by looking up the DataFrame by name in store
-
-        Args:
-            df_name (str): Name of the DataFrame
-            parent (QTreeWidgetItem): Parent item in the nav tree hierarchy
-        """
-
         if parent is None:
             parent = self.nav_tree
 
         # Calculate and format the shape of the DataFrame
-        shape = store.data[df_name]["dataframe"].shape
+        shape = self.store.data[df_name]["dataframe"].shape
         shape = str(shape[0]) + " X " + str(shape[1])
 
         item = QtWidgets.QTreeWidgetItem(parent, [df_name, shape])
@@ -299,34 +269,14 @@ class PandasGUI(QtWidgets.QMainWindow):
 
         df_name = item.data(0, Qt.DisplayRole)
 
-        dfe = store.data[df_name]["dataframe_explorer"]
+        dfe = self.store.data[df_name]["dataframe_explorer"]
         self.stacked_widget.setCurrentWidget(dfe)
 
-    ####################
-    # Dialog functions. TODO: Rewrite these all
-
-    def pivot_dialog(self):
-        default = self.nav_tree.currentItem().data(0, Qt.DisplayRole)
-        win = PivotDialog(store.data, default=default, gui=self)
-
-    def scatter_dialog(self):
-        default = self.nav_tree.currentItem().data(0, Qt.DisplayRole)
-        win = ScatterDialog(store.data, default=default, gui=self)
+    def test(self):
+        logger.debug("test")
 
 
 def show(*args, settings: dict = {}, **kwargs):
-    """
-    Create and show a PandasGUI window with all the DataFrames passed. *args and **kwargs should all be DataFrames
-
-    Args:
-        *args: These should all be DataFrames. The GUI uses stack inspection to get the variable name to use in the GUI
-        block (bool): Indicates whether to run app._exec on the PyQt application to block further execution of script
-        **kwargs: These should all be DataFrames. The key is the desired name and the value is the DataFrame object
-    """
-
-    for key, value in settings.items():
-        setattr(store.settings, key, value)
-
     # Get the variable names in the scope show() was called from
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
 
@@ -348,10 +298,7 @@ def show(*args, settings: dict = {}, **kwargs):
         )
     kwargs = {**kwargs, **dataframes}
 
-    pandas_gui = PandasGUI(**kwargs)
-
-    if store.settings.block:
-        pandas_gui.app.exec_()
+    pandas_gui = PandasGui(settings=settings, **kwargs)
 
     return pandas_gui
 
@@ -359,4 +306,4 @@ def show(*args, settings: dict = {}, **kwargs):
 if __name__ == "__main__":
     from pandasgui.datasets import all_datasets
 
-    show(**all_datasets, settings={"block": True})
+    x = show(**all_datasets, settings={"block": True})

@@ -1,5 +1,3 @@
-"""DataFrameExplorer"""
-
 import sys
 import traceback
 
@@ -9,28 +7,22 @@ import seaborn as sns
 from PyQt5 import QtWidgets
 
 from pandasgui.utility import get_logger
-from pandasgui.widgets import DataFrameViewer, Grapher
+from pandasgui.widgets.dataframe_viewer import DataFrameViewer
+from pandasgui.widgets.grapher import Grapher
 
 logger = get_logger(__name__)
 
 
 class DataFrameExplorer(QtWidgets.QTabWidget):
-    """
-    This is a QTabWidget for analyzing a single DataFrame where the first tab is a DataFrameViewer widget
-
-    Args:
-        df (DataFrame): The DataFrame to display
-    """
-
-    def __init__(self, df):
+    def __init__(self, df, editable=True):
 
         super().__init__()
 
-        df = df.copy()
         self.df = df
+        self.editable = editable
 
         # DataFrame tab
-        self.dataframe_tab = DataFrameViewer(self.df)
+        self.dataframe_tab = DataFrameViewer(self.df, editable=self.editable)
         self.addTab(self.dataframe_tab, "DataFrame")
 
         # Statistics tab
@@ -52,12 +44,11 @@ class DataFrameExplorer(QtWidgets.QTabWidget):
                 "Max": df.max(numeric_only=True),
             }
         )
-        w = DataFrameViewer(stats_df)
+        w = DataFrameViewer(stats_df, editable=self.editable)
         w.setAutoFillBackground(True)
         return w
 
 
-# Examples
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
 

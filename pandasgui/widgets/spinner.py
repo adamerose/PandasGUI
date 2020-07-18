@@ -5,7 +5,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 
-class QtWaitingSpinner(QWidget):
+class Spinner(QWidget):
     mColor = QColor(Qt.gray)
     mRoundness = 100.0
     mMinimumTrailOpacity = 31.4159265358979323846
@@ -209,7 +209,7 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     dial = QDialog()
-    w = QtWaitingSpinner(dial)
+    w = Spinner(dial)
     dial.show()
     w.start()
     QTimer.singleShot(1000, w.stop)
