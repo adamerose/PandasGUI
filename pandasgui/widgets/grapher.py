@@ -1,13 +1,8 @@
 import sys
-from dataclasses import dataclass
-from threading import Thread
 
-import pandas as pd
 import plotly.express as px
-from jsonschema import validate
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from pandasgui.datasets import iris, pokemon
 from pandasgui.utility import DotDict, flatten_multiindex, get_logger
 from pandasgui.widgets.plotly_viewer import PlotlyViewer
 from pandasgui.widgets.spinner import Spinner
@@ -22,6 +17,8 @@ class Grapher(QtWidgets.QWidget):
         self.df = df.copy()
 
         self.df.columns = flatten_multiindex(self.df.columns)
+        self.df.index = flatten_multiindex(self.df.index)
+
         self.prev_kwargs = (
             {}
         )  # This is for carrying plot arg selections forward to new plottypes
@@ -93,8 +90,8 @@ class Grapher(QtWidgets.QWidget):
             if arg_value:
                 kwargs[arg_name] = arg_value
 
-        logger.debug(self.name + "1 " + str(kwargs))
-        logger.debug(self.name + str(self.current_schema))
+        logger.debug(self.name + " kwargs " + str(kwargs))
+        logger.debug(self.name + " self.current_schema " + str(self.current_schema))
         # On plot type change (all selections reset to blank) fill them with previous selections
         if not any(kwargs.values()):
             for arg_name in self.prev_kwargs.keys():
@@ -152,7 +149,7 @@ class Worker(QtCore.QThread):
             logger.debug(f"Finished Worker run. {self.func.__name__} {d}")
             self.finished.emit(result)
         except Exception as e:
-            logger.error(e, exc_info=True)
+            logger.error(e)
 
 
 schemas = DotDict(
@@ -224,13 +221,13 @@ schemas = DotDict(
         # Proportion
         "pie": {
             "name": "pie",
-            "args": {"names": {}, "values": {},},
+            "args": {"names": {}, "values": {}, },
             "function": px.pie,
             "category": "Proportion",
         },
         "treemap": {
             "name": "treemap",
-            "args": {"names": {}, "values": {},},
+            "args": {"names": {}, "values": {}, },
             "function": px.treemap,
             "category": "Proportion",
         },
@@ -256,89 +253,89 @@ schemas = DotDict(
         # 3-Dimensional
         "scatter_3d": {
             "name": "scatter_3d",
-            "args": {"x": {}, "y": {}, "z": {}, "color": {},},
+            "args": {"x": {}, "y": {}, "z": {}, "color": {}, },
             "function": px.scatter_3d,
             "category": "3-Dimensional",
         },
         "line_3d": {
             "name": "line_3d",
-            "args": {"x": {}, "y": {}, "z": {}, "color": {},},
+            "args": {"x": {}, "y": {}, "z": {}, "color": {}, },
             "function": px.line_3d,
             "category": "3-Dimensional",
         },
         # Multidimensional
         "scatter_matrix": {
             "name": "scatter_matrix",
-            "args": {"dimensions": {}, "color": {},},  # List of columns
+            "args": {"dimensions": {}, "color": {}, },  # List of columns
             "function": px.scatter_matrix,
             "category": "Multidimensional",
         },
         "parallel_coordinates": {
             "name": "parallel_coordinates",
-            "args": {"dimensions": {}, "color": {},},  # List of columns
+            "args": {"dimensions": {}, "color": {}, },  # List of columns
             "function": px.parallel_coordinates,
             "category": "Multidimensional",
         },
         "parallel_categories": {
             "name": "parallel_categories",
-            "args": {"dimensions": {}, "color": {},},  # List of columns
+            "args": {"dimensions": {}, "color": {}, },  # List of columns
             "function": px.parallel_categories,
             "category": "Multidimensional",
         },
         # Tile Maps
         "scatter_mapbox": {
             "name": "scatter_mapbox",
-            "args": {"lat": {}, "lon": {}, "color": {}, "size": {},},
+            "args": {"lat": {}, "lon": {}, "color": {}, "size": {}, },
             "function": px.scatter_mapbox,
             "category": "Tile Maps",
         },
         "line_mapbox": {
             "name": "line_mapbox",
-            "args": {"lat": {}, "lon": {}, "color": {},},
+            "args": {"lat": {}, "lon": {}, "color": {}, },
             "function": px.line_mapbox,
             "category": "Tile Maps",
         },
         "density_mapbox": {
             "name": "density_mapbox",
-            "args": {"lat": {}, "lon": {}, "z": {},},
+            "args": {"lat": {}, "lon": {}, "z": {}, },
             "function": px.density_mapbox,
             "category": "Tile Maps",
         },
         # Outline Maps
         "scatter_geo": {
             "name": "scatter_geo",
-            "args": {"lat": {}, "lon": {}, "color": {}, "size": {},},
+            "args": {"lat": {}, "lon": {}, "color": {}, "size": {}, },
             "function": px.scatter_geo,
             "category": "Outline Maps",
         },
         "line_geo": {
             "name": "line_geo",
-            "args": {"lat": {}, "lon": {}, "color": {},},
+            "args": {"lat": {}, "lon": {}, "color": {}, },
             "function": px.line_geo,
             "category": "Outline Maps",
         },
         "choropleth": {
             "name": "choropleth",
-            "args": {"lat": {}, "lon": {},},
+            "args": {"lat": {}, "lon": {}, },
             "function": px.choropleth,
             "category": "Outline Maps",
         },
         # Polar Charts
         "scatter_polar": {
             "name": "scatter_polar",
-            "args": {"r": {}, "theta": {}, "color": {},},
+            "args": {"r": {}, "theta": {}, "color": {}, },
             "function": px.scatter_polar,
             "category": "Polar Charts",
         },
         "line_polar": {
             "name": "line_polar",
-            "args": {"r": {}, "theta": {}, "color": {},},
+            "args": {"r": {}, "theta": {}, "color": {}, },
             "function": px.line_polar,
             "category": "Polar Charts",
         },
         "bar_polar": {
             "name": "bar_polar",
-            "args": {"r": {}, "theta": {}, "color": {},},
+            "args": {"r": {}, "theta": {}, "color": {}, },
             "function": px.bar_polar,
             "category": "Polar Charts",
         },
@@ -353,15 +350,13 @@ def clear_layout(layout):
 
 if __name__ == "__main__":
     from pandasgui.utility import fix_ipython, fix_pyqt
+    from pandasgui.datasets import iris, pokemon, multi_df
 
     fix_ipython()
     fix_pyqt()
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
 
-    gb = Grapher(pokemon, "pokemon")
-    gb.show()
-
-    gb2 = Grapher(iris, "iris")
+    gb2 = Grapher(multi_df, "multi_df")
     gb2.show()
 
     app.exec_()
