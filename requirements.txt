@@ -1,0 +1,5 @@
+pandas
+PyQt5
+PyQtWebEngine
+plotly
+setuptools

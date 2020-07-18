@@ -51,10 +51,6 @@ tag indicating the version number, and this will be what is available on PyPi.
 - Import CSV files with drag & drop
 - Tabs showing column statistics and histograms
 
-## Requirements
-- pandas
-- PyQt5
-- seaborn
 
 ## Screenshots
 DataFrame Viewer

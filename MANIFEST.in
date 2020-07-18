@@ -1,2 +1,1 @@
-include pandasgui/data/*.csv
 include pandasgui/images/*.png

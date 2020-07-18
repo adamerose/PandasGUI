@@ -1,9 +1,6 @@
 import sys
-import traceback
 
-import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
 from PyQt5 import QtWidgets
 
 from pandasgui.utility import get_logger
