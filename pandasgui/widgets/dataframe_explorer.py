@@ -1,62 +1,52 @@
-"""DataFrameExplorer"""
-
-from PyQt5 import QtWidgets
-import pandas as pd
 import sys
-import matplotlib.pyplot as plt
-import seaborn as sns
-from pandasgui.widgets import DataFrameViewer
-from pandasgui.widgets import FigureViewer
-from pandasgui.widgets import GraphBuilder
-import traceback
+
+import pandas as pd
+from PyQt5 import QtWidgets
+
+from pandasgui.utility import get_logger
+from pandasgui.widgets.dataframe_viewer import DataFrameViewer
+from pandasgui.widgets.grapher import Grapher
+
+logger = get_logger(__name__)
+
 
 class DataFrameExplorer(QtWidgets.QTabWidget):
-    """
-    This is a QTabWidget for analyzing a single DataFrame where the first tab is a DataFrameViewer widget
-
-    Args:
-        df (DataFrame): The DataFrame to display
-    """
-
-    def __init__(self, df):
+    def __init__(self, df, editable=True):
 
         super().__init__()
 
-        df = df.copy()
         self.df = df
+        self.editable = editable
 
         # DataFrame tab
-        self.dataframe_tab = DataFrameViewer(self.df)
+        self.dataframe_tab = DataFrameViewer(self.df, editable=self.editable)
         self.addTab(self.dataframe_tab, "DataFrame")
 
         # Statistics tab
-        try:
-            self.statistics_tab = self.make_statistics_tab(df)
-            self.addTab(self.statistics_tab, "Statistics")
-        except:
-            traceback.print_exc()
+        self.statistics_tab = self.make_statistics_tab(df)
+        self.addTab(self.statistics_tab, "Statistics")
 
-        # Histogram tab
-        graph_maker = GraphBuilder(df)
+        # Grapher tab
+        graph_maker = Grapher(df)
         self.addTab(graph_maker, "Grapher")
 
     def make_statistics_tab(self, df):
-        stats_df = pd.DataFrame({
-            'Type': df.dtypes.replace('object', 'string'),
-            'Count': df.count(),
-            'Mean': df.mean(numeric_only=True),
-            'StdDev': df.std(numeric_only=True),
-            'Min': df.min(numeric_only=True),
-            'Max': df.max(numeric_only=True),
-        })
-        w = DataFrameViewer(stats_df)
+        stats_df = pd.DataFrame(
+            {
+                "Type": df.dtypes.replace("object", "string"),
+                "Count": df.count(),
+                "Mean": df.mean(numeric_only=True),
+                "StdDev": df.std(numeric_only=True),
+                "Min": df.min(numeric_only=True),
+                "Max": df.max(numeric_only=True),
+            }
+        )
+        w = DataFrameViewer(stats_df, editable=self.editable)
         w.setAutoFillBackground(True)
         return w
 
 
-
-# Examples
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
 
     from pandasgui.datasets import iris, flights, multi, pokemon
