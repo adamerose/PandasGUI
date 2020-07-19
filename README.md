@@ -54,10 +54,10 @@ tag indicating the version number, and this will be what is available on PyPi.
 
 ## Screenshots
 DataFrame Viewer
-![](https://raw.githubusercontent.com/adamerose/pandasgui/master/screenshots/main.png)
+<img src="https://raw.githubusercontent.com/adamerose/pandasgui/master/screenshots/dataframe.png" alt="Screenshot" width="500"/>
 Statistics
-![](https://raw.githubusercontent.com/adamerose/pandasgui/master/screenshots/statistics.png)
+<img src="https://raw.githubusercontent.com/adamerose/pandasgui/master/screenshots/statistics.png" alt="Screenshot" width="500"/>
 Grapher
-![](https://raw.githubusercontent.com/adamerose/pandasgui/master/screenshots/grapher.png)
+<img src="https://raw.githubusercontent.com/adamerose/pandasgui/master/screenshots/grapher.png" alt="Screenshot" width="500"/>
 MultiIndex Support
-![](https://raw.githubusercontent.com/adamerose/pandasgui/master/screenshots/screenshot4.png)
+<img src="https://raw.githubusercontent.com/adamerose/pandasgui/master/screenshots/multi_index.png" alt="Screenshot" width="500"/>
