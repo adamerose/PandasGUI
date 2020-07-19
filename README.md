@@ -49,15 +49,23 @@ tag indicating the version number, and this will be what is available on PyPi.
 - Interactive plotting
 - Statistics summary
 - MultiIndex support
-- Copy & Paste from GUI
+- Cell editing and copy / paste
 - Import CSV files with drag & drop
 
+
 ## Screenshots
-DataFrame Viewer
+DataFrame Viewer  
+
 <img src="https://raw.githubusercontent.com/adamerose/pandasgui/develop/screenshots/dataframe.png" alt="Screenshot" width="500"/>
-Statistics
+
+Statistics  
+
 <img src="https://raw.githubusercontent.com/adamerose/pandasgui/develop/screenshots/statistics.png" alt="Screenshot" width="500"/>
-Grapher
+
+Grapher  
+
 <img src="https://raw.githubusercontent.com/adamerose/pandasgui/develop/screenshots/grapher.png" alt="Screenshot" width="500"/>
-MultiIndex Support
+
+MultiIndex Support  
+
 <img src="https://raw.githubusercontent.com/adamerose/pandasgui/develop/screenshots/multi_index.png" alt="Screenshot" width="500"/>
