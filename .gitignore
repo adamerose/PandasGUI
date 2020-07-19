@@ -9,4 +9,4 @@ __pycache__
 # PyPI
 dist/
 *.egg-info
-pypi.bat
+pypi.sh
