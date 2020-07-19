@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="pandasgui",
-    version="0.2.0",
+    version="0.2.1",
     description="A GUI for Pandas DataFrames.",
     author="Adam Rose",
     author_email="adam.e.rose@hotmail.com",
