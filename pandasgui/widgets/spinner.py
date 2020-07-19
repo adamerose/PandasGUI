@@ -5,7 +5,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 
-class QtWaitingSpinner(QWidget):
+class Spinner(QWidget):
     mColor = QColor(Qt.gray)
     mRoundness = 100.0
     mMinimumTrailOpacity = 31.4159265358979323846
@@ -18,7 +18,9 @@ class QtWaitingSpinner(QWidget):
     mCurrentCounter = 0
     mIsSpinning = False
 
-    def __init__(self, centerOnParent=True, disableParentWhenSpinning=True, *args, **kwargs):
+    def __init__(
+        self, centerOnParent=True, disableParentWhenSpinning=True, *args, **kwargs
+    ):
         QWidget.__init__(self, *args, **kwargs)
         self.mCenterOnParent = centerOnParent
         self.mDisableParentWhenSpinning = disableParentWhenSpinning
@@ -43,12 +45,16 @@ class QtWaitingSpinner(QWidget):
         self.setFixedSize(size, size)
 
     def updateTimer(self):
-        self.timer.setInterval(1000 / (self.mNumberOfLines * self.mRevolutionsPerSecond))
+        self.timer.setInterval(
+            1000 / (self.mNumberOfLines * self.mRevolutionsPerSecond)
+        )
 
     def updatePosition(self):
         if self.parentWidget() and self.mCenterOnParent:
-            self.move(self.parentWidget().width() / 2 - self.width() / 2,
-                      self.parentWidget().height() / 2 - self.height() / 2)
+            self.move(
+                self.parentWidget().width() / 2 - self.width() / 2,
+                self.parentWidget().height() / 2 - self.height() / 2,
+            )
 
     def lineCountDistanceFromPrimary(self, current, primary, totalNrOfLines):
         distance = primary - current
@@ -56,7 +62,9 @@ class QtWaitingSpinner(QWidget):
             distance += totalNrOfLines
         return distance
 
-    def currentLineColor(self, countDistance, totalNrOfLines, trailFadePerc, minOpacity, color):
+    def currentLineColor(
+        self, countDistance, totalNrOfLines, trailFadePerc, minOpacity, color
+    ):
         if countDistance == 0:
             return color
 
@@ -85,18 +93,29 @@ class QtWaitingSpinner(QWidget):
 
         for i in range(self.mNumberOfLines):
             painter.save()
-            painter.translate(self.mInnerRadius + self.mLineLength,
-                              self.mInnerRadius + self.mLineLength)
+            painter.translate(
+                self.mInnerRadius + self.mLineLength,
+                self.mInnerRadius + self.mLineLength,
+            )
             rotateAngle = 360.0 * i / self.mNumberOfLines
             painter.rotate(rotateAngle)
             painter.translate(self.mInnerRadius, 0)
-            distance = self.lineCountDistanceFromPrimary(i, self.mCurrentCounter,
-                                                         self.mNumberOfLines)
-            color = self.currentLineColor(distance, self.mNumberOfLines,
-                                          self.mTrailFadePercentage, self.mMinimumTrailOpacity, self.mColor)
+            distance = self.lineCountDistanceFromPrimary(
+                i, self.mCurrentCounter, self.mNumberOfLines
+            )
+            color = self.currentLineColor(
+                distance,
+                self.mNumberOfLines,
+                self.mTrailFadePercentage,
+                self.mMinimumTrailOpacity,
+                self.mColor,
+            )
             painter.setBrush(color)
-            painter.drawRoundedRect(QRect(0, -self.mLineWidth // 2, self.mLineLength, self.mLineLength),
-                                    self.mRoundness, Qt.RelativeSize)
+            painter.drawRoundedRect(
+                QRect(0, -self.mLineWidth // 2, self.mLineLength, self.mLineLength),
+                self.mRoundness,
+                Qt.RelativeSize,
+            )
             painter.restore()
 
     def start(self):
@@ -185,12 +204,12 @@ class QtWaitingSpinner(QWidget):
         self.mMinimumTrailOpacity = minimumTrailOpacity
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     app = QApplication(sys.argv)
     dial = QDialog()
-    w = QtWaitingSpinner(dial)
+    w = Spinner(dial)
     dial.show()
     w.start()
     QTimer.singleShot(1000, w.stop)

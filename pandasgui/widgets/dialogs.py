@@ -1,12 +1,11 @@
 """Dialog box widgets for various GUI functions"""
 
-from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtCore import Qt
-import sys
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
 import re
+import sys
+
+import pandas as pd
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import Qt
 
 from pandasgui.utility import flatten_multiindex
 
@@ -23,7 +22,9 @@ class DialogGeneric(QtWidgets.QDialog):
         default:
     """
 
-    def __init__(self, dataframes, destination_names, title, parent=None, default_df=None):
+    def __init__(
+        self, dataframes, destination_names, title, parent=None, default_df=None
+    ):
 
         super().__init__(parent)
 
@@ -59,7 +60,9 @@ class DialogGeneric(QtWidgets.QDialog):
         btnReset = QtWidgets.QPushButton("Reset")
         btnReset.clicked.connect(self.initColumnPicker)
         buttonLayout = QtWidgets.QHBoxLayout()
-        spacer = QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        spacer = QtWidgets.QSpacerItem(
+            0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum
+        )
         buttonLayout.addSpacerItem(spacer)
         buttonLayout.addWidget(btnReset)
         buttonLayout.addWidget(btnFinish)
@@ -72,7 +75,7 @@ class DialogGeneric(QtWidgets.QDialog):
         self.resize(640, 480)
 
     def finish(self):
-        print('Finish (This should be overridden)')
+        print("Finish (This should be overridden)")
 
     def getDestinationItems(self):
         return self.columnPicker.getDestinationItems()
@@ -82,13 +85,15 @@ class DialogGeneric(QtWidgets.QDialog):
 
     def getDataFrame(self):
         df_name = self.dataframePicker.itemText(self.dataframePicker.currentIndex())
-        return self.dataframes[df_name]['dataframe']
+        return self.dataframes[df_name]["dataframe"]
 
     def dataframeChanged(self):
-        print('dfchanged')
+        print("dfchanged")
         # Get the name of the selected dataframe from the dataframePicker
-        selected_df_name = self.dataframePicker.itemText(self.dataframePicker.currentIndex())
-        self.selected_df = self.dataframes[selected_df_name]['dataframe'].copy()
+        selected_df_name = self.dataframePicker.itemText(
+            self.dataframePicker.currentIndex()
+        )
+        self.selected_df = self.dataframes[selected_df_name]["dataframe"].copy()
 
         self.initColumnPicker()
 
@@ -101,7 +106,9 @@ class DialogGeneric(QtWidgets.QDialog):
 # Widget for dragging options source_names into multiple destination lists (DestList) for usage in
 # the dialog function. For example the destinations could be XVariable, Y-Variables, ColorBy for the ScatterPlot dialog
 class Dragger(QtWidgets.QWidget):
-    def __init__(self,  sources: iter = ('Default Cols',), destinations: iter = ('Default Dest',)):
+    def __init__(
+        self, sources: iter = ("Default Cols",), destinations: iter = ("Default Dest",)
+    ):
         super().__init__()
 
         # Set up widgets and layout
@@ -144,7 +151,7 @@ class Dragger(QtWidgets.QWidget):
 # Though the content is a flat list this is implemented as a QTreeWidget for some additional functionality like column
 # titles and multiple columns
 class DestList(QtWidgets.QTreeWidget):
-    def __init__(self, title='Variable', parent=None):
+    def __init__(self, title="Variable", parent=None):
         super().__init__(parent)
         self.title = title
         self.setHeaderLabels([title])
@@ -192,7 +199,11 @@ class RegexSourceList(QtWidgets.QWidget):
         layout.addWidget(self.list)
 
     def filter(self):
-        filteredItems = [item for item in self.item_list if re.search(self.searchBox.text().lower(), item.lower())]
+        filteredItems = [
+            item
+            for item in self.item_list
+            if re.search(self.searchBox.text().lower(), item.lower())
+        ]
         self.list.setItems(filteredItems)
 
     def setItems(self, items):
@@ -201,9 +212,9 @@ class RegexSourceList(QtWidgets.QWidget):
 
 
 class SourceList(QtWidgets.QListWidget):
-    '''
+    """
     A QListWidget that shows the list of column names for a dataframe given as columnNames
-    '''
+    """
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -240,8 +251,13 @@ class SourceList(QtWidgets.QListWidget):
 ###
 class PivotDialog(DialogGeneric):
     def __init__(self, dataframes, default_df=None, parent=None):
-        super().__init__(dataframes, destination_names=['index', 'columns', 'values'], default_df=default_df,
-                         title='Pivot', parent=parent)
+        super().__init__(
+            dataframes,
+            destination_names=["index", "columns", "values"],
+            default_df=default_df,
+            title="Pivot",
+            parent=parent,
+        )
 
         self.show()
 
@@ -251,11 +267,12 @@ class PivotDialog(DialogGeneric):
         df_name = self.getDataFrameName()
 
         try:
-            index = dict['index']
-            columns = dict['columns']
-            values = dict['values']
+            index = dict["index"]
+            columns = dict["columns"]
+            values = dict["values"]
 
             from pandasgui import show
+
             pivot_table = df.pivot_table(values, index, columns)
 
             self.gui.add_dataframe(df_name + "_pivot", pivot_table, parent_name=df_name)
@@ -266,6 +283,7 @@ class PivotDialog(DialogGeneric):
 
 ##
 
+
 class Categorizer(QtWidgets.QDialog):
     def __init__(self, df, column):
         super().__init__()
@@ -274,11 +292,12 @@ class Categorizer(QtWidgets.QDialog):
         self.setLayout(self.layout)
         self.df = df
         from pandasgui import show
+
         self.column_name = column
         self.names = QtWidgets.QLineEdit()
         self.names.textChanged.connect(self.makePicker)
 
-        self.picker = Dragger(['col1', 'col2', 'col3'], df[column].astype(str).unique())
+        self.picker = Dragger(["col1", "col2", "col3"], df[column].astype(str).unique())
 
         # Add button
         btnFinish = QtWidgets.QPushButton("Finish")
@@ -286,7 +305,9 @@ class Categorizer(QtWidgets.QDialog):
         btnReset = QtWidgets.QPushButton("Reset")
         btnReset.clicked.connect(self.finish)
         buttonLayout = QtWidgets.QHBoxLayout()
-        spacer = QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        spacer = QtWidgets.QSpacerItem(
+            0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum
+        )
         buttonLayout.addSpacerItem(spacer)
         buttonLayout.addWidget(btnReset)
         buttonLayout.addWidget(btnFinish)
@@ -300,7 +321,9 @@ class Categorizer(QtWidgets.QDialog):
     def makePicker(self):
         self.layout.removeWidget(self.picker)
         self.df[self.column_name].astype(str).unique()
-        self.picker = Dragger(self.names.text().split(','), self.df[self.column_name].astype(str).unique())
+        self.picker = Dragger(
+            self.names.text().split(","), self.df[self.column_name].astype(str).unique()
+        )
         print(self.df[self.column_name].astype(str).unique())
         self.layout.addWidget(self.picker)
 
@@ -310,11 +333,11 @@ class Categorizer(QtWidgets.QDialog):
         try:
             print(self.picker.getDestinationItems())
             mapping = {
-                'Columbia': 'South-America',
-                'Ecuador': 'South-America',
-                'Peru': 'South-America',
-                'South-Africa': 'Africa',
-                'Namibia': 'Africa',
+                "Columbia": "South-America",
+                "Ecuador": "South-America",
+                "Peru": "South-America",
+                "South-Africa": "Africa",
+                "Namibia": "Africa",
             }
 
             results = self.picker.getDestinationItems()
@@ -324,8 +347,11 @@ class Categorizer(QtWidgets.QDialog):
                     mapping[value] = key
 
             print(mapping)
-            self.df[self.column_name + ' Categorized'] = self.df[self.column_name].astype(str).replace(mapping)
+            self.df[self.column_name + " Categorized"] = (
+                self.df[self.column_name].astype(str).replace(mapping)
+            )
             from pandasgui import show
+
             show(self.df)
 
         except Exception as e:
@@ -334,8 +360,13 @@ class Categorizer(QtWidgets.QDialog):
 
 class ScatterDialog(DialogGeneric):
     def __init__(self, dataframes, default_df=None, parent=None):
-        super().__init__(dataframes, destination_names=['X Variable', 'Y Variable', 'Color By'], default_df=default_df,
-                         title='Scatter Plot', parent=parent)
+        super().__init__(
+            dataframes,
+            destination_names=["X Variable", "Y Variable", "Color By"],
+            default_df=default_df,
+            title="Scatter Plot",
+            parent=parent,
+        )
 
         self.show()
 
@@ -344,22 +375,19 @@ class ScatterDialog(DialogGeneric):
         df = self.getDataFrame()
 
         try:
-            x = dict['X Variable'][0]
-            y = dict['Y Variable'][0]
-            c = dict['Color By'][0]
+            x = dict["X Variable"][0]
+            y = dict["Y Variable"][0]
+            c = dict["Color By"][0]
         except IndexError:
             c = None
 
-        sns.scatterplot(x, y, c, data=df)
-        plt.show()
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
     from PyQt5.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
 
-    test = Dragger(sources=['a', 'b'], destinations=['x', 'y', 'z'])
+    test = Dragger(sources=["a", "b"], destinations=["x", "y", "z"])
     test.show()
     sys.exit(app.exec_())

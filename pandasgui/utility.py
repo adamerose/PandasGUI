@@ -1,22 +1,44 @@
-"""Reusable utility functions"""
+class DotDict(dict):
+    __getattr__ = dict.__getitem__
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
 
-import pandas as pd
-import numpy as np
-import sys
+    def __init__(self, dct):
+        for key, value in dct.items():
+            if hasattr(value, "keys"):
+                value = DotDict(value)
+            self[key] = value
 
-# https://stackoverflow.com/questions/34363552/python-process-finished-with-exit-code-1-when-using-pycharm-and-pyqt5
+
+def get_logger(logger_name=None):
+    import logging
+    import sys
+
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(logging.INFO)
+
+    formatter = logging.Formatter(
+        "%(asctime)s — %(name)s — %(levelname)s — %(message)s"
+    )
+
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
+
+    return logger
+
+
+# https://stackoverflow.com/a/47275100/3620725
 def fix_pyqt():
-    # Back up the reference to the exceptionhook
+    import sys
+
     sys._excepthook = sys.excepthook
 
     def my_exception_hook(exctype, value, traceback):
-        # Print the error and traceback
         print(exctype, value, traceback)
-        # Call the normal Exception hook after
         sys._excepthook(exctype, value, traceback)
         sys.exit(1)
 
-    # Set the exception hook to our wrapping function
     sys.excepthook = my_exception_hook
 
 
@@ -24,6 +46,7 @@ def fix_pyqt():
 def fix_ipython():
     try:
         from IPython import get_ipython
+
         ipython = get_ipython()
         if ipython is not None:
             ipython.magic("gui qt5")
@@ -31,32 +54,11 @@ def fix_ipython():
         pass
 
 
-# %% Reshaping
-
-def pivot(df, keys, categories, data):
-    return pivoted_df
+def flatten_multiindex(mi, sep=" - ", format=None):
+    import pandas as pd
 
 
-# %%
-def save_figs_to_ppt(figs, filename):
-    from pptx import Presentation
-
-    prs = Presentation()
-    title_slide_layout = prs.slide_layouts[0]
-    slide = prs.slides.add_slide(title_slide_layout)
-    title = slide.shapes.title
-    subtitle = slide.placeholders[1]
-
-    title.text = "Hello, World!"
-    subtitle.text = "python-pptx was here!"
-
-    prs.save('test.pptx')
-
-
-def flatten_multiindex(mi, sep=' - ', format=None):
-    if type(mi) == pd.core.indexes.base.Index:
-        return mi
-    elif type(mi) == pd.core.indexes.multi.MultiIndex:
+    if issubclass(type(mi), pd.core.indexes.multi.MultiIndex):
         # Flatten multi-index headers
         if format == None:
             # Flattern by putting sep between each header value
@@ -69,53 +71,25 @@ def flatten_multiindex(mi, sep=' - ', format=None):
                 placeholders = []
                 for name in mi.names:
                     if name is None:
-                        name = ''
-                    name = '{' + str(name) + '}'
+                        name = ""
+                    name = "{" + str(name) + "}"
                     placeholders.append(name)
 
                 # Check if index segment contains each placeholder
-                if all([item != '' for item in tuple]):
+                if all([item != "" for item in tuple]):
                     # Replace placeholders in format with corresponding values
                     flat_name = format
-                    for i, val in enumerate(tuple):  # Iterates over the values in this index segment
+                    for i, val in enumerate(
+                        tuple
+                    ):  # Iterates over the values in this index segment
                         flat_name = flat_name.replace(placeholders[i], val)
                 else:
                     # If the segment doesn't contain all placeholders, just join them with sep instead
                     flat_name = sep.join(tuple).strip(sep)
                 flat_index.append(flat_name)
+    elif issubclass(type(mi), pd.core.indexes.base.Index):
+        return mi
     else:
-        raise TypeError
+        raise TypeError(f"Expected Index but got {type(mi)}")
 
     return flat_index
-
-
-if __name__ == '__main__':
-    #### EXAMPLES ####
-    from pandasgui import show
-
-    X = False  # I'm just using "if X:" instead of "if False:" so my IDE doesn't complain about unreachable code
-    #### flatten_multiindex ####
-    if 1:
-        arrays = [['bar', 'bar', 'baz', 'baz', 'foo', 'foo', 'qux', 'qux'],
-                  ['one', 'two', 'one', 'two', 'one', 'two', 'one', 'two']]
-        tuples = list(zip(*arrays))
-        index = pd.MultiIndex.from_tuples(tuples, names=['first', 'second'])
-        s = pd.Series(np.random.randn(8), index=index)
-        show(s, nonblocking=True)
-        s.index = flatten_multiindex(s.index)
-        show(s)
-
-    #### pivot ####
-    if X:
-        pass
-    if X:
-        df = pd.read_csv('sample_data/pokemon.csv')
-        keys = ['Generation']
-        categories = ['Type 1', 'Type 2']
-        data = {'Attack': ['min', 'max'], 'Defense': ['mean']}
-        # data = {'Attack': ['mean']}
-
-        grouped = df.groupby(keys + categories)
-        aggregated = grouped.agg(data)
-        aggregated.columns.names = ['AggColumn', 'AggFunc']
-        pivoted_df = aggregated.unstack(categories)

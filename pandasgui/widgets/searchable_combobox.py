@@ -3,11 +3,10 @@
 # https://stackoverflow.com/a/7693234/3620725
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt, QSortFilterProxyModel
-from PyQt5.QtWidgets import QCompleter, QComboBox
+from PyQt5.QtCore import Qt
 
 
-class SearchableComboBox(QComboBox):
+class SearchableComboBox(QtWidgets.QComboBox):
     def __init__(self, string_list, parent=None):
         super(SearchableComboBox, self).__init__(parent)
 
@@ -15,14 +14,14 @@ class SearchableComboBox(QComboBox):
         self.setEditable(True)
 
         # add a filter model to filter matching items
-        self.pFilterModel = QSortFilterProxyModel(self)
+        self.pFilterModel = QtCore.QSortFilterProxyModel(self)
         self.pFilterModel.setFilterCaseSensitivity(Qt.CaseInsensitive)
         self.pFilterModel.setSourceModel(self.model())
 
         # add a completer, which uses the filter model
-        self.completer = QCompleter(self.pFilterModel, self)
+        self.completer = QtWidgets.QCompleter(self.pFilterModel, self)
         # always show all (filtered) completions
-        self.completer.setCompletionMode(QCompleter.UnfilteredPopupCompletion)
+        self.completer.setCompletionMode(QtWidgets.QCompleter.UnfilteredPopupCompletion)
         self.setCompleter(self.completer)
 
         # connect signals
@@ -32,14 +31,12 @@ class SearchableComboBox(QComboBox):
         # either fill the standard model of the combobox
         self.addItems(string_list)
 
-
     # on selection of an item from the completer, select the corresponding item from combobox
     def on_completer_activated(self, text):
         if text:
             index = self.findText(text)
             self.setCurrentIndex(index)
             self.activated[str].emit(self.itemText(index))
-
 
     # on model change, update the models of the filter and completer as well
     def setModel(self, model):
@@ -59,10 +56,9 @@ if __name__ == "__main__":
     from PyQt5.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    string_list = ['hola muchachos', 'adios amigos', 'hello world', 'good bye']
+    string_list = ["hola muchachos", "adios amigos", "hello world", "good bye"]
     combo = SearchableComboBox(string_list)
-    combo.currentIndexChanged.connect(lambda ix: print(combo.itemText(ix)))
-    print(combo.findChildren(QtWidgets.QWidget))
+
     combo.resize(300, 40)
     combo.show()
 
