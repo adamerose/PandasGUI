@@ -818,9 +818,9 @@ class HeaderView(QtWidgets.QTableView):
             if self.over_header_edge(mouse_position) is not None:
                 header_index = self.over_header_edge(mouse_position)
                 if self.orientation == Qt.Horizontal:
-                    self.parent.auto_size_column(header_index)
+                    self.parent().auto_size_column(header_index)
                 elif self.orientation == Qt.Vertical:
-                    self.parent.auto_size_row(header_index)
+                    self.parent().auto_size_row(header_index)
                 return True
 
         # Handle active drag resizing
@@ -839,17 +839,17 @@ class HeaderView(QtWidgets.QTableView):
                 if size > 10:
                     if self.orientation == Qt.Horizontal:
                         self.setColumnWidth(self.header_being_resized, size)
-                        self.parent.dataView.setColumnWidth(
+                        self.parent().dataView.setColumnWidth(
                             self.header_being_resized, size
                         )
                     if self.orientation == Qt.Vertical:
                         self.setRowHeight(self.header_being_resized, size)
-                        self.parent.dataView.setRowHeight(
+                        self.parent().dataView.setRowHeight(
                             self.header_being_resized, size
                         )
 
                     self.updateGeometry()
-                    self.parent.dataView.updateGeometry()
+                    self.parent().dataView.updateGeometry()
                 return True
 
             # Set the cursor shape
@@ -915,7 +915,7 @@ class TrackingSpacer(QtWidgets.QFrame):
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
 
-    from pandasgui.datasets import iris, flights, pokemon, multi_df, simple
+    from pandasgui.datasets import pokemon
 
     # view = DataFrameViewer(pokemon)
     # view.show()
