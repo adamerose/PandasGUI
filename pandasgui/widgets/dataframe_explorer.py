@@ -6,11 +6,12 @@ from PyQt5 import QtWidgets
 from pandasgui.utility import get_logger
 from pandasgui.widgets.dataframe_viewer import DataFrameViewer
 from pandasgui.widgets.grapher import Grapher
+from pandasgui.widgets.detachable_tab_widget import DetachableTabWidget
 
 logger = get_logger(__name__)
 
 
-class DataFrameExplorer(QtWidgets.QTabWidget):
+class DataFrameExplorer(DetachableTabWidget):
     def __init__(self, df, editable=True):
 
         super().__init__()
