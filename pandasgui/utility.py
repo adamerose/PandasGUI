@@ -44,19 +44,15 @@ def fix_pyqt():
 
 # This makes it so PyQt5 windows don't become unresponsive in IPython outside app._exec() loops
 def fix_ipython():
-    try:
-        from IPython import get_ipython
+    from IPython import get_ipython
 
-        ipython = get_ipython()
-        if ipython is not None:
-            ipython.magic("gui qt5")
-    except ImportError:
-        pass
+    ipython = get_ipython()
+    if ipython is not None:
+        ipython.magic("gui qt5")
 
 
 def flatten_multiindex(mi, sep=" - ", format=None):
     import pandas as pd
-
 
     if issubclass(type(mi), pd.core.indexes.multi.MultiIndex):
         # Flatten multi-index headers
