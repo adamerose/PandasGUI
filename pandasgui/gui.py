@@ -82,8 +82,6 @@ class PandasGui(QtWidgets.QMainWindow):
         self.app.setWindowIcon(QtGui.QIcon(pdgui_icon_path))
         self.show()
 
-        # https://stackoverflow.com/a/27178019/3620725
-        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
     # Create and add all widgets to GUI.
     def init_ui(self):
