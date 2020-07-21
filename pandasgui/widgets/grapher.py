@@ -2,6 +2,7 @@ import sys
 
 import plotly.express as px
 from PyQt5 import QtCore, QtGui, QtWidgets
+import pandas as pd
 
 from pandasgui.utility import DotDict, flatten_multiindex, get_logger
 from pandasgui.widgets.plotly_viewer import PlotlyViewer
@@ -17,7 +18,8 @@ class Grapher(QtWidgets.QWidget):
         self.df = df.copy()
 
         self.df.columns = flatten_multiindex(self.df.columns)
-        self.df.index = flatten_multiindex(self.df.index)
+        if issubclass(type(self.df.index), pd.core.indexes.multi.MultiIndex):
+            self.df = df.reset_index()
 
         self.prev_kwargs = (
             {}
