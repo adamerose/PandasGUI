@@ -17,9 +17,7 @@ def get_logger(logger_name=None):
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.INFO)
 
-    formatter = logging.Formatter(
-        "%(asctime)s — %(name)s — %(levelname)s — %(message)s"
-    )
+    formatter = logging.Formatter("PandasGui %(levelname)s — %(name)s — %(message)s")
 
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
@@ -75,9 +73,7 @@ def flatten_multiindex(mi, sep=" - ", format=None):
                 if all([item != "" for item in tuple]):
                     # Replace placeholders in format with corresponding values
                     flat_name = format
-                    for i, val in enumerate(
-                        tuple
-                    ):  # Iterates over the values in this index segment
+                    for i, val in enumerate(tuple):  # Iterates over the values in this index segment
                         flat_name = flat_name.replace(placeholders[i], val)
                 else:
                     # If the segment doesn't contain all placeholders, just join them with sep instead
