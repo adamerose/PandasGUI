@@ -17,6 +17,11 @@ logger = get_logger(__name__)
 # Enables PyQt event loop in iPython
 fix_ipython()
 
+# Enable high DPI. This only works before a QApplication is created
+try:
+    QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
+except:
+    pass
 
 class PandasGui(QtWidgets.QMainWindow):
     def __init__(self, settings: dict = {}, **kwargs):
@@ -25,11 +30,6 @@ class PandasGui(QtWidgets.QMainWindow):
             settings: Dict of settings, as defined in pandasgui.store.Settings
             kwargs: Dict of DataFrames where key is name & val is the DataFrame object
         """
-
-        try:  # Enable high DPI. This only works before a QApplication is created
-            QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
-        except:
-            pass
 
         self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
         self.store = Store()
@@ -59,13 +59,7 @@ class PandasGui(QtWidgets.QMainWindow):
 
         # Set window size
         screen = QtWidgets.QDesktopWidget().screenGeometry()
-        percentage_of_screen = 0.7
-        size = tuple(
-            (
-                    pd.np.array([screen.width(), screen.height()]) * percentage_of_screen
-            ).astype(int)
-        )
-        self.resize(QtCore.QSize(*size))
+        self.resize(QtCore.QSize(int(0.7 * screen.width()), int(0.7 * screen.height())))
 
         # Center window on screen
         screen = QtWidgets.QDesktopWidget().screenGeometry()
@@ -121,13 +115,16 @@ class PandasGui(QtWidgets.QMainWindow):
         self.setCentralWidget(self.splitter)
 
     def import_dataframe(self, path):
-        if os.path.isfile(path) and path.endswith(".csv"):
-            df_name = os.path.split(path)[1]
-            df_object = pd.read_csv(path)
-            self.add_dataframe(df_name, df_object)
+        try:
+            if os.path.isfile(path) and path.endswith(".csv"):
+                df_name = os.path.split(path)[1]
+                df_object = pd.read_csv(path)
+                self.add_dataframe(df_name, df_object)
 
-        else:
-            logger.warning("Invalid file: ", path)
+            else:
+                logger.warning("Invalid file: ", path)
+        except Exception as e:
+            logger.error(f"Failed to import {path}\n", e)
 
     def add_dataframe(self, df_name, df_object):
         """
@@ -150,7 +147,7 @@ class PandasGui(QtWidgets.QMainWindow):
         self.store.data[df_name] = {}
         self.store.data[df_name]["dataframe"] = df_object
 
-        dfe = DataFrameExplorer(df_object)
+        dfe = DataFrameExplorer(df_object, editable=self.store.settings.editable)
         self.stacked_widget.addWidget(dfe)
 
         self.store.data[df_name]["dataframe_explorer"] = dfe
@@ -297,11 +294,9 @@ def show(*args, settings: dict = {}, **kwargs):
     kwargs = {**kwargs, **dataframes}
 
     pandas_gui = PandasGui(settings=settings, **kwargs)
-
     return pandas_gui
-
 
 if __name__ == "__main__":
     from pandasgui.datasets import all_datasets
 
-    x = show(**all_datasets, settings={"block": True})
+    gui = show(**all_datasets, settings={"block": True})

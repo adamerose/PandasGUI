@@ -12,14 +12,11 @@ logger = get_logger(__name__)
 try:
     from PyQt5 import QtWebEngineWidgets
 except ImportError as e:
-    if (
-        e.msg
-        == "QtWebEngineWidgets must be imported before a QCoreApplication instance is created"
-    ):
+    if e.msg == "QtWebEngineWidgets must be imported before a QCoreApplication instance is created":
         logger.info("Killing QtWidgets.QApplication to reimport QtWebEngineWidgets")
         from PyQt5 import QtWidgets
 
-        app = QtWidgets.QtWidgets.QApplication.instance()
+        app = QtWidgets.QApplication.instance()
         if app is not None:
             import sip
 
@@ -29,8 +26,7 @@ except ImportError as e:
         from PyQt5 import QtCore, QtWebEngineWidgets
 
         QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_ShareOpenGLContexts)
-        app = QtWidgets.QtWidgets.QApplication(sys.argv)
-        from PyQt5 import QtWebEngineWidgets
+        app = QtWidgets.QApplication(sys.argv)
     else:
         raise e
 
