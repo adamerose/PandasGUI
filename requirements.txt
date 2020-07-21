@@ -3,3 +3,4 @@ PyQt5
 PyQtWebEngine
 plotly
 setuptools
+appdirs
