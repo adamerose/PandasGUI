@@ -204,8 +204,8 @@ class DataFrameViewer(QtWidgets.QWidget):
             constrained_rect = QtCore.QRect(0, 0, cell_width, 0)
             h = (
                 self.dataView.fontMetrics()
-                .boundingRect(constrained_rect, Qt.TextWordWrap, text)
-                .height()
+                    .boundingRect(constrained_rect, Qt.TextWordWrap, text)
+                    .height()
             )
 
             height = max(height, h)
@@ -250,10 +250,10 @@ class DataFrameViewer(QtWidgets.QWidget):
 # Remove dotted border on cell focus.  https://stackoverflow.com/a/55252650/3620725
 class NoFocusDelegate(QtWidgets.QStyledItemDelegate):
     def paint(
-        self,
-        painter: QtGui.QPainter,
-        item: QtWidgets.QStyleOptionViewItem,
-        ix: QtCore.QModelIndex,
+            self,
+            painter: QtGui.QPainter,
+            item: QtWidgets.QStyleOptionViewItem,
+            ix: QtCore.QModelIndex,
     ):
         if item.state & QtWidgets.QStyle.State_HasFocus:
             item.state = item.state ^ QtWidgets.QStyle.State_HasFocus
@@ -284,9 +284,9 @@ class DataTableModel(QtCore.QAbstractTableModel):
     # Returns the data from the DataFrame
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if (
-            role == QtCore.Qt.DisplayRole
-            or role == QtCore.Qt.EditRole
-            or role == QtCore.Qt.ToolTipRole
+                role == QtCore.Qt.DisplayRole
+                or role == QtCore.Qt.EditRole
+                or role == QtCore.Qt.ToolTipRole
         ):
             row = index.row()
             col = index.column()
@@ -317,9 +317,9 @@ class DataTableModel(QtCore.QAbstractTableModel):
     def flags(self, index):
         if self.parent().editable:
             return (
-                QtCore.Qt.ItemIsEditable
-                | QtCore.Qt.ItemIsEnabled
-                | QtCore.Qt.ItemIsSelectable
+                    QtCore.Qt.ItemIsEditable
+                    | QtCore.Qt.ItemIsEnabled
+                    | QtCore.Qt.ItemIsSelectable
             )
         else:
             return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
@@ -405,7 +405,7 @@ class DataTableView(QtWidgets.QTableView):
         rows = [ix.row() for ix in indexes]
         cols = [ix.column() for ix in indexes]
 
-        df = self.parent().df.iloc[min(rows) : max(rows) + 1, min(cols) : max(cols) + 1]
+        df = self.parent().df.iloc[min(rows): max(rows) + 1, min(cols): max(cols) + 1]
 
         # If I try to use Pyperclip without starting new thread large values give access denied error
         def thread_function(df):
@@ -586,7 +586,7 @@ class HeaderView(QtWidgets.QTableView):
 
             # Set selection mode so selecting one row or column at a time adds to selection each time
             if (
-                self.orientation == Qt.Horizontal
+                    self.orientation == Qt.Horizontal
             ):  # This case is for the horizontal header
                 # Get the header's selected columns
                 selection = self.selectionModel().selection()
@@ -834,7 +834,7 @@ class HeaderView(QtWidgets.QTableView):
             if self.header_being_resized is not None:
 
                 size = self.initial_header_size + (
-                    mouse_position - self.resize_start_position
+                        mouse_position - self.resize_start_position
                 )
                 if size > 10:
                     if self.orientation == Qt.Horizontal:
