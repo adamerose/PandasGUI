@@ -4,4 +4,3 @@ PyQt5-sip
 PyQtWebEngine
 plotly
 setuptools
-appdirs

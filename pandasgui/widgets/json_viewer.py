@@ -29,10 +29,10 @@ class TextToTreeItem:
         return titem_list
 
 
-class JsonView(QtWidgets.QWidget):
+class JsonViewer(QtWidgets.QWidget):
 
     def __init__(self, jdata):
-        super(JsonView, self).__init__()
+        super(JsonViewer, self).__init__()
 
         self.find_box = None
         self.tree_widget = None
@@ -69,6 +69,8 @@ class JsonView(QtWidgets.QWidget):
         layout2.addWidget(gbox)
 
         self.setLayout(layout2)
+
+        self.show()
 
     def make_find_ui(self):
 
@@ -136,7 +138,13 @@ class JsonView(QtWidgets.QWidget):
 
 if "__main__" == __name__:
     qt_app = QtWidgets.QApplication(sys.argv)
-    data = {
+    data = [{
+        "name": "Tim",
+        "age": 22,
+        "cars": {
+            "car1": "Mazda",
+        }
+    }, {
         "name": "John",
         "age": 30,
         "cars": {
@@ -144,7 +152,6 @@ if "__main__" == __name__:
             "car2": "BMW",
             "car3": "Fiat"
         }
-    }
-    json_viewer = JsonView(data)
-    json_viewer.show()
+    }]
+    json_viewer = JsonViewer(data)
     sys.exit(qt_app.exec_())

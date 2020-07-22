@@ -19,7 +19,7 @@ class Grapher(QtWidgets.QWidget):
 
         self.df.columns = flatten_multiindex(self.df.columns)
         if issubclass(type(self.df.index), pd.core.indexes.multi.MultiIndex):
-            self.df = df.reset_index()
+            self.df = self.df.reset_index()
 
         self.prev_kwargs = (
             {}

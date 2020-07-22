@@ -17,11 +17,16 @@ logger = get_logger(__name__)
 # Enables PyQt event loop in iPython
 fix_ipython()
 
-# Enable high DPI. This only works before a QApplication is created
-try:
-    QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
-except:
-    pass
+
+def except_hook(cls, exception, traceback):
+    sys.__excepthook__(cls, exception, traceback)
+
+
+# Set the exception hook to our wrapping function
+sys.excepthook = except_hook
+
+# Keep a list of PandasGui widgets so they don't get garbage collected
+refs = []
 
 class PandasGui(QtWidgets.QMainWindow):
     def __init__(self, settings: dict = {}, **kwargs):
@@ -31,8 +36,10 @@ class PandasGui(QtWidgets.QMainWindow):
             kwargs: Dict of DataFrames where key is name & val is the DataFrame object
         """
 
+        refs.append(self)
         self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
         self.store = Store()
+
         # These get built in init_ui()
         self.stacked_widget = None
         self.splitter = None
@@ -75,7 +82,6 @@ class PandasGui(QtWidgets.QMainWindow):
         pdgui_icon_path = pkg_resources.resource_filename(__name__, pdgui_icon)
         self.app.setWindowIcon(QtGui.QIcon(pdgui_icon_path))
         self.show()
-
 
     # Create and add all widgets to GUI.
     def init_ui(self):
@@ -295,6 +301,7 @@ def show(*args, settings: dict = {}, **kwargs):
 
     pandas_gui = PandasGui(settings=settings, **kwargs)
     return pandas_gui
+
 
 if __name__ == "__main__":
     from pandasgui.datasets import all_datasets
