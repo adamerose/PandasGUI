@@ -34,7 +34,7 @@ class DataFrameExplorer(DetachableTabWidget):
     def make_statistics_tab(self, df):
         stats_df = pd.DataFrame(
             {
-                "Type": df.dtypes.replace("object", "string"),
+                "Type": df.dtypes.replace("object", "string").astype(str),
                 "Count": df.count(),
                 "Mean": df.mean(numeric_only=True),
                 "StdDev": df.std(numeric_only=True),
