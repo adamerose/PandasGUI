@@ -55,8 +55,9 @@ def flatten_multiindex(mi, sep=" - ", format=None):
     if issubclass(type(mi), pd.core.indexes.multi.MultiIndex):
         # Flatten multi-index headers
         if format == None:
-            # Flattern by putting sep between each header value
-            flat_index = [sep.join(col).strip(sep) for col in mi.values]
+            # Flatten by putting sep between each header value
+            flat_index = [sep.join([str(x) for x in tup]).strip(sep)
+                          for tup in mi.values]
         else:
             # Flatten according to the provided format string
             flat_index = []
