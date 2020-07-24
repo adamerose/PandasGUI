@@ -46,11 +46,10 @@ class PandasGui(QtWidgets.QMainWindow):
         self.nav_tree = None
 
         # Adds DataFrames listed in kwargs to data store.
-        for i, (df_name, df_object) in enumerate(kwargs.items()):
-            df_object.__class__ = PandasGuiDataFrame
-            df_object.name = df_name
-            self.store.data[df_name] = {}
-            self.store.data[df_name]["dataframe"] = df_object
+        for i, (df_name, df) in enumerate(kwargs.items()):
+            df.__class__ = PandasGuiDataFrame
+            df.name = df_name
+            self.store.data.append(df)
 
         # Add user provided settings to data store
         for key, value in settings.items():
@@ -96,9 +95,8 @@ class PandasGui(QtWidgets.QMainWindow):
         self.nav_tree.setHeaderLabels(["Name", "Shape"])
         self.nav_tree.itemSelectionChanged.connect(self.nav_clicked)
 
-        for df_name in self.store.data.keys():
-            df_object = self.store.data[df_name]["dataframe"]
-            self.add_dataframe(df_name, df_object)
+        for df in self.store.data:
+            self.add_dataframe(df)
 
         # Make splitter to hold nav and DataFrameExplorers
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
@@ -134,32 +132,28 @@ class PandasGui(QtWidgets.QMainWindow):
         except Exception as e:
             logger.error(f"Failed to import {path}\n", e)
 
-    def add_dataframe(self, df_name, df_object):
+    def add_dataframe(self, df):
         """
         Add a new DataFrame to the GUI
         """
 
-        if not issubclass(type(df_object), pd.DataFrame):
+        if not issubclass(type(df), pd.DataFrame):
             try:
-                df_object = pd.DataFrame(df_object)
-                logger.warning(f'Automatically converted "{df_name}" from type {type(df_object)} to DataFrame')
+                df = pd.DataFrame(df)
+                logger.warning(f'Automatically converted "{df.name}" from type {type(df)} to DataFrame')
             except:
-                logger.warning(f'Could not convert "{df_name}" from type {type(df_object)} to DataFrame')
+                logger.warning(f'Could not convert "{df.name}" from type {type(df)} to DataFrame')
                 return
 
         # Non-string column indices causes problems when pulling them from a GUI dropdown (which will give str)
-        if type(df_object.columns) != pd.MultiIndex:
-            df_object.columns = df_object.columns.astype(str)
+        if type(df.columns) != pd.MultiIndex:
+            df.columns = df.columns.astype(str)
 
-        self.store.data[df_name] = {}
-        self.store.data[df_name] = {}
-        self.store.data[df_name]["dataframe"] = df_object
-
-        dfe = DataFrameExplorer(df_object, editable=self.store.settings.editable)
+        dfe = DataFrameExplorer(df, editable=self.store.settings.editable)
+        df.dataframe_explorer = dfe
         self.stacked_widget.addWidget(dfe)
 
-        self.store.data[df_name]["dataframe_explorer"] = dfe
-        self.add_df_to_nav(df_name)
+        self.add_df_to_nav(df.name)
 
     ####################
     # Menu bar functions
@@ -254,7 +248,7 @@ class PandasGui(QtWidgets.QMainWindow):
             parent = self.nav_tree
 
         # Calculate and format the shape of the DataFrame
-        shape = self.store.data[df_name]["dataframe"].shape
+        shape = self.store.get_dataframe(df_name).shape
         shape = str(shape[0]) + " X " + str(shape[1])
 
         item = QtWidgets.QTreeWidgetItem(parent, [df_name, shape])
@@ -272,7 +266,7 @@ class PandasGui(QtWidgets.QMainWindow):
 
         df_name = item.data(0, Qt.DisplayRole)
 
-        dfe = self.store.data[df_name]["dataframe_explorer"]
+        dfe = self.store.get_dataframe(df_name).dataframe_explorer
         self.stacked_widget.setCurrentWidget(dfe)
 
     def test(self):
