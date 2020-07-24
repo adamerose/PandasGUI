@@ -1,12 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Union
 import pandas as pd
-import numpy as np
 
-
-@dataclass
-class CONSTANTS:
-    INDEX: str = None
 
 
 @dataclass
@@ -17,11 +12,12 @@ class Settings:
 
 @dataclass
 class PandasGuiDataFrame(pd.DataFrame):
+
     name: str = None
     dataframe_explorer: "DataFrameExplorer" = None
     dataframe_viewer: "DataFrameViewer" = None
 
-    def set_data(self, df):
+    def update_inplace(self, df):
         self._update_inplace(df)
 
     # Negative number means index level
@@ -60,4 +56,7 @@ class PandasGuiDataFrame(pd.DataFrame):
 @dataclass
 class Store:
     settings: Settings = Settings()
-    data: Dict[(str, PandasGuiDataFrame)] = field(default_factory=dict)
+    data: List[PandasGuiDataFrame] = field(default_factory=list)
+
+    def get_dataframe(self, name):
+        return next((x for x in self.data if x.name == name), None)
