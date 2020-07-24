@@ -7,12 +7,13 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
 from pandasgui.utility import get_logger
+from pandasgui.store import Store, PandasGuiDataFrame
 
 logger = get_logger(__name__)
 
 
 class DataFrameViewer(QtWidgets.QWidget):
-    def __init__(self, df, editable=True):
+    def __init__(self, df: PandasGuiDataFrame, editable=True):
 
         super().__init__()
         self.editable = editable
@@ -20,13 +21,10 @@ class DataFrameViewer(QtWidgets.QWidget):
         # Indicates whether the widget has been shown yet. Set to True in
         self._loaded = False
 
-        if not type(df) == pd.DataFrame:
+        if not issubclass(type(df), pd.DataFrame):
             orig_type = type(df)
             df = df.to_frame()
-            logger.info(
-                f"DataFrame was automatically converted from {orig_type} to DataFrame"
-                " for viewing"
-            )
+            logger.info(f"DataFrame was automatically converted from {orig_type} to DataFrame for viewing")
 
         # Put the df in a wrapper
         self.df = df
@@ -37,6 +35,9 @@ class DataFrameViewer(QtWidgets.QWidget):
         # Create headers
         self.columnHeader = HeaderView(parent=self, orientation=Qt.Horizontal)
         self.indexHeader = HeaderView(parent=self, orientation=Qt.Vertical)
+
+        self.columnHeaderNames = HeaderNamesView(parent=self, orientation=Qt.Horizontal)
+        self.indexHeaderNames = HeaderNamesView(parent=self, orientation=Qt.Vertical)
 
         # Set up layout
         self.gridLayout = QtWidgets.QGridLayout()
@@ -58,6 +59,7 @@ class DataFrameViewer(QtWidgets.QWidget):
             self.dataView.verticalScrollBar().setValue
         )
 
+
         self.dataView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.dataView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
@@ -68,61 +70,55 @@ class DataFrameViewer(QtWidgets.QWidget):
         self.gridLayout.setSpacing(0)
 
         # Toggle level names
-        if not (any(df.columns.names) or df.columns.name):
-            self.columnHeader.verticalHeader().setFixedWidth(0)
-        if not (any(df.index.names) or df.index.name):
-            self.indexHeader.horizontalHeader().setFixedHeight(0)
+        # if not (any(df.columns.names) or df.columns.name):
+        #     self.columnHeader.verticalHeader().setFixedWidth(0)
+        # if not (any(df.index.names) or df.index.name):
+        #     self.indexHeader.horizontalHeader().setFixedHeight(0)
 
-        # Add items to layout
+
+        # Add items to 4x4 grid layout
         self.gridLayout.addWidget(self.columnHeader, 0, 1, 1, 2)
         self.gridLayout.addWidget(self.indexHeader, 1, 0, 2, 2)
         self.gridLayout.addWidget(self.dataView, 2, 2, 1, 1)
         self.gridLayout.addWidget(self.dataView.horizontalScrollBar(), 3, 2, 1, 1)
         self.gridLayout.addWidget(self.dataView.verticalScrollBar(), 2, 3, 1, 1)
+        self.gridLayout.addWidget(self.columnHeaderNames, 0, 3, 1, 1)
+        self.gridLayout.addWidget(self.indexHeaderNames, 0, 0, 1, 1, Qt.AlignBottom)
 
         # These expand when the window is enlarged instead of having the grid squares spread out
         self.gridLayout.setColumnStretch(4, 1)
         self.gridLayout.setRowStretch(4, 1)
 
-        # These placeholders will ensure the size of the blank spaces beside our headers
-        self.gridLayout.addWidget(
-            TrackingSpacer(ref_x=self.columnHeader.verticalHeader()), 3, 1, 1, 1
-        )
-        self.gridLayout.addWidget(
-            TrackingSpacer(ref_y=self.indexHeader.horizontalHeader()), 1, 2, 1, 1
-        )
-        self.gridLayout.addItem(
-            QtWidgets.QSpacerItem(
-                0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
-            ),
-            0,
-            0,
-            1,
-            1,
-        )
+        # # These placeholders will ensure the size of the blank spaces beside our headers
+        # self.gridLayout.addWidget(
+        #     TrackingSpacer(ref_x=self.columnHeader.verticalHeader()), 3, 1, 1, 1
+        # )
+        # self.gridLayout.addWidget(
+        #     TrackingSpacer(ref_y=self.indexHeader.horizontalHeader()), 1, 2, 1, 1
+        # )
+
+        self.gridLayout.addItem(QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding),0,0,1,1,)
 
         # Styling
-        for header in [self.indexHeader, self.columnHeader]:
+        for header in [self.indexHeader, self.columnHeader, self.indexHeaderNames, self.columnHeaderNames]:
             header.setStyleSheet(
                 "background-color: white;"
                 "selection-color: black;"
                 "selection-background-color: #EAEAEA;"
             )
-
         self.dataView.setStyleSheet(
             "background-color: white;"
             "alternate-background-color: #F4F6F6;"
             "selection-color: black;"
             "selection-background-color: #BBDEFB;"
         )
-
-        for item in [self.dataView, self.columnHeader, self.indexHeader]:
+        for item in [self.dataView, self.columnHeader, self.indexHeader, self.indexHeaderNames, self.columnHeaderNames]:
             item.setContentsMargins(0, 0, 0, 0)
             item.setStyleSheet(item.styleSheet() + "border: 0px solid black;")
             item.setItemDelegate(NoFocusDelegate())
 
-    def update_df(self, df):
-        self.df = df
+        self.indexHeaderNames.setDisabled(True)
+        self.columnHeaderNames.setDisabled(True)
 
     def showEvent(self, event: QtGui.QShowEvent):
         """
@@ -441,9 +437,6 @@ class DataTableView(QtWidgets.QTableView):
 
 
 class HeaderModel(QtCore.QAbstractTableModel):
-    """
-    Model for HeaderView
-    """
 
     def __init__(self, parent, orientation):
         super().__init__(parent)
@@ -541,25 +534,10 @@ class HeaderView(QtWidgets.QTableView):
         self.setSpans()
         self.initSize()
 
-        # Orientation specific settings
-        if orientation == Qt.Horizontal:
-            self.setHorizontalScrollBarPolicy(
-                Qt.ScrollBarAlwaysOff
-            )  # Scrollbar is replaced in DataFrameViewer
-            self.horizontalHeader().hide()
-            self.verticalHeader().setDisabled(True)
-            self.verticalHeader().setHighlightSections(
-                False
-            )  # Selection lags a lot without this
-
-        else:
-            self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-            self.verticalHeader().hide()
-            self.horizontalHeader().setDisabled(True)
-
-            self.horizontalHeader().setHighlightSections(
-                False
-            )  # Selection lags a lot without this
+        self.horizontalHeader().hide()
+        self.verticalHeader().hide()
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         # Set initial size
         self.resize(self.sizeHint())
@@ -569,9 +547,8 @@ class HeaderView(QtWidgets.QTableView):
         if self.orientation == Qt.Horizontal:
             df = self.parent().df
 
-            df_sorted = df.sort_values(df.columns[ix.column()], kind="mergesort")
+            df.sort_by(ix.column())
 
-            self.parent().update_df(df_sorted)
             self.parent().data_changed()
 
     # Header
@@ -893,6 +870,96 @@ class HeaderView(QtWidgets.QTableView):
             return QtCore.QSize(self.sizeHint().width(), 0)
 
 
+class HeaderNamesModel(QtCore.QAbstractTableModel):
+
+    def __init__(self, parent, orientation):
+        super().__init__(parent)
+        self.orientation = orientation
+
+    def columnCount(self, parent=None):
+        if self.orientation == Qt.Horizontal:
+            return 1
+        elif self.orientation == Qt.Vertical:
+            return self.parent().df.index.nlevels
+
+    def rowCount(self, parent=None):
+        if self.orientation == Qt.Horizontal:
+            return self.parent().df.columns.nlevels
+        elif self.orientation == Qt.Vertical:
+            return 1
+
+    def data(self, index, role=None):
+        row = index.row()
+        col = index.column()
+
+        if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.ToolTipRole:
+
+            if self.orientation == Qt.Horizontal:
+                return str(self.parent().df.columns.names[row])
+
+            elif self.orientation == Qt.Vertical:
+                return str(self.parent().df.index.names[col])
+
+
+class HeaderNamesView(QtWidgets.QTableView):
+    def __init__(self, parent: DataFrameViewer, orientation):
+        super().__init__(parent)
+
+        # Setup
+        self.orientation = orientation
+        self.table = parent.dataView
+        self.setModel(HeaderNamesModel(parent, orientation))
+        # These are used during column resizing
+        self.header_being_resized = None
+        self.resize_start_position = None
+        self.initial_header_size = None
+
+        self.setFont(QtGui.QFont("Times", weight=QtGui.QFont.Bold))
+
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        self.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        self.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+
+        self.horizontalHeader().hide()
+        self.verticalHeader().hide()
+
+        self.initSize()
+
+    def initSize(self):
+        # Set initial size
+        self.resize(self.sizeHint())
+
+        for ix in range(self.model().columnCount()):
+            self.setColumnWidth(ix, self.columnWidth(ix))
+
+        for ix in range(self.model().rowCount()):
+            self.setRowHeight(ix, self.rowHeight(ix))
+
+    def sizeHint(self):
+
+        if self.orientation == Qt.Horizontal:
+            height = self.parent().columnHeader.sizeHint().height()
+            width = self.columnWidth(0)
+        else:  # Vertical
+            width = self.parent().indexHeader.sizeHint().width()
+            height = self.rowHeight(0)
+
+        return QtCore.QSize(width, height)
+
+    def minimumSizeHint(self):
+        return self.sizeHint()
+
+    def rowHeight(self, row: int) -> int:
+        return self.parent().columnHeader.rowHeight(row)
+
+    def columnWidth(self, column: int) -> int:
+        if self.orientation == Qt.Horizontal:
+            return super().columnWidth(column)
+        else:  # Vertical
+            return self.parent().indexHeader.columnWidth(column)
+
 # This is a fixed size widget with a size that tracks some other widget
 class TrackingSpacer(QtWidgets.QFrame):
     def __init__(self, ref_x=None, ref_y=None):
@@ -915,11 +982,11 @@ class TrackingSpacer(QtWidgets.QFrame):
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
 
-    from pandasgui.datasets import pokemon
+    from pandasgui.datasets import pokemon, mi_manufacturing
 
     # view = DataFrameViewer(pokemon)
     # view.show()
 
-    view2 = DataFrameViewer(pokemon)
+    view2 = DataFrameViewer(mi_manufacturing)
     view2.show()
     app.exec_()
