@@ -7,7 +7,7 @@ import pkg_resources
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
-from pandasgui.store import Store
+from pandasgui.store import Store, PandasGuiDataFrame
 from pandasgui.utility import fix_ipython, fix_pyqt, get_logger
 from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
 from pandasgui.widgets.find_toolbar import FindToolbar
@@ -47,6 +47,8 @@ class PandasGui(QtWidgets.QMainWindow):
 
         # Adds DataFrames listed in kwargs to data store.
         for i, (df_name, df_object) in enumerate(kwargs.items()):
+            df_object.__class__ = PandasGuiDataFrame
+            df_object.name = df_name
             self.store.data[df_name] = {}
             self.store.data[df_name]["dataframe"] = df_object
 
@@ -137,7 +139,7 @@ class PandasGui(QtWidgets.QMainWindow):
         Add a new DataFrame to the GUI
         """
 
-        if type(df_object) != pd.DataFrame:
+        if not issubclass(type(df_object), pd.DataFrame):
             try:
                 df_object = pd.DataFrame(df_object)
                 logger.warning(f'Automatically converted "{df_name}" from type {type(df_object)} to DataFrame')
