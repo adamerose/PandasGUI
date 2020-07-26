@@ -120,6 +120,10 @@ class DataFrameViewer(QtWidgets.QWidget):
         self.indexHeaderNames.setDisabled(True)
         self.columnHeaderNames.setDisabled(True)
 
+    def __reduce__(self):
+        # This is so dataclasses.asdict doesn't complain about this being unpicklable
+        return "DataFrameViewer"
+
     def showEvent(self, event: QtGui.QShowEvent):
         """
         Initialize column and row sizes on the first time the widget is shown
