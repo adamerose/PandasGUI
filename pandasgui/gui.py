@@ -1,6 +1,7 @@
 import inspect
 import os
 import sys
+from dataclasses import dataclass, field, asdict
 
 import pandas as pd
 import pkg_resources
@@ -8,9 +9,10 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
 from pandasgui.store import Store, PandasGuiDataFrame
-from pandasgui.utility import fix_ipython, fix_pyqt, get_logger
+from pandasgui.utility import fix_ipython, fix_pyqt, get_logger, to_dict
 from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
 from pandasgui.widgets.find_toolbar import FindToolbar
+from pandasgui.widgets.json_viewer import JsonViewer
 
 logger = get_logger(__name__)
 
@@ -27,6 +29,7 @@ sys.excepthook = except_hook
 
 # Keep a list of PandasGui widgets so they don't get garbage collected
 refs = []
+
 
 class PandasGui(QtWidgets.QMainWindow):
     def __init__(self, settings: dict = {}, **kwargs):
@@ -65,9 +68,8 @@ class PandasGui(QtWidgets.QMainWindow):
     # Configure app settings
     def init_app(self):
 
-        # Set window size
-        screen = QtWidgets.QDesktopWidget().screenGeometry()
-        self.resize(QtCore.QSize(int(0.7 * screen.width()), int(0.7 * screen.height())))
+        self.resize(QtCore.QSize(int(0.7 * QtWidgets.QDesktopWidget().screenGeometry().width()),
+                                 int(0.7 * QtWidgets.QDesktopWidget().screenGeometry().height())))
 
         # Center window on screen
         screen = QtWidgets.QDesktopWidget().screenGeometry()
@@ -145,10 +147,6 @@ class PandasGui(QtWidgets.QMainWindow):
                 logger.warning(f'Could not convert "{df.name}" from type {type(df)} to DataFrame')
                 return
 
-        # Non-string column indices causes problems when pulling them from a GUI dropdown (which will give str)
-        if type(df.columns) != pd.MultiIndex:
-            df.columns = df.columns.astype(str)
-
         dfe = DataFrameExplorer(df, editable=self.store.settings.editable)
         df.dataframe_explorer = dfe
         self.stacked_widget.addWidget(dfe)
@@ -189,9 +187,14 @@ class PandasGui(QtWidgets.QMainWindow):
 
         # Creates a debug menu.
         debugMenu = menubar.addMenu("&Debug")
-        testDialogAction = QtWidgets.QAction("&Test", self)
-        testDialogAction.triggered.connect(self.test)
-        debugMenu.addAction(testDialogAction)
+
+        act = QtWidgets.QAction("&Print Data Store", self)
+        act.triggered.connect(self.print_store)
+        debugMenu.addAction(act)
+
+        act = QtWidgets.QAction("&View Data Store", self)
+        act.triggered.connect(self.view_store)
+        debugMenu.addAction(act)
 
     class NavWidget(QtWidgets.QTreeWidget):
         def __init__(self, gui):
@@ -269,8 +272,11 @@ class PandasGui(QtWidgets.QMainWindow):
         dfe = self.store.get_dataframe(df_name).dataframe_explorer
         self.stacked_widget.setCurrentWidget(dfe)
 
-    def test(self):
-        logger.debug("test")
+    def print_store(self):
+        print(asdict(self.store))
+
+    def view_store(self):
+        self.store_viewer = JsonViewer(asdict(self.store))
 
 
 def show(*args, settings: dict = {}, **kwargs):
