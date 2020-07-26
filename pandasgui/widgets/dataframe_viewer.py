@@ -70,12 +70,6 @@ class DataFrameViewer(QtWidgets.QWidget):
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.gridLayout.setSpacing(0)
 
-        # Toggle level names
-        # if not (any(df.columns.names) or df.columns.name):
-        #     self.columnHeader.verticalHeader().setFixedWidth(0)
-        # if not (any(df.index.names) or df.index.name):
-        #     self.indexHeader.horizontalHeader().setFixedHeight(0)
-
         # Add items to 4x4 grid layout
         self.gridLayout.addWidget(self.columnHeader, 0, 1, 1, 2)
         self.gridLayout.addWidget(self.indexHeader, 1, 0, 2, 2)
@@ -89,18 +83,14 @@ class DataFrameViewer(QtWidgets.QWidget):
         self.gridLayout.setColumnStretch(4, 1)
         self.gridLayout.setRowStretch(4, 1)
 
-        # # These placeholders will ensure the size of the blank spaces beside our headers
-        # self.gridLayout.addWidget(
-        #     TrackingSpacer(ref_x=self.columnHeader.verticalHeader()), 3, 1, 1, 1
-        # )
-        # self.gridLayout.addWidget(
-        #     TrackingSpacer(ref_y=self.indexHeader.horizontalHeader()), 1, 2, 1, 1
-        # )
 
         self.gridLayout.addItem(
             QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding), 0, 0, 1, 1, )
 
-        # Styling
+        self.set_styles()
+        self.columnHeaderNames.setDisabled(True)
+
+    def set_styles(self):
         for header in [self.indexHeader, self.columnHeader, self.indexHeaderNames, self.columnHeaderNames]:
             header.setStyleSheet(
                 "background-color: white;"
@@ -118,7 +108,9 @@ class DataFrameViewer(QtWidgets.QWidget):
             item.setStyleSheet(item.styleSheet() + "border: 0px solid black;")
             item.setItemDelegate(NoFocusDelegate())
 
-        self.columnHeaderNames.setDisabled(True)
+        for item in [self.indexHeaderNames, self.columnHeaderNames]:
+            item.setStyleSheet(item.styleSheet() + "color: grey;")
+
 
     def __reduce__(self):
         # This is so dataclasses.asdict doesn't complain about this being unpicklable
@@ -487,7 +479,7 @@ class HeaderModel(QtCore.QAbstractTableModel):
             else:
                 icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "images/sort-ascending.png"))
 
-            if col == self.parent().df.column_sorted and row == self.rowCount()-1:
+            if col == self.parent().df.column_sorted and row == self.rowCount()-1 and self.orientation == Qt.Horizontal:
                 return icon
 
     # The headers of this table will show the level names of the MultiIndex
