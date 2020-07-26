@@ -15,40 +15,75 @@ class PandasGuiDataFrame(pd.DataFrame):
     dataframe_explorer: "DataFrameExplorer" = None
     dataframe_viewer: "DataFrameViewer" = None
 
+    initial_index: pd.Index = None
+
+    column_sorted: Union[int, None] = None
+    index_sorted: Union[int, None] = None
+    sort_is_descending: Union[bool, None] = None
+
+    def __init__(self, df):
+        super().__init__(df)
+        self.init_inplace()
+
+    def init_inplace(self):
+        self.initial_index = self.index.copy()
+
     def update_inplace(self, df):
         self._update_inplace(df)
 
-    # Negative number means index level
-    column_sorted: int = None
-    sort_is_ascending: bool = None
+    def sort_by(self, ix: int, is_index=False):
+        if is_index:
 
-    def sort_by(self, ix: int):
-        # kind="mergesort" is the only stable algorithm, otherwise sorting a column will shuffle other columns.
-        if ix < 0:
-            if ix == self.column_sorted:
-                if self.sort_is_ascending:
-                    self.sort_index(level=-ix, ascending=False, kind="mergesort", inplace=True)
-                    self.sort_is_ascending = False
-                else:
-                    self.sort_index(level=-ix, ascending=True, kind="mergesort", inplace=True)
-                    self.sort_is_ascending = True
-            else:
-                self.sort_index(level=-ix, ascending=True, kind="mergesort", inplace=True)
-                self.sort_is_ascending = True
+            # Clicked an unsorted index
+            if ix != self.index_sorted:
+                self.sort_index(level=ix, ascending=True, kind="mergesort", inplace=True)
+
+                self.index_sorted = ix
+                self.sort_is_descending = False
+
+            # Clicked a sorted index level
+            elif ix == self.index_sorted and not self.sort_is_descending:
+                self.sort_index(level=ix, ascending=False, kind="mergesort", inplace=True)
+
+                self.index_sorted = ix
+                self.sort_is_descending = True
+
+            # Clicked a reverse sorted index level
+            elif ix == self.index_sorted and self.sort_is_descending:
+                temp = self.reindex(self.initial_index)
+                self.update_inplace(temp)
+
+                self.index_sorted = None
+                self.sort_is_descending = None
+
+            self.column_sorted = None
+
         else:
-            col = self.columns[ix]
-            if ix == self.column_sorted:
-                if self.sort_is_ascending:
-                    self.sort_values(col, ascending=False, kind="mergesort", inplace=True)
-                    self.sort_is_ascending = False
-                else:
-                    self.sort_values(col, ascending=True, kind="mergesort", inplace=True)
-                    self.sort_is_ascending = True
-            else:
-                self.sort_values(col, ascending=True, kind="mergesort", inplace=True)
-                self.sort_is_ascending = True
+            col_name = self.columns[ix]
 
-        self.column_sorted = ix
+            # Clicked an unsorted column
+            if ix != self.column_sorted:
+                self.sort_values(col_name, ascending=True, kind="mergesort", inplace=True)
+
+                self.column_sorted = ix
+                self.sort_is_descending = False
+
+            # Clicked a sorted column
+            elif ix == self.column_sorted and not self.sort_is_descending:
+                self.sort_values(col_name, ascending=False, kind="mergesort", inplace=True)
+
+                self.column_sorted = ix
+                self.sort_is_descending = True
+
+            # Clicked a reverse sorted column
+            elif ix == self.column_sorted and self.sort_is_descending:
+                temp = self.reindex(self.initial_index)
+                self.update_inplace(temp)
+
+                self.column_sorted = None
+                self.sort_is_descending = None
+
+            self.index_sorted = None
 
         self.dataframe_viewer.data_changed()
 
