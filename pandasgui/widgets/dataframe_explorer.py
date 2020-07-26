@@ -16,6 +16,9 @@ class DataFrameExplorer(DetachableTabWidget):
     def __init__(self, df: PandasGuiDataFrame, editable=True):
         super().__init__()
 
+        if type(df) != PandasGuiDataFrame:
+            df = PandasGuiDataFrame(df)
+
         self.df = df
         self.editable = editable
 

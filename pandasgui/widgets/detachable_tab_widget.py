@@ -302,14 +302,6 @@ class DetachableTabWidget(QtWidgets.QTabWidget):
             self.dragInitiated = False
 
         ##
-        #  Send the onDetachTabSignal when a tab is double clicked
-        #
-        #  @param    event    a mouse double click event
-        def mouseDoubleClickEvent(self, event):
-            event.accept()
-            self.onDetachTabSignal.emit(self.tabAt(event.pos()), self.mouseCursor.pos())
-
-        ##
         #  Set the starting position for a drag event when the mouse button is pressed
         #
         #  @param    event    a mouse press event

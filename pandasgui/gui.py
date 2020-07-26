@@ -51,6 +51,8 @@ class PandasGui(QtWidgets.QMainWindow):
         # Adds DataFrames listed in kwargs to data store.
         for i, (df_name, df) in enumerate(kwargs.items()):
             df.__class__ = PandasGuiDataFrame
+            df.init_inplace()
+
             df.name = df_name
             self.store.data.append(df)
 

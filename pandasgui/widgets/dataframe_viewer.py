@@ -1,5 +1,6 @@
 import sys
 import threading
+import os
 
 import numpy as np
 import pandas as pd
@@ -8,6 +9,7 @@ from PyQt5.QtCore import Qt
 
 from pandasgui.utility import get_logger
 from pandasgui.store import Store, PandasGuiDataFrame
+import pandasgui
 
 logger = get_logger(__name__)
 
@@ -16,18 +18,17 @@ class DataFrameViewer(QtWidgets.QWidget):
     def __init__(self, df: PandasGuiDataFrame, editable=True):
 
         super().__init__()
-        df.dataframe_viewer = self
-        self.editable = editable
+
+        if type(df) != PandasGuiDataFrame:
+            df = PandasGuiDataFrame(df)
 
         # Indicates whether the widget has been shown yet. Set to True in
         self._loaded = False
+        self.editable = editable
 
-        if not issubclass(type(df), pd.DataFrame):
-            orig_type = type(df)
-            df = df.to_frame()
-            logger.info(f"DataFrame was automatically converted from {orig_type} to DataFrame for viewing")
 
         # Put the df in a wrapper
+        df.dataframe_viewer = self
         self.df = df
 
         # Set up DataFrame TableView and Model
@@ -240,6 +241,8 @@ class DataFrameViewer(QtWidgets.QWidget):
             self.dataView.model(),
             self.columnHeader.model(),
             self.indexHeader.model(),
+            self.columnHeaderNames.model(),
+            self.indexHeaderNames.model(),
         ]:
             model.dataChanged.emit(
                 model.index(0, 0), model.index(model.rowCount(), model.columnCount())
@@ -476,6 +479,16 @@ class HeaderModel(QtCore.QAbstractTableModel):
                     return str(self.parent().df.index.values[row][col])
                 else:
                     return str(self.parent().df.index.values[row])
+
+
+        if role == QtCore.Qt.DecorationRole:
+            if self.parent().df.sort_is_descending:
+                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "images/sort-descending.png"))
+            else:
+                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "images/sort-ascending.png"))
+
+            if col == self.parent().df.column_sorted and row == self.rowCount()-1:
+                return icon
 
     # The headers of this table will show the level names of the MultiIndex
     def headerData(self, section, orientation, role=None):
@@ -905,6 +918,15 @@ class HeaderNamesModel(QtCore.QAbstractTableModel):
                     val = "index"
                 return str(val)
 
+        if role == QtCore.Qt.DecorationRole:
+            if self.parent().df.sort_is_descending:
+                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "images/sort-descending.png"))
+            else:
+                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "images/sort-ascending.png"))
+
+            if col == self.parent().df.index_sorted and self.orientation == Qt.Vertical:
+                return icon
+
 
 class HeaderNamesView(QtWidgets.QTableView):
     def __init__(self, parent: DataFrameViewer, orientation):
@@ -927,14 +949,14 @@ class HeaderNamesView(QtWidgets.QTableView):
         self.horizontalHeader().hide()
         self.verticalHeader().hide()
 
+        self.setSelectionMode(self.NoSelection)
         self.init_size()
 
     def on_clicked(self, ix: QtCore.QModelIndex):
-        print("clicked", ix.column())
         # When the index header name is clicked, sort the index by that level
         if self.orientation == Qt.Vertical:
             # Negative number means sort by index level instead of column
-            self.parent().df.sort_by(-ix.column())
+            self.parent().df.sort_by(ix.column(), is_index=True)
 
     def init_size(self):
         # Fit horizontal header names to fit text
