@@ -16,6 +16,7 @@ class DataFrameViewer(QtWidgets.QWidget):
     def __init__(self, df: PandasGuiDataFrame, editable=True):
 
         super().__init__()
+        df.dataframe_viewer = self
         self.editable = editable
 
         # Indicates whether the widget has been shown yet. Set to True in
@@ -59,7 +60,6 @@ class DataFrameViewer(QtWidgets.QWidget):
             self.dataView.verticalScrollBar().setValue
         )
 
-
         self.dataView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.dataView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
@@ -74,7 +74,6 @@ class DataFrameViewer(QtWidgets.QWidget):
         #     self.columnHeader.verticalHeader().setFixedWidth(0)
         # if not (any(df.index.names) or df.index.name):
         #     self.indexHeader.horizontalHeader().setFixedHeight(0)
-
 
         # Add items to 4x4 grid layout
         self.gridLayout.addWidget(self.columnHeader, 0, 1, 1, 2)
@@ -97,7 +96,8 @@ class DataFrameViewer(QtWidgets.QWidget):
         #     TrackingSpacer(ref_y=self.indexHeader.horizontalHeader()), 1, 2, 1, 1
         # )
 
-        self.gridLayout.addItem(QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding),0,0,1,1,)
+        self.gridLayout.addItem(
+            QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding), 0, 0, 1, 1, )
 
         # Styling
         for header in [self.indexHeader, self.columnHeader, self.indexHeaderNames, self.columnHeaderNames]:
@@ -117,7 +117,6 @@ class DataFrameViewer(QtWidgets.QWidget):
             item.setStyleSheet(item.styleSheet() + "border: 0px solid black;")
             item.setItemDelegate(NoFocusDelegate())
 
-        self.indexHeaderNames.setDisabled(True)
         self.columnHeaderNames.setDisabled(True)
 
     def __reduce__(self):
@@ -536,7 +535,7 @@ class HeaderView(QtWidgets.QTableView):
         # Link selection to DataTable
         self.selectionModel().selectionChanged.connect(self.on_selectionChanged)
         self.setSpans()
-        self.initSize()
+        self.init_size()
 
         self.horizontalHeader().hide()
         self.verticalHeader().hide()
@@ -549,11 +548,7 @@ class HeaderView(QtWidgets.QTableView):
     def on_clicked(self, ix: QtCore.QModelIndex):
         # When a header is clicked, sort the DataFrame by that column
         if self.orientation == Qt.Horizontal:
-            df = self.parent().df
-
-            df.sort_by(ix.column())
-
-            self.parent().data_changed()
+            self.parent().df.sort_by(ix.column())
 
     # Header
     def on_selectionChanged(self):
@@ -633,7 +628,7 @@ class HeaderView(QtWidgets.QTableView):
                     )
 
     # Fits columns to contents but with a minimum width and added padding
-    def initSize(self):
+    def init_size(self):
         padding = 20
 
         if self.orientation == Qt.Horizontal:
@@ -899,10 +894,16 @@ class HeaderNamesModel(QtCore.QAbstractTableModel):
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.ToolTipRole:
 
             if self.orientation == Qt.Horizontal:
-                return str(self.parent().df.columns.names[row])
+                val = self.parent().df.columns.names[row]
+                if val is None:
+                    val = ""
+                return str(val)
 
             elif self.orientation == Qt.Vertical:
-                return str(self.parent().df.index.names[col])
+                val = self.parent().df.index.names[col]
+                if val is None:
+                    val = "index"
+                return str(val)
 
 
 class HeaderNamesView(QtWidgets.QTableView):
@@ -911,12 +912,9 @@ class HeaderNamesView(QtWidgets.QTableView):
 
         # Setup
         self.orientation = orientation
-        self.table = parent.dataView
         self.setModel(HeaderNamesModel(parent, orientation))
-        # These are used during column resizing
-        self.header_being_resized = None
-        self.resize_start_position = None
-        self.initial_header_size = None
+
+        self.clicked.connect(self.on_clicked)
 
         self.setFont(QtGui.QFont("Times", weight=QtGui.QFont.Bold))
 
@@ -929,20 +927,25 @@ class HeaderNamesView(QtWidgets.QTableView):
         self.horizontalHeader().hide()
         self.verticalHeader().hide()
 
-        self.initSize()
+        self.init_size()
 
-    def initSize(self):
-        # Set initial size
-        self.resize(self.sizeHint())
+    def on_clicked(self, ix: QtCore.QModelIndex):
+        print("clicked", ix.column())
+        # When the index header name is clicked, sort the index by that level
+        if self.orientation == Qt.Vertical:
+            # Negative number means sort by index level instead of column
+            self.parent().df.sort_by(-ix.column())
 
-        for ix in range(self.model().columnCount()):
-            self.setColumnWidth(ix, self.columnWidth(ix))
-
-        for ix in range(self.model().rowCount()):
-            self.setRowHeight(ix, self.rowHeight(ix))
+    def init_size(self):
+        # Fit horizontal header names to fit text
+        if self.orientation == Qt.Horizontal:
+            self.resizeColumnToContents(0)
+        # Match vertical header name widths to vertical header
+        elif self.orientation == Qt.Vertical:
+            for ix in range(self.model().columnCount()):
+                self.setColumnWidth(ix, self.columnWidth(ix))
 
     def sizeHint(self):
-
         if self.orientation == Qt.Horizontal:
             height = self.parent().columnHeader.sizeHint().height()
             width = self.columnWidth(0)
@@ -960,9 +963,13 @@ class HeaderNamesView(QtWidgets.QTableView):
 
     def columnWidth(self, column: int) -> int:
         if self.orientation == Qt.Horizontal:
-            return super().columnWidth(column)
+            if all(name is None for name in self.parent().df.columns.names):
+                return 0
+            else:
+                return super().columnWidth(column)
         else:  # Vertical
             return self.parent().indexHeader.columnWidth(column)
+
 
 # This is a fixed size widget with a size that tracks some other widget
 class TrackingSpacer(QtWidgets.QFrame):
@@ -993,4 +1000,6 @@ if __name__ == "__main__":
 
     view2 = DataFrameViewer(mi_manufacturing)
     view2.show()
+
+    print(view2.columnHeaderNames.sizeHint())
     app.exec_()
