@@ -31,6 +31,11 @@ class DataFrameExplorer(DetachableTabWidget):
         graph_maker = Grapher(df)
         self.addTab(graph_maker, "Grapher")
 
+    def __reduce__(self):
+        # This is so dataclasses.asdict doesn't complain about this being unpicklable
+        return "DataFrameExplorer"
+
+
     def make_statistics_tab(self, df):
         stats_df = pd.DataFrame(
             {
