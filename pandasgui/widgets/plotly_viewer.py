@@ -34,7 +34,7 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
         super().__init__()
 
         # https://stackoverflow.com/a/8577226/3620725
-        self.temp_file = tempfile.TemporaryFile(mode="w", suffix=".html", delete=False)
+        self.temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False)
         self.set_figure(fig)
 
         self.resize(700, 600)
