@@ -7,109 +7,84 @@ import pandas as pd
 from pandasgui.utility import DotDict, flatten_multiindex, get_logger
 from pandasgui.widgets.plotly_viewer import PlotlyViewer
 from pandasgui.widgets.spinner import Spinner
+from pandasgui.widgets.dialogs import Dragger
 
 logger = get_logger(__name__)
 
 
 class Grapher(QtWidgets.QWidget):
-    def __init__(self, df, name="a"):
+    def __init__(self, df):
         super().__init__()
-        self.name = name
         self.df = df.copy()
 
         self.df.columns = flatten_multiindex(self.df.columns)
         if issubclass(type(self.df.index), pd.core.indexes.multi.MultiIndex):
             self.df = self.df.reset_index()
 
-        self.prev_kwargs = (
-            {}
-        )  # This is for carrying plot arg selections forward to new plottypes
+        self.prev_kwargs = ({})  # This is for carrying plot arg selections forward to new plot types
 
         self.setWindowTitle("Graph Builder")
-        self.schema_widgets = {}
         self.workers = []
         self.current_worker = None
 
         # Dropdown to select plot type
-        self.plot_type_picker = QtWidgets.QComboBox()
+        self.plot_type_picker = QtWidgets.QListWidget()
         self.plot_type_picker.addItems([x["name"] for x in schemas.values()])
-        self.plot_type_picker.currentIndexChanged.connect(self.build_ui)
 
         # UI setup
         self.figure_viewer = PlotlyViewer()
-        self.figure_viewer.setSizePolicy(
-            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
-        )
+        self.figure_viewer.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                                         QtWidgets.QSizePolicy.Expanding)
 
-        self.reset_button = QtWidgets.QPushButton("Reset")
-        self.reset_button.clicked.connect(self.reset_selections)
-
-        self.schema_layout = QtWidgets.QVBoxLayout()
-        self.schema_layout_outer = QtWidgets.QVBoxLayout()
-        self.schema_layout_outer.addWidget(self.plot_type_picker)
-        self.schema_layout_outer.addLayout(self.schema_layout)
-        self.schema_layout_outer.addWidget(self.reset_button)
-        self.schema_layout_outer.addStretch()
+        self.dragger = Dragger(sources=self.df.columns, destinations=[])
 
         self.spinner = Spinner()
         self.spinner.setParent(self.figure_viewer)
 
-        self.layout = QtWidgets.QHBoxLayout()
-        self.layout.addLayout(self.schema_layout_outer)
-        self.layout.addWidget(self.figure_viewer)
+        self.layout = QtWidgets.QGridLayout()
+        self.layout.addWidget(self.plot_type_picker, 0, 0)
+        self.layout.addWidget(self.dragger, 1, 0)
+        self.layout.addWidget(self.figure_viewer, 0, 1, 2, 1)
+        self.layout.setColumnStretch(0,0)
+        self.layout.setColumnStretch(1,1)
+
         self.setLayout(self.layout)
 
+        # Signals
+        self.plot_type_picker.itemSelectionChanged.connect(self.update_dragger)
+        self.dragger.finished.connect(self.update_plot)
+
         # Initial selection
-        self.plot_type_picker.setCurrentIndex(0)
-        self.build_ui()
+        self.plot_type_picker.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.plot_type_picker.setCurrentRow(0)
+        self.update_dragger()
 
-    def build_ui(self):
-        self.current_schema = next(
-            x
-            for x in schemas.values()
-            if x["name"] == self.plot_type_picker.currentText()
-        )
-        clear_layout(self.schema_layout)
+        # Show a blank axis initially
+        self.figure_viewer.set_figure(px.scatter())
 
-        for key, val in self.current_schema.args.items():
-            l = QtWidgets.QLabel(key)
-            w = QtWidgets.QComboBox()
-            self.schema_widgets[key] = w
-            w.addItems([""] + list(self.df.columns))
-            w.currentIndexChanged.connect(self.update_plot)
-            self.schema_layout.addWidget(l)
-            self.schema_layout.addWidget(w)
+    def update_dragger(self):
+        current_schema = schemas[self.plot_type_picker.selectedItems()[0].text()]
 
-        self.update_plot()
+        self.dragger.set_destinations(current_schema.args.keys())
 
     def update_plot(self):
         self.spinner.start()
+        current_schema = schemas[self.plot_type_picker.selectedItems()[0].text()]
 
-        # Get dict of user selected values from widgets for current schema
-        kwargs = {}
-        for arg_name in self.current_schema.args.keys():
-            arg_value = self.schema_widgets[arg_name].currentText()
-            if arg_value:
-                kwargs[arg_name] = arg_value
+        kwargs = {"data_frame": self.df}
+        for key, val in self.dragger.get_data().items():
+            if len(val) == 0:
+                continue
+            elif len(val) == 1:
+                kwargs[key] = val[0]
+            elif len(val) > 1:
+                kwargs[key] = val
+            else:
+                raise ValueError
 
-        logger.debug(self.name + " kwargs " + str(kwargs))
-        logger.debug(self.name + " self.current_schema " + str(self.current_schema))
-        # On plot type change (all selections reset to blank) fill them with previous selections
-        if not any(kwargs.values()):
-            for arg_name in self.prev_kwargs.keys():
-                if arg_name in self.current_schema.args.keys():
-                    kwargs[arg_name] = self.prev_kwargs[arg_name]
-                    widget = self.schema_widgets[arg_name]
-                    widget.blockSignals(True)
-                    widget.setCurrentText(kwargs[arg_name])
-                    widget.blockSignals(False)
+        print(kwargs)
 
-        self.prev_kwargs = kwargs
-
-        logger.debug("2 " + str(kwargs))
-        # Copy because sometimes df gets deleted somehow?
-        kwargs["data_frame"] = self.df.copy()
-        func = self.current_schema.function
+        func = current_schema.function
         self.current_worker = Worker(func, kwargs)
         self.current_worker.finished.connect(self.worker_callback)
         self.current_worker.finished.connect(self.current_worker.deleteLater)
@@ -118,19 +93,8 @@ class Grapher(QtWidgets.QWidget):
 
     @QtCore.pyqtSlot(object)
     def worker_callback(self, fig):
-        logger.debug(self.name + "worker_callback")
         self.figure_viewer.set_figure(fig)
         self.spinner.stop()
-
-    def reset_selections(self):
-        logger.debug(self.name + "reset_selections")
-        for arg_name in self.current_schema.args.keys():
-            widget = self.schema_widgets[arg_name]
-            widget.blockSignals(True)
-            widget.setCurrentIndex(0)
-            widget.blockSignals(False)
-            self.prev_kwargs = {}
-        self.update_plot()
 
 
 # https://stackoverflow.com/questions/9957195/updating-gui-elements-in-multithreaded-pyqt
@@ -151,7 +115,7 @@ class Worker(QtCore.QThread):
             logger.debug(f"Finished Worker run. {self.func.__name__} {d}")
             self.finished.emit(result)
         except Exception as e:
-            logger.debug(e)
+            logger.error(e)
             self.finished.emit(None)
 
 
@@ -353,13 +317,13 @@ def clear_layout(layout):
 
 if __name__ == "__main__":
     from pandasgui.utility import fix_ipython, fix_pyqt
-    from pandasgui.datasets import iris, pokemon, multi_df
+    from pandasgui.datasets import iris, pokemon
 
     fix_ipython()
     fix_pyqt()
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
 
-    gb2 = Grapher(multi_df, "multi_df")
+    gb2 = Grapher(pokemon)
     gb2.show()
 
     app.exec_()

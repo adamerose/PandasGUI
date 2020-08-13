@@ -57,6 +57,8 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
         os.unlink(self.temp_file.name)
         self.temp_file.close()
 
+    def sizeHint(self) -> QtCore.QSize:
+        return QtCore.QSize(400, 400)
 
 if __name__ == "__main__":
     # Create a QtWidgets.QApplication instance or use the existing one if it exists
