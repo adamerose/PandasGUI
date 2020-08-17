@@ -1,36 +1,30 @@
 import os
 import sys
 import tempfile
+
 from plotly.io import to_html
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5.QtCore import Qt
 
 from pandasgui.utility import get_logger
 
 logger = get_logger(__name__)
-# If QtWebEngineWidgets is imported while a QtWidgets.QApplication instance already exists it will fail, so we have to hack it
+
+# Since pandasgui might be imported after other packages already created a QApplication,
+# we need to hack around this import restriction on QtWebEngineWidgets
+# https://stackoverflow.com/a/57436077/3620725
 try:
     from PyQt5 import QtWebEngineWidgets
 except ImportError as e:
-    if (
-        e.msg
-        == "QtWebEngineWidgets must be imported before a QCoreApplication instance is created"
-    ):
+    if e.msg == "QtWebEngineWidgets must be imported before a QCoreApplication instance is created":
         logger.info("Killing QtWidgets.QApplication to reimport QtWebEngineWidgets")
-        from PyQt5 import QtWidgets
 
-        app = QtWidgets.QtWidgets.QApplication.instance()
-        if app is not None:
-            import sip
-
-            app.quit()
-            sip.delete(app)
-        import sys
-        from PyQt5 import QtCore, QtWebEngineWidgets
-
-        QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_ShareOpenGLContexts)
-        app = QtWidgets.QtWidgets.QApplication(sys.argv)
+        app = QtWidgets.QApplication.instance()
+        app.quit()
+        sip.delete(app)
         from PyQt5 import QtWebEngineWidgets
+
+        app.__init__(sys.argv)
     else:
         raise e
 
@@ -40,7 +34,7 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
         super().__init__()
 
         # https://stackoverflow.com/a/8577226/3620725
-        self.temp_file = tempfile.TemporaryFile(mode="w", suffix=".html", delete=False)
+        self.temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False)
         self.set_figure(fig)
 
         self.resize(700, 600)
@@ -63,6 +57,8 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
         os.unlink(self.temp_file.name)
         self.temp_file.close()
 
+    def sizeHint(self) -> QtCore.QSize:
+        return QtCore.QSize(400, 400)
 
 if __name__ == "__main__":
     # Create a QtWidgets.QApplication instance or use the existing one if it exists

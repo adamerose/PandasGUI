@@ -1,5 +1,6 @@
 pandas
 PyQt5
+PyQt5-sip
 PyQtWebEngine
 plotly
 setuptools

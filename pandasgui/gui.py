@@ -1,21 +1,34 @@
 import inspect
 import os
 import sys
+from dataclasses import dataclass, field, asdict
 
 import pandas as pd
 import pkg_resources
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
-from pandasgui.store import Store
-from pandasgui.utility import fix_ipython, fix_pyqt, get_logger
+from pandasgui.store import Store, PandasGuiDataFrame
+from pandasgui.utility import fix_ipython, fix_pyqt, get_logger, to_dict
 from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
 from pandasgui.widgets.find_toolbar import FindToolbar
+from pandasgui.widgets.json_viewer import JsonViewer
 
 logger = get_logger(__name__)
 
 # Enables PyQt event loop in iPython
 fix_ipython()
+
+
+def except_hook(cls, exception, traceback):
+    sys.__excepthook__(cls, exception, traceback)
+
+
+# Set the exception hook to our wrapping function
+sys.excepthook = except_hook
+
+# Keep a list of PandasGui widgets so they don't get garbage collected
+refs = []
 
 
 class PandasGui(QtWidgets.QMainWindow):
@@ -26,22 +39,22 @@ class PandasGui(QtWidgets.QMainWindow):
             kwargs: Dict of DataFrames where key is name & val is the DataFrame object
         """
 
-        try:  # Enable high DPI. This only works before a QApplication is created
-            QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
-        except:
-            pass
-
+        refs.append(self)
         self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
         self.store = Store()
+
         # These get built in init_ui()
         self.stacked_widget = None
         self.splitter = None
         self.nav_tree = None
 
         # Adds DataFrames listed in kwargs to data store.
-        for i, (df_name, df_object) in enumerate(kwargs.items()):
-            self.store.data[df_name] = {}
-            self.store.data[df_name]["dataframe"] = df_object
+        for i, (df_name, df) in enumerate(kwargs.items()):
+            df.__class__ = PandasGuiDataFrame
+            df.init_inplace()
+
+            df.name = df_name
+            self.store.data.append(df)
 
         # Add user provided settings to data store
         for key, value in settings.items():
@@ -57,15 +70,8 @@ class PandasGui(QtWidgets.QMainWindow):
     # Configure app settings
     def init_app(self):
 
-        # Set window size
-        screen = QtWidgets.QDesktopWidget().screenGeometry()
-        percentage_of_screen = 0.7
-        size = tuple(
-            (
-                    pd.np.array([screen.width(), screen.height()]) * percentage_of_screen
-            ).astype(int)
-        )
-        self.resize(QtCore.QSize(*size))
+        self.resize(QtCore.QSize(int(0.7 * QtWidgets.QDesktopWidget().screenGeometry().width()),
+                                 int(0.7 * QtWidgets.QDesktopWidget().screenGeometry().height())))
 
         # Center window on screen
         screen = QtWidgets.QDesktopWidget().screenGeometry()
@@ -82,9 +88,6 @@ class PandasGui(QtWidgets.QMainWindow):
         self.app.setWindowIcon(QtGui.QIcon(pdgui_icon_path))
         self.show()
 
-        # https://stackoverflow.com/a/27178019/3620725
-        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
-
     # Create and add all widgets to GUI.
     def init_ui(self):
         # This holds the DataFrameExplorer for each DataFrame
@@ -96,9 +99,8 @@ class PandasGui(QtWidgets.QMainWindow):
         self.nav_tree.setHeaderLabels(["Name", "Shape"])
         self.nav_tree.itemSelectionChanged.connect(self.nav_clicked)
 
-        for df_name in self.store.data.keys():
-            df_object = self.store.data[df_name]["dataframe"]
-            self.add_dataframe(df_name, df_object)
+        for df in self.store.data:
+            self.add_dataframe(df)
 
         # Make splitter to hold nav and DataFrameExplorers
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
@@ -123,40 +125,35 @@ class PandasGui(QtWidgets.QMainWindow):
         self.setCentralWidget(self.splitter)
 
     def import_dataframe(self, path):
-        if os.path.isfile(path) and path.endswith(".csv"):
-            df_name = os.path.split(path)[1]
-            df_object = pd.read_csv(path)
-            self.add_dataframe(df_name, df_object)
+        try:
+            if os.path.isfile(path) and path.endswith(".csv"):
+                df_name = os.path.split(path)[1]
+                df_object = pd.read_csv(path)
+                self.add_dataframe(df_name, df_object)
 
-        else:
-            logger.warning("Invalid file: ", path)
+            else:
+                logger.warning("Invalid file: ", path)
+        except Exception as e:
+            logger.error(f"Failed to import {path}\n", e)
 
-    def add_dataframe(self, df_name, df_object):
+    def add_dataframe(self, df):
         """
         Add a new DataFrame to the GUI
         """
 
-        if type(df_object) != pd.DataFrame:
+        if not issubclass(type(df), pd.DataFrame):
             try:
-                df_object = pd.DataFrame(df_object)
-                logger.warning(f'Automatically converted "{df_name}" from type {type(df_object)} to DataFrame')
+                df = pd.DataFrame(df)
+                logger.warning(f'Automatically converted "{df.name}" from type {type(df)} to DataFrame')
             except:
-                logger.warning(f'Could not convert "{df_name}" from type {type(df_object)} to DataFrame')
+                logger.warning(f'Could not convert "{df.name}" from type {type(df)} to DataFrame')
                 return
 
-        # Non-string column indices causes problems when pulling them from a GUI dropdown (which will give str)
-        if type(df_object.columns) != pd.MultiIndex:
-            df_object.columns = df_object.columns.astype(str)
-
-        self.store.data[df_name] = {}
-        self.store.data[df_name] = {}
-        self.store.data[df_name]["dataframe"] = df_object
-
-        dfe = DataFrameExplorer(df_object)
+        dfe = DataFrameExplorer(df, editable=self.store.settings.editable)
+        df.dataframe_explorer = dfe
         self.stacked_widget.addWidget(dfe)
 
-        self.store.data[df_name]["dataframe_explorer"] = dfe
-        self.add_df_to_nav(df_name)
+        self.add_df_to_nav(df.name)
 
     ####################
     # Menu bar functions
@@ -192,9 +189,14 @@ class PandasGui(QtWidgets.QMainWindow):
 
         # Creates a debug menu.
         debugMenu = menubar.addMenu("&Debug")
-        testDialogAction = QtWidgets.QAction("&Test", self)
-        testDialogAction.triggered.connect(self.test)
-        debugMenu.addAction(testDialogAction)
+
+        act = QtWidgets.QAction("&Print Data Store", self)
+        act.triggered.connect(self.print_store)
+        debugMenu.addAction(act)
+
+        act = QtWidgets.QAction("&View Data Store", self)
+        act.triggered.connect(self.view_store)
+        debugMenu.addAction(act)
 
     class NavWidget(QtWidgets.QTreeWidget):
         def __init__(self, gui):
@@ -251,7 +253,7 @@ class PandasGui(QtWidgets.QMainWindow):
             parent = self.nav_tree
 
         # Calculate and format the shape of the DataFrame
-        shape = self.store.data[df_name]["dataframe"].shape
+        shape = self.store.get_dataframe(df_name).shape
         shape = str(shape[0]) + " X " + str(shape[1])
 
         item = QtWidgets.QTreeWidgetItem(parent, [df_name, shape])
@@ -269,11 +271,14 @@ class PandasGui(QtWidgets.QMainWindow):
 
         df_name = item.data(0, Qt.DisplayRole)
 
-        dfe = self.store.data[df_name]["dataframe_explorer"]
+        dfe = self.store.get_dataframe(df_name).dataframe_explorer
         self.stacked_widget.setCurrentWidget(dfe)
 
-    def test(self):
-        logger.debug("test")
+    def print_store(self):
+        print(asdict(self.store))
+
+    def view_store(self):
+        self.store_viewer = JsonViewer(asdict(self.store))
 
 
 def show(*args, settings: dict = {}, **kwargs):
@@ -299,11 +304,10 @@ def show(*args, settings: dict = {}, **kwargs):
     kwargs = {**kwargs, **dataframes}
 
     pandas_gui = PandasGui(settings=settings, **kwargs)
-
     return pandas_gui
 
 
 if __name__ == "__main__":
     from pandasgui.datasets import all_datasets
 
-    x = show(**all_datasets, settings={"block": True})
+    gui = show(**all_datasets, settings={"block": True})
