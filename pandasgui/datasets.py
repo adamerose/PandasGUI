@@ -1,61 +1,57 @@
-"""Defines sample datasets for use in testing and demos"""
-import numpy as np
+# Some small datasets from https://github.com/adamerose/datasets
+
+import os
 import pandas as pd
+from pandasgui.utility import get_logger
+from appdirs import user_data_dir
 
-iris = pd.read_csv(
-    "https://raw.githubusercontent.com/adamerose/datasets/master/iris.csv"
-)
-mpg = pd.read_csv("https://raw.githubusercontent.com/adamerose/datasets/master/mpg.csv")
-pokemon = pd.read_csv(
-    "https://raw.githubusercontent.com/adamerose/datasets/master/pokemon.csv"
-)
-tips = pd.read_csv(
-    "https://raw.githubusercontent.com/adamerose/datasets/master/tips.csv"
-)
-titanic = pd.read_csv(
-    "https://raw.githubusercontent.com/adamerose/datasets/master/titanic.csv"
-)
-flights = pd.read_csv(
-    "https://raw.githubusercontent.com/adamerose/datasets/master/flights.csv"
-)
+logger = get_logger(__name__)
 
-multi_index = pd.MultiIndex.from_tuples(
-    [
-        ("A", "one", "x"),
-        ("A", "one", "y"),
-        ("A", "two", "x"),
-        ("A", "two", "y"),
-        ("B", "one", "x"),
-        ("B", "one", "y"),
-        ("B", "two", "x"),
-        ("B", "two", "y"),
-    ],
-    names=["first", "second", "third"],
-)
-multi_df = pd.DataFrame(np.random.randn(8, 8), index=multi_index, columns=multi_index)
+__all__ = ["all_datasets",
 
-simple = pd.DataFrame({"a": [1, 2, 3], "b": [10, 20, 30], "c": [300, 200, 100]})
+           "pokemon",
+           "car_crashes",
+           "iris",
+           "mpg",
+           "penguins",
+           "tips",
+           "titanic",
+           "gapminder",
+           "stockdata",
+           "mi_manufacturing", ]
+
+dataset_names = [x for x in __all__ if x != "all_datasets"]
+
+all_datasets = {}
+
+local_data_dir = os.path.join(user_data_dir(), "pandasgui", "dataset_files")
 
 
-__all__ = [
-    "all_datasets",
-    "iris",
-    "mpg",
-    "pokemon",
-    "tips",
-    "titanic",
-    "flights",
-    "simple",
-    "multi_df",
-]
+def read_csv(path):
+    if "mi_manufacturing" in path:
+        return pd.read_csv(path, index_col=[0, 1, 2], header=[0, 1, 2])
+    else:
+        return pd.read_csv(path)
 
-all_datasets = {
-    "iris": iris,
-    "mpg": mpg,
-    "pokemon": pokemon,
-    "tips": tips,
-    "titanic": titanic,
-    "flights": flights,
-    "simple": simple,
-    "multi_df": multi_df,
-}
+
+def to_csv(df, path):
+    if "mi_manufacturing" in path:
+        return df.to_csv(path, encoding='UTF-8')
+    else:
+        return df.to_csv(path, encoding='UTF-8', index=False)
+
+
+for ix, name in enumerate(dataset_names):
+    local_data_path = os.path.join(local_data_dir, f"{name}.csv")
+    os.makedirs(local_data_dir, exist_ok=True)
+    if os.path.exists(local_data_path):
+        all_datasets[name] = read_csv(local_data_path)
+    else:
+        url = f"https://raw.githubusercontent.com/adamerose/datasets/master/{name}.csv"
+        all_datasets[name] = read_csv(url)
+        to_csv(all_datasets[name], local_data_path)
+        logger.info(f"Saved {url} to {local_data_dir}")
+
+# Add the datasets to globals so they can be imported like `from pandasgui.datasets import iris`
+for name in all_datasets.keys():
+    globals()[name] = all_datasets[name]

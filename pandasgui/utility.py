@@ -10,6 +10,49 @@ class DotDict(dict):
             self[key] = value
 
 
+from threading import Timer
+
+
+def throttle(wait):
+    """
+        https://gist.github.com/walkermatt/2871026
+        Decorator that will postpone a functions
+        execution until after wait seconds
+        have elapsed since the last time it was invoked. """
+    def decorator(fn):
+        def throttled(*args, **kwargs):
+            def call_it():
+                fn(*args, **kwargs)
+            try:
+                throttled.t.cancel()
+            except(AttributeError):
+                pass
+            throttled.t = Timer(wait, call_it)
+            throttled.t.start()
+        return throttled
+    return decorator
+
+def to_dict(obj, classkey=None):
+    if isinstance(obj, dict):
+        data = {}
+        for (k, v) in obj.items():
+            data[k] = to_dict(v, classkey)
+        return data
+    elif hasattr(obj, "_ast"):
+        return to_dict(obj._ast())
+    elif hasattr(obj, "__iter__") and not isinstance(obj, str):
+        return [to_dict(v, classkey) for v in obj]
+    elif hasattr(obj, "__dict__"):
+        data = dict([(key, to_dict(value, classkey))
+                     for key, value in obj.__dict__.items()
+                     if not callable(value) and not key.startswith('_')])
+        if classkey is not None and hasattr(obj, "__class__"):
+            data[classkey] = obj.__class__.__name__
+        return data
+    else:
+        return obj
+
+
 def get_logger(logger_name=None):
     import logging
     import sys
@@ -17,9 +60,7 @@ def get_logger(logger_name=None):
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.INFO)
 
-    formatter = logging.Formatter(
-        "%(asctime)s — %(name)s — %(levelname)s — %(message)s"
-    )
+    formatter = logging.Formatter("PandasGui %(levelname)s — %(name)s — %(message)s")
 
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
@@ -44,25 +85,22 @@ def fix_pyqt():
 
 # This makes it so PyQt5 windows don't become unresponsive in IPython outside app._exec() loops
 def fix_ipython():
-    try:
-        from IPython import get_ipython
+    from IPython import get_ipython
 
-        ipython = get_ipython()
-        if ipython is not None:
-            ipython.magic("gui qt5")
-    except ImportError:
-        pass
+    ipython = get_ipython()
+    if ipython is not None:
+        ipython.magic("gui qt5")
 
 
 def flatten_multiindex(mi, sep=" - ", format=None):
     import pandas as pd
 
-
     if issubclass(type(mi), pd.core.indexes.multi.MultiIndex):
         # Flatten multi-index headers
         if format == None:
-            # Flattern by putting sep between each header value
-            flat_index = [sep.join(col).strip(sep) for col in mi.values]
+            # Flatten by putting sep between each header value
+            flat_index = [sep.join([str(x) for x in tup]).strip(sep)
+                          for tup in mi.values]
         else:
             # Flatten according to the provided format string
             flat_index = []
@@ -79,9 +117,7 @@ def flatten_multiindex(mi, sep=" - ", format=None):
                 if all([item != "" for item in tuple]):
                     # Replace placeholders in format with corresponding values
                     flat_name = format
-                    for i, val in enumerate(
-                        tuple
-                    ):  # Iterates over the values in this index segment
+                    for i, val in enumerate(tuple):  # Iterates over the values in this index segment
                         flat_name = flat_name.replace(placeholders[i], val)
                 else:
                     # If the segment doesn't contain all placeholders, just join them with sep instead
