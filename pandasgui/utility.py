@@ -85,11 +85,16 @@ def fix_pyqt():
 
 # This makes it so PyQt5 windows don't become unresponsive in IPython outside app._exec() loops
 def fix_ipython():
-    from IPython import get_ipython
+    try:
+        from IPython import get_ipython
+        ipython = get_ipython()
+        if ipython is not None:
+            ipython.magic("gui qt5")
+    except ModuleNotFoundError:
+        # Don't need to fix iPython if user doesn't have it
+        return
 
-    ipython = get_ipython()
-    if ipython is not None:
-        ipython.magic("gui qt5")
+
 
 
 def flatten_multiindex(mi, sep=" - ", format=None):
