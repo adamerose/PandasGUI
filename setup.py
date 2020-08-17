@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="pandasgui",
-    version="0.2.2",
+    version="0.2.2.3",
     description="A GUI for Pandas DataFrames.",
     author="Adam Rose",
     author_email="adam.e.rose@hotmail.com",
@@ -20,5 +20,6 @@ setup(
         "PyQtWebEngine",
         "plotly>=4.4.1",
         "setuptools",
+        "appdirs"
     ],
 )
