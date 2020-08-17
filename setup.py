@@ -18,7 +18,7 @@ setup(
         "pandas",
         "PyQt5",
         "PyQtWebEngine",
-        "plotly",
+        "plotly>=4.4.1",
         "setuptools",
     ],
 )
