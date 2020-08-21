@@ -4,10 +4,11 @@ import plotly.express as px
 from PyQt5 import QtCore, QtGui, QtWidgets
 import pandas as pd
 
-from pandasgui.utility import DotDict, flatten_multiindex, get_logger
+from pandasgui.utility import flatten_multiindex, get_logger
 from pandasgui.widgets.plotly_viewer import PlotlyViewer
 from pandasgui.widgets.spinner import Spinner
 from pandasgui.widgets.dialogs import Dragger
+from pandasgui.widgets.grapher_plotting import schemas
 
 logger = get_logger(__name__)
 
@@ -29,14 +30,20 @@ class Grapher(QtWidgets.QWidget):
 
         # Dropdown to select plot type
         self.plot_type_picker = QtWidgets.QListWidget()
-        self.plot_type_picker.addItems([x["name"] for x in schemas.values()])
+
+        for x in schemas:
+            icon = QtGui.QIcon(x['icon_path'])
+            text = x["label"]
+            item = QtWidgets.QListWidgetItem(icon, text)
+            self.plot_type_picker.addItem(item)
+
 
         # UI setup
         self.figure_viewer = PlotlyViewer()
         self.figure_viewer.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
                                          QtWidgets.QSizePolicy.Expanding)
 
-        self.dragger = Dragger(sources=self.df.columns, destinations=[])
+        self.dragger = Dragger(sources=self.df.columns, destinations=[], source_types=self.df.dtypes.values.astype(str))
 
         self.spinner = Spinner()
         self.spinner.setParent(self.figure_viewer)
@@ -45,8 +52,8 @@ class Grapher(QtWidgets.QWidget):
         self.layout.addWidget(self.plot_type_picker, 0, 0)
         self.layout.addWidget(self.dragger, 1, 0)
         self.layout.addWidget(self.figure_viewer, 0, 1, 2, 1)
-        self.layout.setColumnStretch(0,0)
-        self.layout.setColumnStretch(1,1)
+        self.layout.setColumnStretch(0, 0)
+        self.layout.setColumnStretch(1, 1)
 
         self.setLayout(self.layout)
 
@@ -63,13 +70,15 @@ class Grapher(QtWidgets.QWidget):
         self.figure_viewer.set_figure(px.scatter())
 
     def update_dragger(self):
-        current_schema = schemas[self.plot_type_picker.selectedItems()[0].text()]
+        selected_plot_label = self.plot_type_picker.selectedItems()[0].text()
+        current_schema = next(filter(lambda x: x['label'] == selected_plot_label, schemas))
 
-        self.dragger.set_destinations(current_schema.args.keys())
+        self.dragger.set_destinations(current_schema['args'].keys())
 
     def update_plot(self):
         self.spinner.start()
-        current_schema = schemas[self.plot_type_picker.selectedItems()[0].text()]
+        selected_plot_label = self.plot_type_picker.selectedItems()[0].text()
+        current_schema = next(filter(lambda x: x['label'] == selected_plot_label, schemas))
 
         kwargs = {"data_frame": self.df}
         for key, val in self.dragger.get_data().items():
@@ -84,7 +93,7 @@ class Grapher(QtWidgets.QWidget):
 
         print(kwargs)
 
-        func = current_schema.function
+        func = current_schema['function']
         self.current_worker = Worker(func, kwargs)
         self.current_worker.finished.connect(self.worker_callback)
         self.current_worker.finished.connect(self.current_worker.deleteLater)
@@ -117,197 +126,6 @@ class Worker(QtCore.QThread):
         except Exception as e:
             logger.error(e)
             self.finished.emit(None)
-
-
-schemas = DotDict(
-    {
-        # Basic
-        "scatter": {
-            "name": "scatter",
-            "args": {
-                "x": {},
-                "y": {},
-                "color": {},
-                "size": {},
-                "facet_row": {},
-                "facet_col": {},
-            },
-            "function": px.scatter,
-            "category": "Basic",
-        },
-        "line": {
-            "name": "line",
-            "args": {
-                "x": {},
-                "y": {},
-                "line_group": {},
-                "color": {},
-                "facet_row": {},
-                "facet_col": {},
-            },
-            "function": px.line,
-            "category": "Basic",
-        },
-        "area": {
-            "name": "area",
-            "args": {
-                "x": {},
-                "y": {},
-                "line_group": {},
-                "color": {},
-                "facet_row": {},
-                "facet_col": {},
-            },
-            "function": px.area,
-            "category": "Basic",
-        },
-        "bar": {
-            "name": "bar",
-            "args": {"x": {}, "y": {}, "color": {}, "facet_row": {}, "facet_col": {}},
-            "function": px.bar,
-            "category": "Basic",
-        },
-        "histogram": {
-            "name": "histogram",
-            "args": {"x": {}, "y": {}, "color": {}, "facet_row": {}, "facet_col": {}},
-            "function": px.histogram,
-            "category": "Basic",
-        },
-        "box": {
-            "name": "box",
-            "args": {"x": {}, "y": {}, "color": {}, "facet_row": {}, "facet_col": {}},
-            "function": px.box,
-            "category": "Basic",
-        },
-        "violin": {
-            "name": "violin",
-            "args": {"x": {}, "y": {}, "color": {}, "facet_row": {}, "facet_col": {}},
-            "function": px.violin,
-            "category": "1D Distributions",
-        },
-        # Proportion
-        "pie": {
-            "name": "pie",
-            "args": {"names": {}, "values": {}, },
-            "function": px.pie,
-            "category": "Proportion",
-        },
-        "treemap": {
-            "name": "treemap",
-            "args": {"names": {}, "values": {}, },
-            "function": px.treemap,
-            "category": "Proportion",
-        },
-        "funnel": {
-            "name": "funnel",
-            "args": {"x": {}, "y": {}, "color": {}, "facet_row": {}, "facet_col": {}},
-            "function": px.funnel,
-            "category": "Proportion",
-        },
-        # 2D Distributions
-        "density_heatmap": {
-            "name": "density_heatmap",
-            "args": {"x": {}, "y": {}, "z": {}, "facet_row": {}, "facet_col": {}},
-            "function": px.density_heatmap,
-            "category": "2D Distributions",
-        },
-        "density_contour": {
-            "name": "density_contour",
-            "args": {"x": {}, "y": {}, "z": {}, "facet_row": {}, "facet_col": {}},
-            "function": px.density_contour,
-            "category": "2D Distributions",
-        },
-        # 3-Dimensional
-        "scatter_3d": {
-            "name": "scatter_3d",
-            "args": {"x": {}, "y": {}, "z": {}, "color": {}, },
-            "function": px.scatter_3d,
-            "category": "3-Dimensional",
-        },
-        "line_3d": {
-            "name": "line_3d",
-            "args": {"x": {}, "y": {}, "z": {}, "color": {}, },
-            "function": px.line_3d,
-            "category": "3-Dimensional",
-        },
-        # Multidimensional
-        "scatter_matrix": {
-            "name": "scatter_matrix",
-            "args": {"dimensions": {}, "color": {}, },  # List of columns
-            "function": px.scatter_matrix,
-            "category": "Multidimensional",
-        },
-        "parallel_coordinates": {
-            "name": "parallel_coordinates",
-            "args": {"dimensions": {}, "color": {}, },  # List of columns
-            "function": px.parallel_coordinates,
-            "category": "Multidimensional",
-        },
-        "parallel_categories": {
-            "name": "parallel_categories",
-            "args": {"dimensions": {}, "color": {}, },  # List of columns
-            "function": px.parallel_categories,
-            "category": "Multidimensional",
-        },
-        # Tile Maps
-        "scatter_mapbox": {
-            "name": "scatter_mapbox",
-            "args": {"lat": {}, "lon": {}, "color": {}, "size": {}, },
-            "function": px.scatter_mapbox,
-            "category": "Tile Maps",
-        },
-        "line_mapbox": {
-            "name": "line_mapbox",
-            "args": {"lat": {}, "lon": {}, "color": {}, },
-            "function": px.line_mapbox,
-            "category": "Tile Maps",
-        },
-        "density_mapbox": {
-            "name": "density_mapbox",
-            "args": {"lat": {}, "lon": {}, "z": {}, },
-            "function": px.density_mapbox,
-            "category": "Tile Maps",
-        },
-        # Outline Maps
-        "scatter_geo": {
-            "name": "scatter_geo",
-            "args": {"lat": {}, "lon": {}, "color": {}, "size": {}, },
-            "function": px.scatter_geo,
-            "category": "Outline Maps",
-        },
-        "line_geo": {
-            "name": "line_geo",
-            "args": {"lat": {}, "lon": {}, "color": {}, },
-            "function": px.line_geo,
-            "category": "Outline Maps",
-        },
-        "choropleth": {
-            "name": "choropleth",
-            "args": {"lat": {}, "lon": {}, },
-            "function": px.choropleth,
-            "category": "Outline Maps",
-        },
-        # Polar Charts
-        "scatter_polar": {
-            "name": "scatter_polar",
-            "args": {"r": {}, "theta": {}, "color": {}, },
-            "function": px.scatter_polar,
-            "category": "Polar Charts",
-        },
-        "line_polar": {
-            "name": "line_polar",
-            "args": {"r": {}, "theta": {}, "color": {}, },
-            "function": px.line_polar,
-            "category": "Polar Charts",
-        },
-        "bar_polar": {
-            "name": "bar_polar",
-            "args": {"r": {}, "theta": {}, "color": {}, },
-            "function": px.bar_polar,
-            "category": "Polar Charts",
-        },
-    }
-)
 
 
 def clear_layout(layout):

@@ -38,35 +38,25 @@ class PandasGui(QtWidgets.QMainWindow):
             settings: Dict of settings, as defined in pandasgui.store.Settings
             kwargs: Dict of DataFrames where key is name & val is the DataFrame object
         """
-
         refs.append(self)
         self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
         self.store = Store()
-
-        # These get built in init_ui()
-        self.stacked_widget = None
-        self.splitter = None
-        self.nav_tree = None
-
-        # Adds DataFrames listed in kwargs to data store.
-        for i, (df_name, df) in enumerate(kwargs.items()):
-            df.__class__ = PandasGuiDataFrame
-            df.init_inplace()
-
-            df.name = df_name
-            self.store.data.append(df)
-
-        # Add user provided settings to data store
-        for key, value in settings.items():
-            setattr(self.store.settings, key, value)
 
         super().__init__()
         self.init_app()
         self.init_ui()
 
+        # Add user provided settings to data store
+        for key, value in settings.items():
+            setattr(self.store.settings, key, value)
+
+        # Adds DataFrames listed in kwargs to data store.
+        for i, (df_name, df) in enumerate(kwargs.items()):
+            self.add_df(df, df_name)
+
         if self.store.settings.block:
             self.app.exec_()
-
+            
     # Configure app settings
     def init_app(self):
 
@@ -99,9 +89,6 @@ class PandasGui(QtWidgets.QMainWindow):
         self.nav_tree.setHeaderLabels(["Name", "Shape"])
         self.nav_tree.itemSelectionChanged.connect(self.nav_clicked)
 
-        for df in self.store.data:
-            self.add_dataframe(df)
-
         # Make splitter to hold nav and DataFrameExplorers
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
         self.splitter.addWidget(self.nav_tree)
@@ -129,14 +116,14 @@ class PandasGui(QtWidgets.QMainWindow):
             if os.path.isfile(path) and path.endswith(".csv"):
                 df_name = os.path.split(path)[1]
                 df_object = pd.read_csv(path)
-                self.add_dataframe(df_name, df_object)
+                self.add_df(df_object, df_name)
 
             else:
                 logger.warning("Invalid file: ", path)
         except Exception as e:
             logger.error(f"Failed to import {path}\n", e)
 
-    def add_dataframe(self, df):
+    def add_df(self, df, name):
         """
         Add a new DataFrame to the GUI
         """
@@ -144,10 +131,16 @@ class PandasGui(QtWidgets.QMainWindow):
         if not issubclass(type(df), pd.DataFrame):
             try:
                 df = pd.DataFrame(df)
-                logger.warning(f'Automatically converted "{df.name}" from type {type(df)} to DataFrame')
+                logger.warning(f'Automatically converted "{name}" from type {type(df)} to DataFrame')
             except:
-                logger.warning(f'Could not convert "{df.name}" from type {type(df)} to DataFrame')
+                logger.warning(f'Could not convert "{name}" from type {type(df)} to DataFrame')
                 return
+
+        df.__class__ = PandasGuiDataFrame
+        df.init_inplace()
+
+        df.name = name
+        self.store.data.append(df)
 
         dfe = DataFrameExplorer(df, editable=self.store.settings.editable)
         df.dataframe_explorer = dfe
