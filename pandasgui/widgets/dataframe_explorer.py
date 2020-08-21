@@ -7,7 +7,7 @@ from pandasgui.utility import get_logger
 from pandasgui.widgets.dataframe_viewer import DataFrameViewer
 from pandasgui.widgets.grapher import Grapher
 from pandasgui.widgets.detachable_tab_widget import DetachableTabWidget
-from pandasgui.store import Store, PandasGuiDataFrame
+from pandasgui.store import PandasGuiDataFrame
 
 logger = get_logger(__name__)
 
@@ -61,7 +61,7 @@ class DataFrameExplorer(DetachableTabWidget):
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
 
-    from pandasgui.datasets import iris, flights, multi, pokemon
+    from pandasgui.datasets import flights
 
     # Create and show widget
     dfe = DataFrameExplorer(flights)
