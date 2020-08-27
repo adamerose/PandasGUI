@@ -6,7 +6,6 @@ from typing import NewType, Union
 from dataclasses import dataclass
 import pandasgui
 import os
-import plotly.figure_factory as ff
 
 ColumnName = Union[str, None]
 
