@@ -1,6 +1,10 @@
 from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Union
 import pandas as pd
+from pandas import DataFrame
+from PyQt5 import QtCore, QtGui, QtWidgets, sip
+from PyQt5.QtCore import Qt
+import traceback
 
 
 @dataclass
@@ -10,47 +14,77 @@ class Settings:
 
 
 @dataclass
-class PandasGuiDataFrame(pd.DataFrame):
-    name: str = None
-    dataframe_explorer: "DataFrameExplorer" = None
-    dataframe_viewer: "DataFrameViewer" = None
+class Filter:
+    expr: str
+    enabled: bool
+    failed: bool
 
-    initial_index: pd.Index = None
 
-    column_sorted: Union[int, None] = None
-    index_sorted: Union[int, None] = None
-    sort_is_descending: Union[bool, None] = None
+class PandasGuiDataFrame:
+    def __init__(self, df: DataFrame, name: str = 'Untitled'):
+        super().__init__()
 
-    def __init__(self, df):
-        super().__init__(df)
-        self.init_inplace()
+        self.dataframe_unfiltered = df
+        self.dataframe = df
+        self.name = name
+        self.initial_index = df.index.copy()
 
-    def init_inplace(self):
-        self.initial_index = self.index.copy()
+        self.dataframe_explorer: Union["DataFrameExplorer", None] = None
+        self.dataframe_viewer: Union["DataFrameViewer", None] = None
+        self.filter_viewer: Union["FilterViewer", None] = None
+
+        self.column_sorted: Union[int, None] = None
+        self.index_sorted: Union[int, None] = None
+        self.sort_is_descending: Union[bool, None] = None
+
+        self.filters: List[Filter] = []
+
+    def update(self):
+        models = []
+        if self.dataframe_viewer is not None:
+            models += [self.dataframe_viewer.dataView.model(),
+                       self.dataframe_viewer.columnHeader.model(),
+                       self.dataframe_viewer.indexHeader.model(),
+                       self.dataframe_viewer.columnHeaderNames.model(),
+                       self.dataframe_viewer.indexHeaderNames.model(),
+                       ]
+
+        if self.filter_viewer is not None:
+            models += [self.filter_viewer.list_model,
+                       ]
+
+        for model in models:
+            model.beginResetModel()
+            model.endResetModel()
 
     def update_inplace(self, df):
-        self._update_inplace(df)
+        self.dataframe._update_inplace(df)
+
+    def edit_data(self, row, col, value):
+        self.dataframe_unfiltered.iloc[self.dataframe.index[row], col] = value
+        self.apply_filters()
+        self.update()
 
     def sort_by(self, ix: int, is_index=False):
         if is_index:
 
             # Clicked an unsorted index
             if ix != self.index_sorted:
-                self.sort_index(level=ix, ascending=True, kind="mergesort", inplace=True)
+                self.dataframe.sort_index(level=ix, ascending=True, kind="mergesort", inplace=True)
 
                 self.index_sorted = ix
                 self.sort_is_descending = False
 
             # Clicked a sorted index level
             elif ix == self.index_sorted and not self.sort_is_descending:
-                self.sort_index(level=ix, ascending=False, kind="mergesort", inplace=True)
+                self.dataframe.sort_index(level=ix, ascending=False, kind="mergesort", inplace=True)
 
                 self.index_sorted = ix
                 self.sort_is_descending = True
 
             # Clicked a reverse sorted index level
             elif ix == self.index_sorted and self.sort_is_descending:
-                temp = self.reindex(self.initial_index)
+                temp = self.dataframe.reindex(self.initial_index)
                 self.update_inplace(temp)
 
                 self.index_sorted = None
@@ -59,25 +93,25 @@ class PandasGuiDataFrame(pd.DataFrame):
             self.column_sorted = None
 
         else:
-            col_name = self.columns[ix]
+            col_name = self.dataframe.columns[ix]
 
             # Clicked an unsorted column
             if ix != self.column_sorted:
-                self.sort_values(col_name, ascending=True, kind="mergesort", inplace=True)
+                self.dataframe.sort_values(col_name, ascending=True, kind="mergesort", inplace=True)
 
                 self.column_sorted = ix
                 self.sort_is_descending = False
 
             # Clicked a sorted column
             elif ix == self.column_sorted and not self.sort_is_descending:
-                self.sort_values(col_name, ascending=False, kind="mergesort", inplace=True)
+                self.dataframe.sort_values(col_name, ascending=False, kind="mergesort", inplace=True)
 
                 self.column_sorted = ix
                 self.sort_is_descending = True
 
             # Clicked a reverse sorted column
             elif ix == self.column_sorted and self.sort_is_descending:
-                temp = self.reindex(self.initial_index)
+                temp = self.dataframe.reindex(self.initial_index)
                 self.update_inplace(temp)
 
                 self.column_sorted = None
@@ -85,7 +119,50 @@ class PandasGuiDataFrame(pd.DataFrame):
 
             self.index_sorted = None
 
-        self.dataframe_viewer.data_changed()
+        self.update()
+
+    def add_filter(self, expr: str, enabled=True):
+        filt = Filter(expr=expr, enabled=enabled, failed=False)
+        self.filters.append(filt)
+        self.apply_filters()
+
+    def remove_filter(self, index: int):
+        self.filters.pop(index)
+        self.apply_filters()
+
+    def edit_filter(self, index: int, expr: str):
+        filt = self.filters[index]
+        filt.expr = expr
+        filt.failed = False
+        self.apply_filters()
+
+    def toggle_filter(self, index: int):
+        self.filters[index].enabled = not self.filters[index].enabled
+        self.apply_filters()
+
+    def apply_filters(self):
+
+        df = self.dataframe_unfiltered
+        for ix, filt in enumerate(self.filters):
+            if filt.enabled and not filt.failed:
+                try:
+                    df = df.query(filt.expr)
+                except Exception as e:
+                    self.filters[ix].failed = True
+                    traceback.print_exc()
+        self.dataframe = df
+        self.update()
+
+    @staticmethod
+    def cast(x: Union["PandasGuiDataFrame", pd.DataFrame, pd.Series]):
+        if type(x) == PandasGuiDataFrame:
+            return x
+        if type(x) == pd.DataFrame:
+            return PandasGuiDataFrame(x)
+        elif type(x) == pd.Series:
+            return PandasGuiDataFrame(pd.DataFrame(x))
+        else:
+            raise TypeError
 
 
 @dataclass

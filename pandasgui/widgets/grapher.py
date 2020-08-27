@@ -3,6 +3,7 @@ import sys
 import plotly.express as px
 from PyQt5 import QtCore, QtGui, QtWidgets
 import pandas as pd
+from pandasgui.store import Store, PandasGuiDataFrame
 
 from pandasgui.utility import flatten_multiindex, get_logger
 from pandasgui.widgets.plotly_viewer import PlotlyViewer
@@ -14,9 +15,12 @@ logger = get_logger(__name__)
 
 
 class Grapher(QtWidgets.QWidget):
-    def __init__(self, df):
+    def __init__(self, pgdf: PandasGuiDataFrame):
         super().__init__()
-        self.df = df.copy()
+
+        pgdf = PandasGuiDataFrame.cast(pgdf)
+
+        self.df = pgdf.dataframe.copy()
 
         self.df.columns = flatten_multiindex(self.df.columns)
         if issubclass(type(self.df.index), pd.core.indexes.multi.MultiIndex):
@@ -31,9 +35,9 @@ class Grapher(QtWidgets.QWidget):
         # Dropdown to select plot type
         self.plot_type_picker = QtWidgets.QListWidget()
 
-        for x in schemas:
-            icon = QtGui.QIcon(x['icon_path'])
-            text = x["label"]
+        for schema in schemas:
+            icon = QtGui.QIcon(schema['icon_path'])
+            text =schema["label"]
             item = QtWidgets.QListWidgetItem(icon, text)
             self.plot_type_picker.addItem(item)
 

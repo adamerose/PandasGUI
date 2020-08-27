@@ -1,7 +1,6 @@
 import inspect
 import os
 import sys
-from dataclasses import dataclass, field, asdict
 
 import pandas as pd
 import pkg_resources
@@ -123,7 +122,7 @@ class PandasGui(QtWidgets.QMainWindow):
         except Exception as e:
             logger.error(f"Failed to import {path}\n", e)
 
-    def add_df(self, df, name):
+    def add_df(self, df: pd.DataFrame, name: str):
         """
         Add a new DataFrame to the GUI
         """
@@ -136,17 +135,13 @@ class PandasGui(QtWidgets.QMainWindow):
                 logger.warning(f'Could not convert "{name}" from type {type(df)} to DataFrame')
                 return
 
-        df.__class__ = PandasGuiDataFrame
-        df.init_inplace()
+        pgdf = PandasGuiDataFrame(df, name)
+        self.store.data.append(pgdf)
 
-        df.name = name
-        self.store.data.append(df)
-
-        dfe = DataFrameExplorer(df, editable=self.store.settings.editable)
-        df.dataframe_explorer = dfe
+        dfe = DataFrameExplorer(pgdf, editable=self.store.settings.editable)
         self.stacked_widget.addWidget(dfe)
 
-        self.add_df_to_nav(df.name)
+        self.add_df_to_nav(name)
 
     ####################
     # Menu bar functions
@@ -246,7 +241,7 @@ class PandasGui(QtWidgets.QMainWindow):
             parent = self.nav_tree
 
         # Calculate and format the shape of the DataFrame
-        shape = self.store.get_dataframe(df_name).shape
+        shape = self.store.get_dataframe(df_name).dataframe.shape
         shape = str(shape[0]) + " X " + str(shape[1])
 
         item = QtWidgets.QTreeWidgetItem(parent, [df_name, shape])
@@ -268,11 +263,28 @@ class PandasGui(QtWidgets.QMainWindow):
         self.stacked_widget.setCurrentWidget(dfe)
 
     def print_store(self):
-        print(asdict(self.store))
+        d = as_dict(self.store)
+        print(d)
 
     def view_store(self):
-        self.store_viewer = JsonViewer(asdict(self.store))
+        d = as_dict(self.store)
+        self.store_viewer = JsonViewer(d)
 
+def as_dict(obj):
+    if not  hasattr(obj,"__dict__"):
+        return obj
+    result = {}
+    for key, val in obj.__dict__.items():
+        if key.startswith("_"):
+            continue
+        element = []
+        if isinstance(val, list):
+            for item in val:
+                element.append(as_dict(item))
+        else:
+            element = as_dict(val)
+        result[key] = element
+    return result
 
 def show(*args, settings: dict = {}, **kwargs):
     # Get the variable names in the scope show() was called from
