@@ -81,8 +81,11 @@ class DataFrameViewer(QtWidgets.QWidget):
         self.gridLayout.addItem(
             QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding), 0, 0, 1, 1, )
 
-        self.set_styles()
         self.columnHeaderNames.setDisabled(True)
+
+        # Do this at top so sizeHints are calculated correctly
+        self.set_styles()
+        self.updateGeometry()
 
     def set_styles(self):
         for header in [self.indexHeader, self.columnHeader, self.indexHeaderNames, self.columnHeaderNames]:
@@ -91,6 +94,7 @@ class DataFrameViewer(QtWidgets.QWidget):
                 "selection-color: black;"
                 "selection-background-color: #EAEAEA;"
             )
+
         self.dataView.setStyleSheet(
             "background-color: white;"
             "alternate-background-color: #F4F6F6;"
@@ -140,7 +144,7 @@ class DataFrameViewer(QtWidgets.QWidget):
         """
         Set the size of column at column_index to fit its contents
         """
-        padding = 20
+        padding = 30
 
         self.columnHeader.resizeColumnToContents(column_index)
         width = self.columnHeader.columnWidth(column_index)
@@ -187,12 +191,7 @@ class DataFrameViewer(QtWidgets.QWidget):
             # This constrained width, with the flag of Qt.TextWordWrap
             # gets the height the cell would have to be to fit the text.
             constrained_rect = QtCore.QRect(0, 0, cell_width, 0)
-            h = (
-                self.dataView.fontMetrics()
-                    .boundingRect(constrained_rect, Qt.TextWordWrap, text)
-                    .height()
-            )
-
+            h = self.dataView.fontMetrics().boundingRect(constrained_rect, Qt.TextWordWrap, text).height()
             height = max(height, h)
 
         height += padding
@@ -310,7 +309,7 @@ class DataTableModel(QtCore.QAbstractTableModel):
             try:
                 self.pgdf.edit_data(row, col, value)
             except Exception as e:
-                print(e)
+                logger.exception(e)
                 return False
             return True
 
@@ -436,7 +435,7 @@ class HeaderModel(QtCore.QAbstractTableModel):
         elif self.orientation == Qt.Vertical:
             return self.pgdf.dataframe.index.shape[0]
 
-    def data(self, index, role=None):
+    def data(self, index, role=QtCore.Qt.DisplayRole):
         row = index.row()
         col = index.column()
 
@@ -516,10 +515,13 @@ class HeaderView(QtWidgets.QTableView):
             )
         )
         self.setWordWrap(False)
-        self.setFont(QtGui.QFont("Times", weight=QtGui.QFont.Bold))
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+
+        font = QtGui.QFont()
+        font.setBold(True)
+        self.setFont(font)
 
         # Link selection to DataTable
         self.selectionModel().selectionChanged.connect(self.on_selectionChanged)
@@ -618,7 +620,7 @@ class HeaderView(QtWidgets.QTableView):
 
     # Fits columns to contents but with a minimum width and added padding
     def init_size(self):
-        padding = 20
+        padding = 30
 
         if self.orientation == Qt.Horizontal:
             min_size = 100
@@ -635,7 +637,6 @@ class HeaderView(QtWidgets.QTableView):
                 self.setColumnWidth(col, new_width)
                 self.table.setColumnWidth(col, new_width)
         else:
-            max_size = 1000
             self.resizeColumnsToContents()
             for col in range(self.model().columnCount()):
                 width = self.columnWidth(col)
@@ -752,7 +753,7 @@ class HeaderView(QtWidgets.QTableView):
         if event.type() == QtCore.QEvent.MouseButtonPress:
             if self.orientation == Qt.Horizontal:
                 mouse_position = event.pos().x()
-            elif self.orientation == Qt.Vertical:
+            else:
                 mouse_position = event.pos().y()
 
             if self.over_header_edge(mouse_position) is not None:
@@ -776,7 +777,7 @@ class HeaderView(QtWidgets.QTableView):
         if event.type() == QtCore.QEvent.MouseButtonDblClick:
             if self.orientation == Qt.Horizontal:
                 mouse_position = event.pos().x()
-            elif self.orientation == Qt.Vertical:
+            else:
                 mouse_position = event.pos().y()
 
             # Find which column or row edge the mouse was over and auto size it
@@ -804,14 +805,10 @@ class HeaderView(QtWidgets.QTableView):
                 if size > 10:
                     if self.orientation == Qt.Horizontal:
                         self.setColumnWidth(self.header_being_resized, size)
-                        self.parent().dataView.setColumnWidth(
-                            self.header_being_resized, size
-                        )
+                        self.parent().dataView.setColumnWidth(self.header_being_resized, size)
                     if self.orientation == Qt.Vertical:
                         self.setRowHeight(self.header_being_resized, size)
-                        self.parent().dataView.setRowHeight(
-                            self.header_being_resized, size
-                        )
+                        self.parent().dataView.setRowHeight(self.header_being_resized, size)
 
                     self.updateGeometry()
                     self.parent().dataView.updateGeometry()
@@ -877,7 +874,7 @@ class HeaderNamesModel(QtCore.QAbstractTableModel):
         elif self.orientation == Qt.Vertical:
             return 1
 
-    def data(self, index, role=None):
+    def data(self, index, role=QtCore.Qt.DisplayRole):
         row = index.row()
         col = index.column()
 
@@ -916,8 +913,6 @@ class HeaderNamesView(QtWidgets.QTableView):
 
         self.clicked.connect(self.on_clicked)
 
-        self.setFont(QtGui.QFont("Times", weight=QtGui.QFont.Bold))
-
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
@@ -928,6 +923,10 @@ class HeaderNamesView(QtWidgets.QTableView):
         self.verticalHeader().hide()
 
         self.setSelectionMode(self.NoSelection)
+
+        font = QtGui.QFont()
+        font.setBold(True)
+        self.setFont(font)
         self.init_size()
 
     def on_clicked(self, ix: QtCore.QModelIndex):
@@ -936,18 +935,15 @@ class HeaderNamesView(QtWidgets.QTableView):
             self.pgdf.sort_index(ix.column())
 
     def init_size(self):
-        # Fit horizontal header names to fit text
-        if self.orientation == Qt.Horizontal:
-            self.resizeColumnToContents(0)
         # Match vertical header name widths to vertical header
-        elif self.orientation == Qt.Vertical:
+        if self.orientation == Qt.Vertical:
             for ix in range(self.model().columnCount()):
                 self.setColumnWidth(ix, self.columnWidth(ix))
 
     def sizeHint(self):
         if self.orientation == Qt.Horizontal:
-            height = self.parent().columnHeader.sizeHint().height()
             width = self.columnWidth(0)
+            height = self.parent().columnHeader.sizeHint().height()
         else:  # Vertical
             width = self.parent().indexHeader.sizeHint().width()
             height = self.rowHeight(0)
@@ -966,7 +962,7 @@ class HeaderNamesView(QtWidgets.QTableView):
                 return 0
             else:
                 return super().columnWidth(column)
-        else:  # Vertical
+        else:
             return self.parent().indexHeader.columnWidth(column)
 
 
