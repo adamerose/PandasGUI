@@ -66,62 +66,53 @@ class PandasGuiDataFrame:
         self.apply_filters()
         self.update()
 
-    def sort_by(self, ix: int, is_index=False):
-        if is_index:
+    def sort_column(self, ix: int):
+        col_name = self.dataframe.columns[ix]
 
-            # Clicked an unsorted index
-            if ix != self.index_sorted:
-                self.dataframe= self.dataframe.sort_index(level=ix, ascending=True, kind="mergesort")
+        # Clicked an unsorted column
+        if ix != self.column_sorted:
+            self.dataframe = self.dataframe.sort_values(col_name, ascending=True, kind="mergesort")
+            self.column_sorted = ix
+            self.sort_is_ascending = True
 
-                self.index_sorted = ix
-                self.sort_is_descending = False
+        # Clicked a sorted column
+        elif ix == self.column_sorted and self.sort_is_ascending:
+            self.dataframe = self.dataframe.sort_values(col_name, ascending=False, kind="mergesort")
+            self.column_sorted = ix
+            self.sort_is_ascending = False
 
-            # Clicked a sorted index level
-            elif ix == self.index_sorted and not self.sort_is_descending:
-                self.dataframe = self.dataframe.sort_index(level=ix, ascending=False, kind="mergesort")
-
-                self.index_sorted = ix
-                self.sort_is_descending = True
-
-            # Clicked a reverse sorted index level
-            elif ix == self.index_sorted and self.sort_is_descending:
-                unsorted_index = self.dataframe_original[self.dataframe_original.index.isin(self.dataframe)].index
-                self.dataframe = self.dataframe.reindex(unsorted_index)
-
-
-                self.index_sorted = None
-                self.sort_is_descending = None
-
+        # Clicked a reverse sorted column - reset to the original unsorted order
+        elif ix == self.column_sorted:
+            unsorted_index = self.dataframe_original[self.dataframe_original.index.isin(self.dataframe.index)].index
+            self.dataframe = self.dataframe.reindex(unsorted_index)
             self.column_sorted = None
+            self.sort_is_ascending = None
 
-        else:
-            col_name = self.dataframe.columns[ix]
+        self.index_sorted = None
+        self.update()
 
-            # Clicked an unsorted column
-            if ix != self.column_sorted:
-                unsorted_index = self.dataframe_original[self.dataframe_original.index.isin(self.dataframe.index)].index
-                self.dataframe = self.dataframe.reindex(unsorted_index)
+    def sort_index(self, ix: int):
+        # Clicked an unsorted index level
+        if ix != self.index_sorted:
+            self.dataframe = self.dataframe.sort_index(level=ix, ascending=True, kind="mergesort")
+            self.index_sorted = ix
+            self.sort_is_ascending = True
 
-                self.column_sorted = ix
-                self.sort_is_descending = False
+        # Clicked a sorted index level
+        elif ix == self.index_sorted and self.sort_is_ascending:
+            self.dataframe = self.dataframe.sort_index(level=ix, ascending=False, kind="mergesort")
+            self.index_sorted = ix
+            self.sort_is_ascending = False
 
-            # Clicked a sorted column
-            elif ix == self.column_sorted and not self.sort_is_descending:
-                self.dataframe = self.dataframe.sort_values(col_name, ascending=False, kind="mergesort")
-
-                self.column_sorted = ix
-                self.sort_is_descending = True
-
-            # Clicked a reverse sorted column
-            elif ix == self.column_sorted and self.sort_is_descending:
-                unsorted_index = self.dataframe_original[self.dataframe_original.index.isin(self.dataframe.index)].index
-                self.dataframe = self.dataframe.reindex(unsorted_index)
-
-                self.column_sorted = None
-                self.sort_is_descending = None
+        # Clicked a reverse sorted index level - reset to the original unsorted order
+        elif ix == self.index_sorted:
+            unsorted_index = self.dataframe_original[self.dataframe_original.index.isin(self.dataframe)].index
+            self.dataframe = self.dataframe.reindex(unsorted_index)
 
             self.index_sorted = None
+            self.sort_is_ascending = None
 
+        self.column_sorted = None
         self.update()
 
     def add_filter(self, expr: str, enabled=True):

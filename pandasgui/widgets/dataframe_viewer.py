@@ -462,10 +462,10 @@ class HeaderModel(QtCore.QAbstractTableModel):
                     return str(self.pgdf.dataframe.index.values[row])
 
         if role == QtCore.Qt.DecorationRole:
-            if self.pgdf.sort_is_descending:
-                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "images/sort-descending.png"))
-            else:
+            if self.pgdf.sort_is_ascending:
                 icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "images/sort-ascending.png"))
+            else:
+                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "images/sort-descending.png"))
 
             if col == self.pgdf.column_sorted and row == self.rowCount() - 1 and self.orientation == Qt.Horizontal:
                 return icon
@@ -542,7 +542,7 @@ class HeaderView(QtWidgets.QTableView):
     def on_clicked(self, ix: QtCore.QModelIndex):
         # When a header is clicked, sort the DataFrame by that column
         if self.orientation == Qt.Horizontal:
-            self.pgdf.sort_by(ix.column())
+            self.pgdf.sort_column(ix.column())
 
     # Header
     def on_selectionChanged(self):
@@ -901,10 +901,10 @@ class HeaderNamesModel(QtCore.QAbstractTableModel):
                 return str(val)
 
         if role == QtCore.Qt.DecorationRole:
-            if self.pgdf.sort_is_descending:
-                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "images/sort-descending.png"))
-            else:
+            if self.pgdf.sort_is_ascending:
                 icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "images/sort-ascending.png"))
+            else:
+                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "images/sort-descending.png"))
 
             if col == self.pgdf.index_sorted and self.orientation == Qt.Vertical:
                 return icon
@@ -938,8 +938,7 @@ class HeaderNamesView(QtWidgets.QTableView):
     def on_clicked(self, ix: QtCore.QModelIndex):
         # When the index header name is clicked, sort the index by that level
         if self.orientation == Qt.Vertical:
-            # Negative number means sort by index level instead of column
-            self.pgdf.sort_by(ix.column(), is_index=True)
+            self.pgdf.sort_index(ix.column())
 
     def init_size(self):
         # Fit horizontal header names to fit text
