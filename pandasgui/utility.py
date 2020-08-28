@@ -10,47 +10,59 @@ class DotDict(dict):
             self[key] = value
 
 
-from threading import Timer
-
-
 def throttle(wait):
     """
         https://gist.github.com/walkermatt/2871026
         Decorator that will postpone a functions
         execution until after wait seconds
         have elapsed since the last time it was invoked. """
+    from threading import Timer
     def decorator(fn):
         def throttled(*args, **kwargs):
             def call_it():
                 fn(*args, **kwargs)
+
             try:
                 throttled.t.cancel()
             except(AttributeError):
                 pass
             throttled.t = Timer(wait, call_it)
             throttled.t.start()
+
         return throttled
+
     return decorator
 
-def to_dict(obj, classkey=None):
-    if isinstance(obj, dict):
-        data = {}
-        for (k, v) in obj.items():
-            data[k] = to_dict(v, classkey)
-        return data
-    elif hasattr(obj, "_ast"):
-        return to_dict(obj._ast())
-    elif hasattr(obj, "__iter__") and not isinstance(obj, str):
-        return [to_dict(v, classkey) for v in obj]
-    elif hasattr(obj, "__dict__"):
-        data = dict([(key, to_dict(value, classkey))
-                     for key, value in obj.__dict__.items()
-                     if not callable(value) and not key.startswith('_')])
-        if classkey is not None and hasattr(obj, "__class__"):
-            data[classkey] = obj.__class__.__name__
-        return data
+
+def as_dict(obj, recurse_list=None):
+    # Primitive types
+    if not hasattr(obj, "__dict__"):
+        return str(obj)
+
+    # Check if object was seen before, otherwise traverse it too
+    if recurse_list is None:
+        recurse_list = []
+    if id(obj) in recurse_list:
+        return "*loop detected*"
     else:
-        return obj
+        recurse_list.append(id(obj))
+        result = {}
+        for key, val in obj.__dict__.items():
+
+            if key.startswith("_"):
+                continue
+
+            if isinstance(val, list):
+                if len(val) == 0:
+                    element = str(val)
+                else:
+                    element = []
+                    for item in val:
+                        element.append(as_dict(item, recurse_list=recurse_list))
+            else:
+                element = as_dict(val, recurse_list=recurse_list)
+            result[key] = element
+        return result
 
 
 def get_logger(logger_name=None):
@@ -93,8 +105,6 @@ def fix_ipython():
     except ModuleNotFoundError:
         # Don't need to fix iPython if user doesn't have it
         return
-
-
 
 
 def flatten_multiindex(mi, sep=" - ", format=None):
