@@ -11,6 +11,7 @@ from pandasgui.utility import get_logger
 
 logger = get_logger(__name__)
 
+
 @dataclass
 class Settings:
     # Are table cells editable
@@ -29,7 +30,22 @@ class Filter:
 @dataclass
 class HistoryItem:
     name: str
+    args: tuple
+    kwargs: dict
     time: str
+
+
+def track_history(func):
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        self.history.append(HistoryItem(name=func.__name__,
+                                        args=args,
+                                        kwargs=kwargs,
+                                        time=datetime.now().strftime("%H:%M:%S"))
+                            )
+        func(self, *args, **kwargs)
+
+    return wrapper
 
 
 class PandasGuiDataFrame:
@@ -55,12 +71,6 @@ class PandasGuiDataFrame:
 
         self.filters: List[Filter] = []
 
-    def track_history(self, func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            self.history += HistoryItem(name=func.__name__,
-                                        time=datetime.now().strftime("%H:%M:%S"))
-
     def update(self):
         models = []
         if self.dataframe_viewer is not None:
@@ -79,12 +89,14 @@ class PandasGuiDataFrame:
             model.beginResetModel()
             model.endResetModel()
 
+    @track_history
     def edit_data(self, row, col, value):
         # Not using iat here because it won't work with MultiIndex
         self.dataframe_original.at[self.dataframe.index[row], self.dataframe.columns[col]] = value
         self.apply_filters()
         self.update()
 
+    @track_history
     def sort_column(self, ix: int):
         col_name = self.dataframe.columns[ix]
 
@@ -110,6 +122,7 @@ class PandasGuiDataFrame:
         self.index_sorted = None
         self.update()
 
+    @track_history
     def sort_index(self, ix: int):
         # Clicked an unsorted index level
         if ix != self.index_sorted:
@@ -134,21 +147,25 @@ class PandasGuiDataFrame:
         self.column_sorted = None
         self.update()
 
+    @track_history
     def add_filter(self, expr: str, enabled=True):
         filt = Filter(expr=expr, enabled=enabled, failed=False)
         self.filters.append(filt)
         self.apply_filters()
 
+    @track_history
     def remove_filter(self, index: int):
         self.filters.pop(index)
         self.apply_filters()
 
+    @track_history
     def edit_filter(self, index: int, expr: str):
         filt = self.filters[index]
         filt.expr = expr
         filt.failed = False
         self.apply_filters()
 
+    @track_history
     def toggle_filter(self, index: int):
         self.filters[index].enabled = not self.filters[index].enabled
         self.apply_filters()
