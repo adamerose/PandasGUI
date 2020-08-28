@@ -24,10 +24,10 @@ class PandasGuiDataFrame:
     def __init__(self, df: DataFrame, name: str = 'Untitled'):
         super().__init__()
 
-        self.dataframe_unfiltered = df
         self.dataframe = df
+        self.dataframe_original = df.copy()
         self.name = name
-        self.initial_index = df.index.copy()
+
 
         self.dataframe_explorer: Union["DataFrameExplorer", None] = None
         self.dataframe_viewer: Union["DataFrameViewer", None] = None
@@ -36,6 +36,7 @@ class PandasGuiDataFrame:
         self.column_sorted: Union[int, None] = None
         self.index_sorted: Union[int, None] = None
         self.sort_is_descending: Union[bool, None] = None
+
 
         self.filters: List[Filter] = []
 
@@ -61,7 +62,7 @@ class PandasGuiDataFrame:
         self.dataframe._update_inplace(df)
 
     def edit_data(self, row, col, value):
-        self.dataframe_unfiltered.iloc[self.dataframe.index[row], col] = value
+        self.dataframe_original.iloc[self.dataframe.index[row], col] = value
         self.apply_filters()
         self.update()
 
@@ -70,22 +71,23 @@ class PandasGuiDataFrame:
 
             # Clicked an unsorted index
             if ix != self.index_sorted:
-                self.dataframe.sort_index(level=ix, ascending=True, kind="mergesort", inplace=True)
+                self.dataframe= self.dataframe.sort_index(level=ix, ascending=True, kind="mergesort")
 
                 self.index_sorted = ix
                 self.sort_is_descending = False
 
             # Clicked a sorted index level
             elif ix == self.index_sorted and not self.sort_is_descending:
-                self.dataframe.sort_index(level=ix, ascending=False, kind="mergesort", inplace=True)
+                self.dataframe = self.dataframe.sort_index(level=ix, ascending=False, kind="mergesort")
 
                 self.index_sorted = ix
                 self.sort_is_descending = True
 
             # Clicked a reverse sorted index level
             elif ix == self.index_sorted and self.sort_is_descending:
-                temp = self.dataframe.reindex(self.initial_index)
-                self.update_inplace(temp)
+                unsorted_index = self.dataframe_original[self.dataframe_original.index.isin(self.dataframe)].index
+                self.dataframe = self.dataframe.reindex(unsorted_index)
+
 
                 self.index_sorted = None
                 self.sort_is_descending = None
@@ -97,22 +99,23 @@ class PandasGuiDataFrame:
 
             # Clicked an unsorted column
             if ix != self.column_sorted:
-                self.dataframe.sort_values(col_name, ascending=True, kind="mergesort", inplace=True)
+                unsorted_index = self.dataframe_original[self.dataframe_original.index.isin(self.dataframe.index)].index
+                self.dataframe = self.dataframe.reindex(unsorted_index)
 
                 self.column_sorted = ix
                 self.sort_is_descending = False
 
             # Clicked a sorted column
             elif ix == self.column_sorted and not self.sort_is_descending:
-                self.dataframe.sort_values(col_name, ascending=False, kind="mergesort", inplace=True)
+                self.dataframe = self.dataframe.sort_values(col_name, ascending=False, kind="mergesort")
 
                 self.column_sorted = ix
                 self.sort_is_descending = True
 
             # Clicked a reverse sorted column
             elif ix == self.column_sorted and self.sort_is_descending:
-                temp = self.dataframe.reindex(self.initial_index)
-                self.update_inplace(temp)
+                unsorted_index = self.dataframe_original[self.dataframe_original.index.isin(self.dataframe.index)].index
+                self.dataframe = self.dataframe.reindex(unsorted_index)
 
                 self.column_sorted = None
                 self.sort_is_descending = None
@@ -142,7 +145,7 @@ class PandasGuiDataFrame:
 
     def apply_filters(self):
 
-        df = self.dataframe_unfiltered
+        df = self.dataframe_original
         for ix, filt in enumerate(self.filters):
             if filt.enabled and not filt.failed:
                 try:
