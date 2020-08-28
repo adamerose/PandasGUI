@@ -5,11 +5,17 @@ from pandas import DataFrame
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5.QtCore import Qt
 import traceback
+from functools import wraps
+from datetime import datetime
+from pandasgui.utility import get_logger
 
+logger = get_logger(__name__)
 
 @dataclass
 class Settings:
-    editable: bool = True  # Are table cells editable
+    # Are table cells editable
+    editable: bool = True
+    # Should GUI block code execution until closed
     block: bool = False
 
 
@@ -20,25 +26,40 @@ class Filter:
     failed: bool
 
 
+@dataclass
+class HistoryItem:
+    name: str
+    time: str
+
+
 class PandasGuiDataFrame:
     def __init__(self, df: DataFrame, name: str = 'Untitled'):
         super().__init__()
+        df = df.copy()
 
         self.dataframe = df
-        self.dataframe_original = df.copy()
+        self.dataframe_original = df
         self.name = name
 
+        self.history: List[HistoryItem] = []
 
+        # References to other object instances that may be assigned later
+        self.settings: Settings = Settings()
         self.dataframe_explorer: Union["DataFrameExplorer", None] = None
         self.dataframe_viewer: Union["DataFrameViewer", None] = None
         self.filter_viewer: Union["FilterViewer", None] = None
 
         self.column_sorted: Union[int, None] = None
         self.index_sorted: Union[int, None] = None
-        self.sort_is_descending: Union[bool, None] = None
-
+        self.sort_is_ascending: Union[bool, None] = None
 
         self.filters: List[Filter] = []
+
+    def track_history(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            self.history += HistoryItem(name=func.__name__,
+                                        time=datetime.now().strftime("%H:%M:%S"))
 
     def update(self):
         models = []
@@ -58,11 +79,9 @@ class PandasGuiDataFrame:
             model.beginResetModel()
             model.endResetModel()
 
-    def update_inplace(self, df):
-        self.dataframe._update_inplace(df)
-
     def edit_data(self, row, col, value):
-        self.dataframe_original.iloc[self.dataframe.index[row], col] = value
+        # Not using iat here because it won't work with MultiIndex
+        self.dataframe_original.at[self.dataframe.index[row], self.dataframe.columns[col]] = value
         self.apply_filters()
         self.update()
 
@@ -143,7 +162,7 @@ class PandasGuiDataFrame:
                     df = df.query(filt.expr)
                 except Exception as e:
                     self.filters[ix].failed = True
-                    traceback.print_exc()
+                    logger.exception(e)
         self.dataframe = df
         self.update()
 
@@ -163,6 +182,10 @@ class PandasGuiDataFrame:
 class Store:
     settings: Settings = Settings()
     data: List[PandasGuiDataFrame] = field(default_factory=list)
+
+    def add_pgdf(self, pgdf):
+        pgdf.settings = self.settings
+        self.data.append(pgdf)
 
     def get_dataframe(self, name):
         return next((x for x in self.data if x.name == name), None)

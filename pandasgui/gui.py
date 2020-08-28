@@ -136,9 +136,9 @@ class PandasGui(QtWidgets.QMainWindow):
                 return
 
         pgdf = PandasGuiDataFrame(df, name)
-        self.store.data.append(pgdf)
+        self.store.add_pgdf(pgdf)
 
-        dfe = DataFrameExplorer(pgdf, editable=self.store.settings.editable)
+        dfe = DataFrameExplorer(pgdf)
         self.stacked_widget.addWidget(dfe)
 
         self.add_df_to_nav(name)
