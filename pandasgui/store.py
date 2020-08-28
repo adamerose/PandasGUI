@@ -138,8 +138,8 @@ class PandasGuiDataFrame:
 
         # Clicked a reverse sorted index level - reset to the original unsorted order
         elif ix == self.index_sorted:
-            unsorted_index = self.dataframe_original[self.dataframe_original.index.isin(self.dataframe)].index
-            self.dataframe = self.dataframe.reindex(unsorted_index)
+            unsorted_index = self.dataframe_original[self.dataframe_original.index.isin(self.dataframe.index)].index
+            self.dataframe.index = unsorted_index
 
             self.index_sorted = None
             self.sort_is_ascending = None
