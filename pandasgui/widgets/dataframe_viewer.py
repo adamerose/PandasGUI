@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 
 
 class DataFrameViewer(QtWidgets.QWidget):
-    def __init__(self, pgdf: PandasGuiDataFrame, editable=True):
+    def __init__(self, pgdf: PandasGuiDataFrame):
         super().__init__()
 
         pgdf = PandasGuiDataFrame.cast(pgdf)
@@ -25,7 +25,6 @@ class DataFrameViewer(QtWidgets.QWidget):
 
         # Indicates whether the widget has been shown yet. Set to True in
         self._loaded = False
-        self.editable = editable
 
         # Set up DataFrame TableView and Model
         self.dataView = DataTableView(parent=self)
@@ -299,12 +298,8 @@ class DataTableModel(QtCore.QAbstractTableModel):
             return str(cell)
 
     def flags(self, index):
-        if self.parent().editable:
-            return (
-                    QtCore.Qt.ItemIsEditable
-                    | QtCore.Qt.ItemIsEnabled
-                    | QtCore.Qt.ItemIsSelectable
-            )
+        if self.parent().pgdf.settings.editable:
+            return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
         else:
             return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
 

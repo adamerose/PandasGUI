@@ -14,17 +14,15 @@ logger = get_logger(__name__)
 
 
 class DataFrameExplorer(DetachableTabWidget):
-    def __init__(self, pgdf: PandasGuiDataFrame, editable=True):
+    def __init__(self, pgdf: PandasGuiDataFrame):
         super().__init__()
 
         pgdf = PandasGuiDataFrame.cast(pgdf)
         pgdf.dataframe_explorer = self
         self.pgdf = pgdf
 
-        self.editable = editable
-
         # DataFrame tab
-        self.dataframe_tab = DataFrameViewer(pgdf, editable=self.editable)
+        self.dataframe_tab = DataFrameViewer(pgdf)
         self.addTab(self.dataframe_tab, "DataFrame")
 
         # Filters tab
@@ -58,7 +56,7 @@ class DataFrameExplorer(DetachableTabWidget):
         )
 
         stats_pgdf = PandasGuiDataFrame(stats_df.reset_index())
-        w = DataFrameViewer(stats_pgdf, editable=self.editable)
+        w = DataFrameViewer(stats_pgdf)
         w.setAutoFillBackground(True)
         return w
 
