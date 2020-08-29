@@ -1,19 +1,20 @@
 import sys
-
+from typing import List
 import pandas as pd
-from PyQt5 import QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import Qt
 
 from pandasgui.utility import get_logger
 from pandasgui.widgets.dataframe_viewer import DataFrameViewer
 from pandasgui.widgets.grapher import Grapher
-from pandasgui.widgets.detachable_tab_widget import DetachableTabWidget
 from pandasgui.widgets.filter_viewer import FilterViewer
+from pandasgui.widgets.dock_widget import DockWidget
 from pandasgui.store import PandasGuiDataFrame
 
 logger = get_logger(__name__)
 
 
-class DataFrameExplorer(DetachableTabWidget):
+class DataFrameExplorer(QtWidgets.QMainWindow):
     def __init__(self, pgdf: PandasGuiDataFrame):
         super().__init__()
 
@@ -21,26 +22,48 @@ class DataFrameExplorer(DetachableTabWidget):
         pgdf.dataframe_explorer = self
         self.pgdf = pgdf
 
+        # Dock setup
+        self.docks: List[DockWidget] = []
+        self.setDockOptions(self.GroupedDragging | self.AllowTabbedDocks | self.AllowNestedDocks)
+        self.setTabPosition(Qt.AllDockWidgetAreas, QtWidgets.QTabWidget.North)
+
         # DataFrame tab
         self.dataframe_tab = DataFrameViewer(pgdf)
-        self.addTab(self.dataframe_tab, "DataFrame")
+        self.add_view(self.dataframe_tab, "DataFrame")
 
         # Filters tab
         self.filters_tab = FilterViewer(pgdf)
-        self.addTab(self.filters_tab, "Filters")
+        self.add_view(self.filters_tab, "Filters")
 
         # Statistics tab
         self.statistics_tab = self.make_statistics_tab(pgdf)
-        self.addTab(self.statistics_tab, "Statistics")
+        self.add_view(self.statistics_tab, "Statistics")
 
         # Grapher tab
         graph_maker = Grapher(pgdf)
-        self.addTab(graph_maker, "Grapher")
+        self.add_view(graph_maker, "Grapher")
+
+    def add_view(self, widget: QtWidgets.QWidget, title: str):
+        dock = DockWidget(title)
+        dock.setAllowedAreas(Qt.AllDockWidgetAreas)
+
+        frame = QtWidgets.QFrame()
+        frame.setFrameStyle(frame.Box | frame.Raised)
+        frame.setLineWidth(2)
+        layout = QtWidgets.QHBoxLayout()
+        layout.addWidget(widget)
+        frame.setLayout(layout)
+        dock.setWidget(frame)
+
+        if len(self.docks) > 0:
+            self.tabifyDockWidget(self.docks[0], dock)
+        else:
+            self.addDockWidget(Qt.LeftDockWidgetArea, dock)
+        self.docks.append(dock)
 
     def __reduce__(self):
         # This is so dataclasses.asdict doesn't complain about this being unpicklable
         return "DataFrameExplorer"
-
 
     def make_statistics_tab(self, pgdf: PandasGuiDataFrame):
         stats_df = pd.DataFrame(
