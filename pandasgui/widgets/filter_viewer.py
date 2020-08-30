@@ -30,18 +30,27 @@ class FilterViewer(QtWidgets.QWidget):
         self.text_input.setPlaceholderText("Enter a Pandas query expression")
         self.text_input_label = QtWidgets.QLabel('''<a href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.query.html">What's a query expression?</a>''')
         self.text_input_label.linkActivated.connect(lambda link: QDesktopServices.openUrl(QUrl(link)))
+        self.text_input.setValidator(None)
+
+        self.submit_button = QtWidgets.QPushButton("Add Filter")
+
         # Signals
         self.text_input.returnPressed.connect(self.add_filter)
+        self.submit_button.clicked.connect(self.add_filter)
 
         # Layout
+        self.new_filter_layout = QtWidgets.QHBoxLayout()
+        self.new_filter_layout.addWidget(self.text_input)
+        self.new_filter_layout.addWidget(self.submit_button)
         self.layout = QtWidgets.QVBoxLayout()
-        self.layout.addWidget(self.text_input)
+        self.layout.addLayout(self.new_filter_layout)
         self.layout.addWidget(self.text_input_label)
         self.layout.addWidget(self.list_view)
         self.setLayout(self.layout)
 
     def add_filter(self):
         expr = self.text_input.text()
+        print(expr)
         self.text_input.setText("")
         self.pgdf.add_filter(expr=expr)
         print(self.pgdf.filters)
@@ -118,10 +127,12 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     from pandasgui.datasets import pokemon
 
+    stacked_widget = QtWidgets.QStackedWidget()
     pokemon = PandasGuiDataFrame(pokemon)
     pokemon.add_filter('Generation > 3', enabled=False)
     pokemon.add_filter('Attack > 50', enabled=True)
     pokemon.add_filter('Defense < 30', enabled=True)
     fv = FilterViewer(pokemon)
-    fv.show()
+    stacked_widget.addWidget(fv)
+    stacked_widget.show()
     app.exec_()
