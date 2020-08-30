@@ -281,7 +281,11 @@ class PandasGui(QtWidgets.QMainWindow):
         self.store_viewer = JsonViewer(d)
         self.store_viewer.show()
 
-
+    def get_dataframes(self):
+        df_dict = {}
+        for pgdf in self.store.data:
+            df_dict[pgdf.name] = pgdf.dataframe
+        return df_dict
 
 def show(*args, settings: dict = {}, **kwargs):
     # Get the variable names in the scope show() was called from
