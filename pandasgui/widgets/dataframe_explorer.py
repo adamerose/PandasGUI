@@ -57,8 +57,11 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
 
         if len(self.docks) > 0:
             self.tabifyDockWidget(self.docks[0], dock)
+            # Keep the first tab active by default
+            self.docks[0].raise_()
         else:
-            self.addDockWidget(Qt.LeftDockWidgetArea, dock)
+            self.addDockWidget(Qt.TopDockWidgetArea, dock)
+
         self.docks.append(dock)
 
     def __reduce__(self):
