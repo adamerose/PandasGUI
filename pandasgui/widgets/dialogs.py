@@ -23,6 +23,9 @@ class Dragger(QtWidgets.QWidget):
         assert (len(destinations) == len(set(destinations)))
         assert (len(sources) == len(source_types))
 
+        # Custom kwargs dialog
+        self.kwargs_dialog = self.CustomKwargsEditor(self)
+
         # Search box
         self.search_box = QtWidgets.QLineEdit()
         self.search_box.textChanged.connect(self.filter)
@@ -44,7 +47,6 @@ class Dragger(QtWidgets.QWidget):
         self.dest_tree.setRootIsDecorated(False)
 
         self.set_destinations(destinations)
-
         self.apply_tree_settings()
 
         # Configure drag n drop
@@ -59,12 +61,14 @@ class Dragger(QtWidgets.QWidget):
         dest.setDefaultDropAction(QtCore.Qt.MoveAction)
 
         # Buttons
+        self.kwargs_button = QtWidgets.QPushButton("Custom Kwargs")
         self.reset_button = QtWidgets.QPushButton("Reset")
         self.finish_button = QtWidgets.QPushButton("Finish")
 
         # Signals
         self.itemDropped.connect(self.apply_tree_settings)
         self.dest_tree.itemDoubleClicked.connect(self.handle_double_click)
+        self.kwargs_button.clicked.connect(self.custom_kwargs)
         self.reset_button.clicked.connect(self.reset)
         self.finish_button.clicked.connect(self.finish)
 
@@ -74,6 +78,7 @@ class Dragger(QtWidgets.QWidget):
         self.source_tree_layout.addWidget(self.source_tree)
 
         self.button_layout = QtWidgets.QHBoxLayout()
+        self.button_layout.addWidget(self.kwargs_button)
         self.button_layout.addWidget(self.reset_button)
         self.button_layout.addWidget(self.finish_button)
 
@@ -124,11 +129,6 @@ class Dragger(QtWidgets.QWidget):
         for item in items:
             item.setHidden(False)
 
-    def reset(self):
-
-        self.remembered_values = {}
-        self.clear_tree()
-
     # Clear tree items under each sections
     def clear_tree(self):
         root = self.dest_tree.invisibleRootItem()
@@ -141,6 +141,13 @@ class Dragger(QtWidgets.QWidget):
 
         for item in to_delete:
             sip.delete(item)
+
+    def custom_kwargs(self):
+        self.kwargs_dialog.setVisible(not self.kwargs_dialog.isVisible())
+
+    def reset(self):
+        self.remembered_values = {}
+        self.clear_tree()
 
     def finish(self):
         self.finished.emit()
@@ -185,10 +192,15 @@ class Dragger(QtWidgets.QWidget):
                 value = sub_child.text(0)
                 data[section].append(value)
 
+        # Add custom kwargs
+        root = self.kwargs_dialog.tree_widget.invisibleRootItem()
+        for i in range(root.childCount()):
+            child = root.child(i)
+            data[child.text(0)] = child.text(1)
+
         return data
 
     def set_sources(self, sources: List[str], source_types: List[str]):
-
 
         for i in range(len(sources)):
             item = QtWidgets.QTreeWidgetItem(self.source_tree, [sources[i], source_types[i]])
@@ -219,6 +231,50 @@ class Dragger(QtWidgets.QWidget):
         def dropEvent(self, e: QtGui.QDropEvent):
             super().dropEvent(e)
             self.parent().itemDropped.emit()
+
+    class CustomKwargsEditor(QtWidgets.QDialog):
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.setVisible(False)
+            self.setWindowTitle("Custom Kwargs")
+
+            self.tree_widget = QtWidgets.QTreeWidget()
+            self.tree_widget.setHeaderLabels(['Kwarg Name', 'Kwarg Value'])
+            self.kwarg_name = QtWidgets.QLineEdit()
+            self.kwarg_value = QtWidgets.QLineEdit()
+            self.submit_button = QtWidgets.QPushButton("Add")
+            self.delete_button = QtWidgets.QPushButton("Delete")
+
+            # Signals
+            self.kwarg_name.returnPressed.connect(self.add_item)
+            self.kwarg_value.returnPressed.connect(self.add_item)
+            self.submit_button.pressed.connect(self.add_item)
+            self.delete_button.pressed.connect(self.delete)
+
+            # Layout
+            self.layout = QtWidgets.QVBoxLayout()
+            self.input_layout = QtWidgets.QHBoxLayout()
+            self.input_layout.addWidget(self.kwarg_name)
+            self.input_layout.addWidget(self.kwarg_value)
+            self.input_layout.addWidget(self.submit_button)
+            self.layout.addLayout(self.input_layout)
+            self.layout.addWidget(self.tree_widget)
+            self.layout.addWidget(self.delete_button)
+            self.setLayout(self.layout)
+
+        def add_item(self):
+            name = self.kwarg_name.text()
+            value = self.kwarg_value.text()
+            self.kwarg_name.setText("")
+            self.kwarg_value.setText("")
+
+            if name != "" and value != "":
+                item = QtWidgets.QTreeWidgetItem(self.tree_widget, [name, value])
+                item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable)
+
+        def delete(self):
+            for item in self.tree_widget.selectedItems():
+                sip.delete(item)
 
 
 class SearchableListWidget(QtWidgets.QWidget):
@@ -285,6 +341,7 @@ if __name__ == "__main__":
 
     test = Dragger(sources=pokemon.columns, destinations=["x", "y", "color"],
                    source_types=pokemon.dtypes.values.astype(str))
+    test.finished.connect(lambda: print(test.get_data()))
     test.show()
 
     sys.exit(app.exec_())
