@@ -2,17 +2,14 @@ from pandasgui.utility import DotDict
 import plotly.express as px
 from pandas import DataFrame
 import inspect
-from typing import NewType, Union
+from typing import NewType, Union, List, Callable
 from dataclasses import dataclass
 import pandasgui
 import os
+from dataclasses_json import dataclass_json
+from dacite import from_dict
 
 ColumnName = Union[str, None]
-
-
-@dataclass
-class ColumnName:
-    required: bool = False
 
 
 def line(**kwargs):
@@ -36,16 +33,39 @@ def scatter_matrix(**kwargs):
     fig.update_traces(diagonal_visible=False)
     return fig
 
+
 def contour(**kwargs):
     fig = px.density_contour(**kwargs)
     fig.update_traces(contours_coloring="fill", contours_showlabels=True)
     return fig
 
-schemas = [
+
+@dataclass_json
+@dataclass
+class Arg:
+    arg_name: str
+
+
+@dataclass_json
+@dataclass
+class Schema:
+    name: str
+    args: List[Arg]
+    label: str
+    category: str
+    function: Callable
+    icon_path: str
+
+
+schema_data_list = [
     {
         "name": "histogram",
         "label": "Histogram",
-        "args": {"x": {}, "color": {}, "facet_row": {}, "facet_col": {}},
+        "args": [{'arg_name': "x"},
+                 {'arg_name': "color"},
+                 {'arg_name': "facet_row"},
+                 {'arg_name': "facet_col"}]
+        ,
         "function": px.histogram,
         "category": "Basic",
         "icon_path": os.path.join(pandasgui.__path__[0], "images/plotly/trace-type-histogram.svg")
@@ -53,7 +73,13 @@ schemas = [
     {
         "name": "scatter",
         "label": "Scatter",
-        "args": {"x": {}, "y": {}, "color": {}, "facet_row": {}, "facet_col": {}},
+        "args": [{'arg_name': "x"},
+                 {'arg_name': "y"},
+                 {'arg_name': "color"},
+                 {'arg_name': "facet_row"},
+
+                 {'arg_name': "facet_col"}]
+        ,
         "function": px.scatter,
         "category": "Basic",
         "icon_path": os.path.join(pandasgui.__path__[0], "images/plotly/trace-type-scatter.svg")
@@ -61,7 +87,12 @@ schemas = [
     {
         "name": "line",
         "label": "Line",
-        "args": {"x": {}, "y": {}, "color": {}, "facet_row": {}, "facet_col": {}},
+        "args": [{'arg_name': "x"},
+                 {'arg_name': "y"},
+                 {'arg_name': "color"},
+                 {'arg_name': "facet_row"},
+                 {'arg_name': "facet_col"}]
+        ,
         "function": line,
         "category": "Basic",
         "icon_path": os.path.join(pandasgui.__path__[0], "images/plotly/trace-type-line.svg")
@@ -69,7 +100,13 @@ schemas = [
     {
         "name": "bar",
         "label": "Bar",
-        "args": {"x": {}, "y": {}, "color": {}, "facet_row": {}, "facet_col": {}},
+        "args": [{'arg_name': "x"},
+                 {'arg_name': "y"},
+                 {'arg_name': "color"},
+                 {'arg_name': "facet_row"},
+
+                 {'arg_name': "facet_col"}]
+        ,
         "function": px.bar,
         "category": "Basic",
         "icon_path": os.path.join(pandasgui.__path__[0], "images/plotly/trace-type-bar.svg")
@@ -77,7 +114,13 @@ schemas = [
     {
         "name": "box",
         "label": "Box",
-        "args": {"x": {}, "y": {}, "color": {}, "facet_row": {}, "facet_col": {}},
+        "args": [{'arg_name': "x"},
+                 {'arg_name': "y"},
+                 {'arg_name': "color"},
+                 {'arg_name': "facet_row"},
+
+                 {'arg_name': "facet_col"}]
+        ,
         "function": px.box,
         "category": "Basic",
         "icon_path": os.path.join(pandasgui.__path__[0], "images/plotly/trace-type-box.svg")
@@ -85,7 +128,13 @@ schemas = [
     {
         "name": "violin",
         "label": "Violin",
-        "args": {"x": {}, "y": {}, "color": {}, "facet_row": {}, "facet_col": {}},
+        "args": [{'arg_name': "x"},
+                 {'arg_name': "y"},
+                 {'arg_name': "color"},
+                 {'arg_name': "facet_row"},
+
+                 {'arg_name': "facet_col"}]
+        ,
         "function": px.violin,
         "category": "1D Distributions",
         "icon_path": os.path.join(pandasgui.__path__[0], "images/plotly/trace-type-violin.svg")
@@ -93,7 +142,11 @@ schemas = [
     {
         "name": "scatter_3d",
         "label": "Scatter 3D",
-        "args": {"x": {}, "y": {}, "z": {}, "color": {}, },
+        "args": [{'arg_name': "x"},
+                 {'arg_name': "y"},
+                 {'arg_name': "z"},
+                 {'arg_name': "color"},
+                 ],
         "function": px.scatter_3d,
         "category": "3-Dimensional",
         "icon_path": os.path.join(pandasgui.__path__[0], "images/plotly/trace-type-scatter3d.svg")
@@ -101,7 +154,13 @@ schemas = [
     {
         "name": "density_heatmap",
         "label": "Heatmap",
-        "args": {"x": {}, "y": {}, "z": {}, "facet_row": {}, "facet_col": {}},
+        "args": [{'arg_name': "x"},
+                 {'arg_name': "y"},
+                 {'arg_name': "z"},
+                 {'arg_name': "facet_row"},
+
+                 {'arg_name': "facet_col"}]
+        ,
         "function": px.density_heatmap,
         "category": "2D Distributions",
         "icon_path": os.path.join(pandasgui.__path__[0], "images/plotly/trace-type-heatmap.svg")
@@ -109,7 +168,13 @@ schemas = [
     {
         "name": "density_contour",
         "label": "Contour",
-        "args": {"x": {}, "y": {}, "z": {}, "facet_row": {}, "facet_col": {}},
+        "args": [{'arg_name': "x"},
+                 {'arg_name': "y"},
+                 {'arg_name': "z"},
+                 {'arg_name': "facet_row"},
+
+                 {'arg_name': "facet_col"}]
+        ,
         "function": contour,
         "category": "2D Distributions",
         "icon_path": os.path.join(pandasgui.__path__[0], "images/plotly/trace-type-contour.svg")
@@ -117,7 +182,9 @@ schemas = [
     {
         "name": "pie",
         "label": "Pie",
-        "args": {"names": {}, "values": {}, },
+        "args": [{'arg_name': "names"},
+                 {'arg_name': "values"},
+                 ],
         "function": px.pie,
         "category": "Proportion",
         "icon_path": os.path.join(pandasgui.__path__[0], "images/plotly/trace-type-pie.svg")
@@ -126,9 +193,13 @@ schemas = [
     {
         "name": "scatter_matrix",
         "label": "Scatter Matrix",
-        "args": {"dimensions": {}, "color": {}, },
+        "args": [{'arg_name': "dimensions"},
+                 {'arg_name': "color"},
+                 ],
         "function": scatter_matrix,
         "category": "Multidimensional",
         "icon_path": os.path.join(pandasgui.__path__[0], "images/plotly/trace-type-splom.svg")
     },
 ]
+
+schemas = [from_dict(data_class=Schema, data=schema_data) for schema_data in schema_data_list]

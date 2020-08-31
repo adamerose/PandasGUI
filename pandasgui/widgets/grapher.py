@@ -36,11 +36,10 @@ class Grapher(QtWidgets.QWidget):
         self.plot_type_picker = QtWidgets.QListWidget()
 
         for schema in schemas:
-            icon = QtGui.QIcon(schema['icon_path'])
-            text =schema["label"]
+            icon = QtGui.QIcon(schema.icon_path)
+            text = schema.label
             item = QtWidgets.QListWidgetItem(icon, text)
             self.plot_type_picker.addItem(item)
-
 
         # UI setup
         self.figure_viewer = PlotlyViewer()
@@ -75,14 +74,20 @@ class Grapher(QtWidgets.QWidget):
 
     def update_dragger(self):
         selected_plot_label = self.plot_type_picker.selectedItems()[0].text()
-        current_schema = next(filter(lambda x: x['label'] == selected_plot_label, schemas))
+        current_schema = next(filter(lambda schema: schema.label == selected_plot_label, schemas))
+        arg_list = [arg.arg_name for arg in current_schema.args]
+        #
+        # if self.show_all:
+        #     arg_list = [arg.arg_name for arg in current_schema.args]
+        # else:
+        #     arg_list = [arg.arg_name for arg in current_schema.args if not arg.advanced]
 
-        self.dragger.set_destinations(current_schema['args'].keys())
+        self.dragger.set_destinations(arg_list)
 
     def update_plot(self):
         self.spinner.start()
         selected_plot_label = self.plot_type_picker.selectedItems()[0].text()
-        current_schema = next(filter(lambda x: x['label'] == selected_plot_label, schemas))
+        current_schema = next(filter(lambda x: x.label == selected_plot_label, schemas))
 
         kwargs = {"data_frame": self.df}
         for key, val in self.dragger.get_data().items():
@@ -97,7 +102,7 @@ class Grapher(QtWidgets.QWidget):
 
         print(kwargs)
 
-        func = current_schema['function']
+        func = current_schema.function
         self.current_worker = Worker(func, kwargs)
         self.current_worker.finished.connect(self.worker_callback)
         self.current_worker.finished.connect(self.current_worker.deleteLater)
