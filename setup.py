@@ -20,6 +20,7 @@ setup(
         "PyQtWebEngine",
         "plotly>=4.4.1",
         "setuptools",
-        "appdirs"
+        "appdirs",
+        "dacite"
     ],
 )
