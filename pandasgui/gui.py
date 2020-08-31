@@ -54,6 +54,11 @@ class PandasGui(QtWidgets.QMainWindow):
         for df_name, df in kwargs.items():
             self.add_df(df, df_name)
 
+        # Default to first item
+        self.stacked_widget.setCurrentWidget(self.store.data[0].dataframe_explorer)
+        self.nav_tree.setCurrentItem(self.nav_tree.topLevelItem(0))
+
+        # Start event loop if blocking enabled
         if self.store.settings.block:
             self.app.exec_()
 
