@@ -6,6 +6,7 @@ from PyQt5.QtCore import Qt
 from typing import List
 import os
 import pandasgui
+import ast
 
 
 class Dragger(QtWidgets.QWidget):
@@ -196,7 +197,14 @@ class Dragger(QtWidgets.QWidget):
         root = self.kwargs_dialog.tree_widget.invisibleRootItem()
         for i in range(root.childCount()):
             child = root.child(i)
-            data[child.text(0)] = child.text(1)
+            key = child.text(0)
+            value = child.text(1)
+            try:
+                value = ast.literal_eval(value)
+            except (SyntaxError, ValueError):
+                pass
+
+            data[key] = value
 
         return data
 
@@ -265,11 +273,13 @@ class Dragger(QtWidgets.QWidget):
         def add_item(self):
             name = self.kwarg_name.text()
             value = self.kwarg_value.text()
-            self.kwarg_name.setText("")
-            self.kwarg_value.setText("")
 
             if name != "" and value != "":
+                self.kwarg_name.setText("")
+                self.kwarg_value.setText("")
+
                 item = QtWidgets.QTreeWidgetItem(self.tree_widget, [name, value])
+
                 item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable)
 
         def delete(self):

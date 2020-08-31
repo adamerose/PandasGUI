@@ -91,14 +91,14 @@ class Grapher(QtWidgets.QWidget):
 
         kwargs = {"data_frame": self.df}
         for key, val in self.dragger.get_data().items():
-            if len(val) == 0:
+            if type(val) == list and len(val) == 0:
                 continue
-            elif len(val) == 1:
+            elif type(val) == list and len(val) == 1:
                 kwargs[key] = val[0]
-            elif len(val) > 1:
+            elif type(val) == list and len(val) > 1:
                 kwargs[key] = val
             else:
-                raise ValueError
+                kwargs[key] = val
 
         print(kwargs)
 
