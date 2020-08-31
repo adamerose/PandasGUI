@@ -27,6 +27,21 @@ def line(**kwargs):
     kwargs['data_frame'] = df
     return px.line(**kwargs)
 
+def bar(**kwargs):
+    key_cols = []
+    for arg in [a for a in ['x', 'color', 'facet_row', 'facet_col'] if a in kwargs.keys()]:
+        key_cols_subset = kwargs[arg]
+        if type(key_cols_subset) == list:
+            key_cols += key_cols_subset
+        elif type(key_cols_subset) == str:
+            key_cols += [key_cols_subset]
+        else:
+            raise TypeError
+
+    df = kwargs['data_frame'].groupby(key_cols).mean().reset_index()
+    kwargs['data_frame'] = df
+    return px.bar(**kwargs)
+
 
 def scatter_matrix(**kwargs):
     fig = px.scatter_matrix(**kwargs)
@@ -107,7 +122,7 @@ schema_data_list = [
 
                  {'arg_name': "facet_col"}]
         ,
-        "function": px.bar,
+        "function": bar,
         "category": "Basic",
         "icon_path": os.path.join(pandasgui.__path__[0], "images/plotly/trace-type-bar.svg")
     },
