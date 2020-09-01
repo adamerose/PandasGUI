@@ -207,17 +207,13 @@ class DataFrameViewer(QtWidgets.QWidget):
         QtWidgets.QWidget.keyPressEvent(self, event)
 
         if event.matches(QtGui.QKeySequence.Copy):
-            print("Ctrl + C")
             self.dataView.copy()
         if event.matches(QtGui.QKeySequence.Paste):
             self.dataView.paste()
-            print("Ctrl + V")
-        if event.key() == Qt.Key_P and (event.modifiers() & Qt.ControlModifier):
-            self.dataView.print()
-            print("Ctrl + P")
-        if event.key() == Qt.Key_D and (event.modifiers() & Qt.ControlModifier):
-            self.debug()
-            print("Ctrl + D")
+        # if event.key() == Qt.Key_P and (event.modifiers() & Qt.ControlModifier):
+        #     print("Ctrl + P")
+        # if event.key() == Qt.Key_D and (event.modifiers() & Qt.ControlModifier):
+        #     print("Ctrl + D")
 
     def data_changed(self):
         # Call dataChanged on all models for all data
@@ -377,28 +373,42 @@ class DataTableView(QtWidgets.QTableView):
 
         # Get the bounds using the top left and bottom right selected cells
         indexes = self.selectionModel().selection().indexes()
-
         rows = [ix.row() for ix in indexes]
         cols = [ix.column() for ix in indexes]
 
         df = self.pgdf.dataframe.iloc[min(rows): max(rows) + 1, min(cols): max(cols) + 1]
 
-        # If I try to use Pyperclip without starting new thread large values give access denied error
-        def thread_function(df):
-            df.to_clipboard(index=False, header=False)
+        # Special case for single-cell copy since df.to_clipboard appends extra newline
+        if df.shape == (1, 1):
+            clipboard = QtWidgets.QApplication.instance().clipboard()
+            clipboard.setText(str(df.iloc[0, 0]))
 
-        threading.Thread(target=thread_function, args=(df,)).start()
+        # If I try to use Pyperclip without starting new thread large selections give access denied error
+
+        threading.Thread(target=lambda df: df.to_clipboard(index=False, header=False), args=(df,)).start()
 
     def paste(self):
-        # Set up clipboard object
-        app = QtWidgets.QApplication.instance()
-        if not app:
-            app = QtWidgets.QApplication(sys.argv)
-        clipboard = app.clipboard()
+        df_to_paste = pd.read_clipboard(header=None)
 
-        # TODO
-        print(clipboard.text())
+        # Get the bounds using the top left and bottom right selected cells
+        indexes = self.selectionModel().selection().indexes()
+        rows = [ix.row() for ix in indexes]
+        cols = [ix.column() for ix in indexes]
 
+        self.pgdf.paste_data(min(rows), min(cols), df_to_paste)
+
+        # Select the range of cells that were pasted
+        self.selectionModel().clearSelection()
+        temp = self.selectionMode()
+        self.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
+
+        for i in range(df_to_paste.shape[0]):
+            for j in range(df_to_paste.shape[1]):
+
+                self.selectionModel().select(self.model().index(min(rows) + i, min(cols) + j),
+                                             QtCore.QItemSelectionModel.Select)
+
+        self.setSelectionMode(temp)
     def sizeHint(self):
         # Set width and height based on number of columns in model
         # Width
@@ -607,16 +617,12 @@ class HeaderView(QtWidgets.QTableView):
                 # Loop over the rows above this one
                 for row in range(ix.row()):
                     ix2 = self.model().index(row, ix.column())
-                    self.setSelection(
-                        self.visualRect(ix2), QtCore.QItemSelectionModel.Select
-                    )
+                    self.setSelection(self.visualRect(ix2), QtCore.QItemSelectionModel.Select)
             else:
                 # Loop over the columns left of this one
                 for col in range(ix.column()):
                     ix2 = self.model().index(ix.row(), col)
-                    self.setSelection(
-                        self.visualRect(ix2), QtCore.QItemSelectionModel.Select
-                    )
+                    self.setSelection(self.visualRect(ix2), QtCore.QItemSelectionModel.Select)
 
     # Fits columns to contents but with a minimum width and added padding
     def init_size(self):
@@ -996,5 +1002,4 @@ if __name__ == "__main__":
     view2 = DataFrameViewer(mi_manufacturing)
     view2.show()
 
-    print(view2.columnHeaderNames.sizeHint())
     app.exec_()

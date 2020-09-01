@@ -90,11 +90,23 @@ class PandasGuiDataFrame:
             model.endResetModel()
 
     @track_history
-    def edit_data(self, row, col, value):
+    def edit_data(self, row, col, value, skip_update=False):
         # Not using iat here because it won't work with MultiIndex
         self.dataframe_original.at[self.dataframe.index[row], self.dataframe.columns[col]] = value
+        if not skip_update:
+            self.apply_filters()
+            self.update()
+
+    @track_history
+    def paste_data(self, top_row, left_col, df_to_paste):
+        # Not using iat here because it won't work with MultiIndex
+        for i in range(df_to_paste.shape[0]):
+            for j in range(df_to_paste.shape[1]):
+                value = df_to_paste.iloc[i, j]
+                self.edit_data(top_row + i, left_col + j, value, skip_update=True)
         self.apply_filters()
         self.update()
+
 
     @track_history
     def sort_column(self, ix: int):
