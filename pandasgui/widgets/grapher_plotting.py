@@ -6,7 +6,6 @@ from typing import NewType, Union, List, Callable
 from dataclasses import dataclass
 import pandasgui
 import os
-from dataclasses_json import dataclass_json
 from dacite import from_dict
 
 ColumnName = Union[str, None]
@@ -55,13 +54,11 @@ def contour(**kwargs):
     return fig
 
 
-@dataclass_json
 @dataclass
 class Arg:
     arg_name: str
 
 
-@dataclass_json
 @dataclass
 class Schema:
     name: str
