@@ -278,7 +278,7 @@ class PandasGui(QtWidgets.QMainWindow):
             print(header)
             for h in pgdf.history:
                 print(h)
-            print('-'*len(header))
+            print('-' * len(header))
 
     def view_store(self):
         d = as_dict(self.store)
@@ -292,9 +292,14 @@ class PandasGui(QtWidgets.QMainWindow):
             df_dict[pgdf.name] = pgdf.dataframe
         return df_dict
 
-def show(*args, settings: dict = {}, **kwargs):
+
+def show(*args,
+         block: bool = False,
+         editable: bool = True,
+         **kwargs):
     # Get the variable names in the scope show() was called from
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
+    settings = {'block': block, 'editable': editable}
 
     # Make a dictionary of the DataFrames from the position args and get their variable names using inspect
     dataframes = {}
@@ -321,4 +326,4 @@ def show(*args, settings: dict = {}, **kwargs):
 if __name__ == "__main__":
     from pandasgui.datasets import all_datasets
 
-    gui = show(**all_datasets, settings={"block": True})
+    gui = show(**all_datasets, block=True)
