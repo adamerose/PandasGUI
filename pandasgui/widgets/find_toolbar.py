@@ -141,16 +141,16 @@ class FindToolbar(QtWidgets.QToolBar):
             text: text to search for.
         """
         # get current dataframe data
-        current_df = self.parent().stacked_widget.currentWidget().dataframe_tab
-        self.current_dataView = current_df.dataView
-        self.current_model = self.current_dataView.model()
-        df = self.current_model.df
+        current_pgdf = self.parent().store.data[self.parent().stacked_widget.currentIndex()]
+        current_dataView = current_pgdf.dataframe_viewer.dataView
+        current_model = current_dataView.model()
+        df = current_pgdf.dataframe
 
         # clear matches and selection from last search results
         if self.findThread:
             self.findThread.stop()
         self.search_matches = []
-        self.current_dataView.selectionModel().clear()
+        current_dataView.selectionModel().clear()
         self.matches_found_label.setText("Matches Found: 0")
         self.search_selection = None
 
@@ -170,8 +170,13 @@ class FindToolbar(QtWidgets.QToolBar):
         Args:
             cells_matched: list of tuples - (row, col). Type QtCore.pyqtSignal(list).
         """
+
+        current_pgdf = self.parent().store.data[self.parent().stacked_widget.currentIndex()]
+        current_dataView = current_pgdf.dataframe_viewer.dataView
+        current_model = current_dataView.model()
+
         # converts list of tuples to list of QtCore.QModelIndex for easy selection.
-        match_idxs = [self.current_model.index(row, col) for row, col in cells_matched]
+        match_idxs = [current_model.index(row, col) for row, col in cells_matched]
         self.search_matches.extend(match_idxs)
 
         matches_found_text = "Matches Found: " + str(len(self.search_matches))
@@ -271,11 +276,13 @@ class FindToolbar(QtWidgets.QToolBar):
 
     def highlight_match(self):
         # clear last seletion
-        self.current_dataView.selectionModel().select(
+        current_pgdf = self.parent().store.data[self.parent().stacked_widget.currentIndex()]
+        current_dataView = current_pgdf.dataframe_viewer.dataView
+        current_dataView.selectionModel().select(
             self.search_matches[self.search_selection],
             QtCore.QItemSelectionModel.ClearAndSelect,
         )
-        self.current_dataView.scrollTo(self.search_matches[self.search_selection])
+        current_dataView.scrollTo(self.search_matches[self.search_selection])
 
 
 class ButtonLineEdit(QtWidgets.QLineEdit):

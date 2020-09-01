@@ -2,7 +2,7 @@
 
 A GUI built with PyQt5 for analyzing Pandas DataFrames.
 
-<img src="https://im6.ezgif.com/tmp/ezgif-6-653908efcc7e.gif" alt="Demo" width="750"/>>
+<img src="https://imgur.com/LEAQfa1.gif" alt="Demo" width="750"/>
 
 ## Installation
 
@@ -65,23 +65,23 @@ show(**all_datasets)
 
 DataFrame Viewer
 
-<img src="https://raw.githubusercontent.com/adamerose/pandasgui/develop/screenshots/dataframe.png" alt="Screenshot" width="500"/>
+<img src="https://imgur.com/hUnuBiY.png" alt="Screenshot" width="500"/>
 
 Filters
 
-<img src="https://raw.githubusercontent.com/adamerose/pandasgui/develop/screenshots/filters.png" alt="Screenshot" width="500"/>
+<img src="https://imgur.com/Yn0Zqa6.png" alt="Screenshot" width="500"/>
 
 Statistics
 
-<img src="https://raw.githubusercontent.com/adamerose/pandasgui/develop/screenshots/statistics.png" alt="Screenshot" width="500"/>
+<img src="https://imgur.com/mKCaaNM.png" alt="Screenshot" width="500"/>
 
 Grapher
 
-<img src="https://raw.githubusercontent.com/adamerose/pandasgui/develop/screenshots/grapher.png" alt="Screenshot" width="500"/>
+<img src="https://imgur.com/zZIeAzj.png" alt="Screenshot" width="500"/>
 
 MultiIndex Support
 
-<img src="https://raw.githubusercontent.com/adamerose/pandasgui/develop/screenshots/multi_index.png" alt="Screenshot" width="500"/>
+<img src="https://imgur.com/2rz9OzC.png" alt="Screenshot" width="500"/>
 
 ## More Info
 

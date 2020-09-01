@@ -216,7 +216,7 @@ class Store:
         pgdf.settings = self.settings
         self.data.append(pgdf)
 
-    def get_dataframe(self, name):
+    def get_pgdf(self, name):
         return next((x for x in self.data if x.name == name), None)
 
     def to_dict(self):
