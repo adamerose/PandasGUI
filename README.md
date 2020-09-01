@@ -6,66 +6,89 @@ A GUI built with PyQt5 for analyzing Pandas DataFrames.
 
 ## Installation
 
-Install from PyPi:
+Install latest release from PyPi:
 
-```python
+```shell
 pip install pandasgui
 ```
 
-Install directly from Github for the latest changes:
+Install directly from Github for the latest unreleased changes:
 
-```python
+```shell
 pip install git+https://github.com/adamerose/pandasgui.git
 ```
 
 ## Usage
+
 Create and view a simple DataFrame
+
 ```python
 import pandas as pd
 from pandasgui import show
 
-example_df = pd.DataFrame(([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), columns=['a', 'b', 'c'])
-
-show(example_df, settings={'block': True})
+df = pd.DataFrame(([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), columns=['a', 'b', 'c'])
+show(df)
 ```
 
-View all sample datasets
+Or if you are running your code as a script instead of within iPython, you will need to block execution until you close the GUI
+
+```python
+show(df, block=True)
+```
+
+PandasGUI comes with sample datasets that will automatically download on first usage
+
+```python
+from pandasgui import show
+from pandasgui.datasets import pokemon, titanic
+show(pokemon, titanic)
+```
+
+This module also exports `all_datasets` which is a dictionary of all the sample datasets
+
 ```python
 from pandasgui import show
 from pandasgui.datasets import all_datasets
-
-show(**all_datasets, settings={'block': True})
+show(**all_datasets)
 ```
 
-The `settings={'block': True}` flag blocks code execution until the GUI window is closed, and can be omitted when working in iPython.
+## Demo
 
-## About
-This project is still in version 0.x.y and subject to major changes. Issues, feedback and forks are welcome. 
-Latest changes will be on the develop branch, and this will be occasionally merged to master as a release with a
-tag indicating the version number, and this will be what is available on PyPi.
+<img src="https://im6.ezgif.com/tmp/ezgif-6-653908efcc7e.gif" alt="Demo" width="500"/>
 
 ## Features
-- View DataFrames and Series
+
+- View DataFrames and Series (with MultiIndex support)
+- Filtering
 - Interactive plotting
 - Statistics summary
-- MultiIndex support
-- Cell editing and copy / paste
+- Data editing and copy / paste
 - Import CSV files with drag & drop
 
-
 ## Screenshots
-DataFrame Viewer  
+
+DataFrame Viewer
 
 <img src="https://raw.githubusercontent.com/adamerose/pandasgui/develop/screenshots/dataframe.png" alt="Screenshot" width="500"/>
 
-Statistics  
+Filters
+
+<img src="https://raw.githubusercontent.com/adamerose/pandasgui/develop/screenshots/filters.png" alt="Screenshot" width="500"/>
+
+Statistics
 
 <img src="https://raw.githubusercontent.com/adamerose/pandasgui/develop/screenshots/statistics.png" alt="Screenshot" width="500"/>
 
-Grapher  
+Grapher
 
 <img src="https://raw.githubusercontent.com/adamerose/pandasgui/develop/screenshots/grapher.png" alt="Screenshot" width="500"/>
 
-MultiIndex Support  
+MultiIndex Support
 
 <img src="https://raw.githubusercontent.com/adamerose/pandasgui/develop/screenshots/multi_index.png" alt="Screenshot" width="500"/>
+
+## More Info
+
+This project is still in version 0.x.y and still subject to major changes. Issues, feedback and pull requests are welcome.
+Latest changes will be on the develop branch, and this will be occasionally merged to master as a release with a
+tag indicating the version number, and this will be what is available on PyPi.

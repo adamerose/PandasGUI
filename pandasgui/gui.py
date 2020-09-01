@@ -1,7 +1,7 @@
 import inspect
 import os
 import sys
-from dataclasses import dataclass, field, asdict
+import pprint
 
 import pandas as pd
 import pkg_resources
@@ -9,7 +9,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
 from pandasgui.store import Store, PandasGuiDataFrame
-from pandasgui.utility import fix_ipython, fix_pyqt, get_logger, to_dict
+from pandasgui.utility import fix_ipython, fix_pyqt, get_logger, as_dict
 from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
 from pandasgui.widgets.find_toolbar import FindToolbar
 from pandasgui.widgets.json_viewer import JsonViewer
@@ -38,32 +38,27 @@ class PandasGui(QtWidgets.QMainWindow):
             settings: Dict of settings, as defined in pandasgui.store.Settings
             kwargs: Dict of DataFrames where key is name & val is the DataFrame object
         """
-
         refs.append(self)
         self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
         self.store = Store()
-
-        # These get built in init_ui()
-        self.stacked_widget = None
-        self.splitter = None
-        self.nav_tree = None
-
-        # Adds DataFrames listed in kwargs to data store.
-        for i, (df_name, df) in enumerate(kwargs.items()):
-            df.__class__ = PandasGuiDataFrame
-            df.init_inplace()
-
-            df.name = df_name
-            self.store.data.append(df)
-
-        # Add user provided settings to data store
-        for key, value in settings.items():
-            setattr(self.store.settings, key, value)
 
         super().__init__()
         self.init_app()
         self.init_ui()
 
+        # Add user provided settings to data store
+        for key, value in settings.items():
+            setattr(self.store.settings, key, value)
+
+        # Adds DataFrames listed in kwargs to data store.
+        for df_name, df in kwargs.items():
+            self.add_df(df, df_name)
+
+        # Default to first item
+        self.stacked_widget.setCurrentWidget(self.store.data[0].dataframe_explorer)
+        self.nav_tree.setCurrentItem(self.nav_tree.topLevelItem(0))
+
+        # Start event loop if blocking enabled
         if self.store.settings.block:
             self.app.exec_()
 
@@ -86,6 +81,7 @@ class PandasGui(QtWidgets.QMainWindow):
         pdgui_icon = "images/icon.png"
         pdgui_icon_path = pkg_resources.resource_filename(__name__, pdgui_icon)
         self.app.setWindowIcon(QtGui.QIcon(pdgui_icon_path))
+        # self.app.setFont(QtGui.QFont('Arial'))
         self.show()
 
     # Create and add all widgets to GUI.
@@ -98,9 +94,6 @@ class PandasGui(QtWidgets.QMainWindow):
         # Creates the headers.
         self.nav_tree.setHeaderLabels(["Name", "Shape"])
         self.nav_tree.itemSelectionChanged.connect(self.nav_clicked)
-
-        for df in self.store.data:
-            self.add_dataframe(df)
 
         # Make splitter to hold nav and DataFrameExplorers
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
@@ -129,31 +122,25 @@ class PandasGui(QtWidgets.QMainWindow):
             if os.path.isfile(path) and path.endswith(".csv"):
                 df_name = os.path.split(path)[1]
                 df_object = pd.read_csv(path)
-                self.add_dataframe(df_name, df_object)
+                self.add_df(df_object, df_name)
 
             else:
                 logger.warning("Invalid file: ", path)
         except Exception as e:
             logger.error(f"Failed to import {path}\n", e)
 
-    def add_dataframe(self, df):
+    def add_df(self, df: pd.DataFrame, name: str):
         """
         Add a new DataFrame to the GUI
         """
+        pgdf = PandasGuiDataFrame.cast(df)
+        pgdf.name = name
+        self.store.add_pgdf(pgdf)
 
-        if not issubclass(type(df), pd.DataFrame):
-            try:
-                df = pd.DataFrame(df)
-                logger.warning(f'Automatically converted "{df.name}" from type {type(df)} to DataFrame')
-            except:
-                logger.warning(f'Could not convert "{df.name}" from type {type(df)} to DataFrame')
-                return
-
-        dfe = DataFrameExplorer(df, editable=self.store.settings.editable)
-        df.dataframe_explorer = dfe
+        dfe = DataFrameExplorer(pgdf)
         self.stacked_widget.addWidget(dfe)
 
-        self.add_df_to_nav(df.name)
+        self.add_df_to_nav(name)
 
     ####################
     # Menu bar functions
@@ -196,6 +183,10 @@ class PandasGui(QtWidgets.QMainWindow):
 
         act = QtWidgets.QAction("&View Data Store", self)
         act.triggered.connect(self.view_store)
+        debugMenu.addAction(act)
+
+        act = QtWidgets.QAction("&Print History (for current DataFrame)", self)
+        act.triggered.connect(self.print_history)
         debugMenu.addAction(act)
 
     class NavWidget(QtWidgets.QTreeWidget):
@@ -253,7 +244,7 @@ class PandasGui(QtWidgets.QMainWindow):
             parent = self.nav_tree
 
         # Calculate and format the shape of the DataFrame
-        shape = self.store.get_dataframe(df_name).shape
+        shape = self.store.get_dataframe(df_name).dataframe.shape
         shape = str(shape[0]) + " X " + str(shape[1])
 
         item = QtWidgets.QTreeWidgetItem(parent, [df_name, shape])
@@ -275,15 +266,40 @@ class PandasGui(QtWidgets.QMainWindow):
         self.stacked_widget.setCurrentWidget(dfe)
 
     def print_store(self):
-        print(asdict(self.store))
+        d = as_dict(self.store)
+        pprint.pprint(d)
+
+    def print_history(self):
+        pgdf = self.store.data[self.stacked_widget.currentIndex()]
+        if len(pgdf.history) == 0:
+            print(f"No actions recorded yet for {pgdf.name}")
+        else:
+            header = f'---- History ({pgdf.name}) ----'
+            print(header)
+            for h in pgdf.history:
+                print(h)
+            print('-' * len(header))
 
     def view_store(self):
-        self.store_viewer = JsonViewer(asdict(self.store))
+        d = as_dict(self.store)
+        print(d)
+        self.store_viewer = JsonViewer(d)
+        self.store_viewer.show()
+
+    def get_dataframes(self):
+        df_dict = {}
+        for pgdf in self.store.data:
+            df_dict[pgdf.name] = pgdf.dataframe
+        return df_dict
 
 
-def show(*args, settings: dict = {}, **kwargs):
+def show(*args,
+         block: bool = False,
+         editable: bool = True,
+         **kwargs):
     # Get the variable names in the scope show() was called from
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
+    settings = {'block': block, 'editable': editable}
 
     # Make a dictionary of the DataFrames from the position args and get their variable names using inspect
     dataframes = {}
@@ -310,4 +326,4 @@ def show(*args, settings: dict = {}, **kwargs):
 if __name__ == "__main__":
     from pandasgui.datasets import all_datasets
 
-    gui = show(**all_datasets, settings={"block": True})
+    gui = show(**all_datasets, block=True)
