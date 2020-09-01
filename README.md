@@ -33,7 +33,7 @@ show(df)
 Or if you are running your code as a script instead of within iPython, you will need to block execution until you close the GUI
 
 ```python
-show(df, block=True)
+show(df, settings={'block': True})
 ```
 
 PandasGUI comes with sample datasets that will automatically download on first usage
