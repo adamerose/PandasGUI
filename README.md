@@ -2,7 +2,7 @@
 
 A GUI built with PyQt5 for analyzing Pandas DataFrames.
 
-<img src="https://raw.githubusercontent.com/adamerose/pandasgui/develop/screenshots/dataframe.png" alt="Screenshot" width="500"/>
+<img src="https://im6.ezgif.com/tmp/ezgif-6-653908efcc7e.gif" alt="Demo" width="750"/>>
 
 ## Installation
 
@@ -33,7 +33,7 @@ show(df)
 Or if you are running your code as a script instead of within iPython, you will need to block execution until you close the GUI
 
 ```python
-show(df, block=True)
+show(df, settings={'block': True})
 ```
 
 PandasGUI comes with sample datasets that will automatically download on first usage
@@ -51,10 +51,6 @@ from pandasgui import show
 from pandasgui.datasets import all_datasets
 show(**all_datasets)
 ```
-
-## Demo
-
-<img src="https://im6.ezgif.com/tmp/ezgif-6-653908efcc7e.gif" alt="Demo" width="500"/>
 
 ## Features
 

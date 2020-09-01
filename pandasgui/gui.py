@@ -294,29 +294,30 @@ class PandasGui(QtWidgets.QMainWindow):
 
 
 def show(*args,
-         block: bool = False,
-         editable: bool = True,
+         settings: dict = {},
          **kwargs):
     # Get the variable names in the scope show() was called from
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
-    settings = {'block': block, 'editable': editable}
 
     # Make a dictionary of the DataFrames from the position args and get their variable names using inspect
     dataframes = {}
+    untitled_number = 1
     for i, df_object in enumerate(args):
-        df_name = "untitled" + str(i + 1)
+        df_name = None
 
         for var_name, var_val in callers_local_vars:
             if var_val is df_object:
                 df_name = var_name
 
+        if df_name is None:
+            df_name = f"untitled_{untitled_number}"
+            untitled_number += 1
         dataframes[df_name] = df_object
 
     # Add the dictionary of positional args to the kwargs
     if any([key in kwargs.keys() for key in dataframes.keys()]):
-        logger.warning(
-            "Duplicate DataFrame names were provided, duplicates were ignored."
-        )
+        logger.warning("Duplicate DataFrame names were provided, duplicates were ignored.")
+
     kwargs = {**kwargs, **dataframes}
 
     pandas_gui = PandasGui(settings=settings, **kwargs)
@@ -326,4 +327,4 @@ def show(*args,
 if __name__ == "__main__":
     from pandasgui.datasets import all_datasets
 
-    gui = show(**all_datasets, block=True)
+    gui = show(**all_datasets, settings={'block': True})
