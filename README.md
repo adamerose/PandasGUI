@@ -2,7 +2,7 @@
 
 A GUI built with PyQt5 for analyzing Pandas DataFrames.
 
-<img src="https://im6.ezgif.com/tmp/ezgif-6-653908efcc7e.gif" alt="Demo" width="750"/>>
+<img src="https://raw.githubusercontent.com/adamerose/pandasgui/develop/screenshots/demo.gif" alt="Demo" width="750"/>
 
 ## Installation
 
