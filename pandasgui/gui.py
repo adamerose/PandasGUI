@@ -244,7 +244,7 @@ class PandasGui(QtWidgets.QMainWindow):
             parent = self.nav_tree
 
         # Calculate and format the shape of the DataFrame
-        shape = self.store.get_dataframe(df_name).dataframe.shape
+        shape = self.store.get_pgdf(df_name).dataframe.shape
         shape = str(shape[0]) + " X " + str(shape[1])
 
         item = QtWidgets.QTreeWidgetItem(parent, [df_name, shape])
@@ -262,7 +262,7 @@ class PandasGui(QtWidgets.QMainWindow):
 
         df_name = item.data(0, Qt.DisplayRole)
 
-        dfe = self.store.get_dataframe(df_name).dataframe_explorer
+        dfe = self.store.get_pgdf(df_name).dataframe_explorer
         self.stacked_widget.setCurrentWidget(dfe)
 
     def print_store(self):
