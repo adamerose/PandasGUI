@@ -45,7 +45,7 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
 
         # Layout
         self.dataframe_tab.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.filters_dock)
+        # self.addDockWidget(Qt.RightDockWidgetArea, self.filters_dock)
 
     def add_view(self, widget: QtWidgets.QWidget, title: str):
         dock = DockWidget(title)
