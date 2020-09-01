@@ -381,14 +381,14 @@ class DataTableView(QtWidgets.QTableView):
         # Special case for single-cell copy since df.to_clipboard appends extra newline
         if df.shape == (1, 1):
             clipboard = QtWidgets.QApplication.instance().clipboard()
-            clipboard.setText(str(df.iloc[0, 0]))
-
-        # If I try to use Pyperclip without starting new thread large selections give access denied error
-
-        threading.Thread(target=lambda df: df.to_clipboard(index=False, header=False), args=(df,)).start()
+            value = str(df.iloc[0, 0])
+            clipboard.setText(value)
+        else:
+            # If I try to use Pyperclip without starting new thread large selections give access denied error
+            threading.Thread(target=lambda df: df.to_clipboard(index=False, header=False), args=(df,)).start()
 
     def paste(self):
-        df_to_paste = pd.read_clipboard(header=None)
+        df_to_paste = pd.read_clipboard(sep=',|\t', header=None)
 
         # Get the bounds using the top left and bottom right selected cells
         indexes = self.selectionModel().selection().indexes()
@@ -409,6 +409,7 @@ class DataTableView(QtWidgets.QTableView):
                                              QtCore.QItemSelectionModel.Select)
 
         self.setSelectionMode(temp)
+
     def sizeHint(self):
         # Set width and height based on number of columns in model
         # Width

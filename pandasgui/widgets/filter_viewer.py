@@ -53,10 +53,9 @@ class FilterViewer(QtWidgets.QWidget):
 
     def add_filter(self):
         expr = self.text_input.text()
-        print(expr)
-        self.text_input.setText("")
-        self.pgdf.add_filter(expr=expr)
-        print(self.pgdf.filters)
+        if not expr == "":
+            self.text_input.setText("")
+            self.pgdf.add_filter(expr=expr)
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Delete:
@@ -72,9 +71,7 @@ class FilterViewer(QtWidgets.QWidget):
                 col = self.palette().placeholderText().color()
                 painter.setPen(col)
                 fm = self.fontMetrics()
-                elided_text = fm.elidedText(
-                    "No filters defined", QtCore.Qt.ElideRight, self.viewport().width()
-                )
+                elided_text = fm.elidedText("No filters defined", QtCore.Qt.ElideRight, self.viewport().width())
                 painter.drawText(self.viewport().rect(), QtCore.Qt.AlignCenter, elided_text)
                 painter.restore()
 
