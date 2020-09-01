@@ -18,13 +18,7 @@ class Grapher(QtWidgets.QWidget):
     def __init__(self, pgdf: PandasGuiDataFrame):
         super().__init__()
 
-        pgdf = PandasGuiDataFrame.cast(pgdf)
-
-        self.df = pgdf.dataframe.copy()
-
-        self.df.columns = flatten_multiindex(self.df.columns)
-        if issubclass(type(self.df.index), pd.core.indexes.multi.MultiIndex):
-            self.df = self.df.reset_index()
+        self.pgdf = PandasGuiDataFrame.cast(pgdf)
 
         self.prev_kwargs = ({})  # This is for carrying plot arg selections forward to new plot types
 
@@ -46,7 +40,9 @@ class Grapher(QtWidgets.QWidget):
         self.figure_viewer.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
                                          QtWidgets.QSizePolicy.Expanding)
 
-        self.dragger = Dragger(sources=self.df.columns, destinations=[], source_types=self.df.dtypes.values.astype(str))
+        df = self.get_df()
+        self.dragger = Dragger(sources=df.columns, destinations=[],
+                               source_types=df.dtypes.values.astype(str))
 
         self.spinner = Spinner()
         self.spinner.setParent(self.figure_viewer)
@@ -84,12 +80,20 @@ class Grapher(QtWidgets.QWidget):
 
         self.dragger.set_destinations(arg_list)
 
+    def get_df(self):
+        df = self.pgdf.dataframe.copy()
+        df.columns = flatten_multiindex(df.columns)
+        if issubclass(type(df.index), pd.core.indexes.multi.MultiIndex):
+            df = df.reset_index()
+        return df
+
     def update_plot(self):
         self.spinner.start()
         selected_plot_label = self.plot_type_picker.selectedItems()[0].text()
         current_schema = next(filter(lambda x: x.label == selected_plot_label, schemas))
 
-        kwargs = {"data_frame": self.df}
+        df = self.get_df()
+        kwargs = {"data_frame": df}
         for key, val in self.dragger.get_data().items():
             if type(val) == list and len(val) == 0:
                 continue
