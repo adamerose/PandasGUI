@@ -54,7 +54,8 @@ show(**all_datasets)
 
 ## Demo
 
-<img src="https://thumbs.gfycat.com/OffensiveAlarmingAndalusianhorse-mobile.mp4" alt="Demo" width="500"/>
+<img src="https://im6.ezgif.com/tmp/ezgif-6-653908efcc7e.gif" alt="Demo" width="500"/>
+
 ## Features
 
 - View DataFrames and Series (with MultiIndex support)
