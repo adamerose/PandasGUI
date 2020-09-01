@@ -27,7 +27,7 @@ class FilterViewer(QtWidgets.QWidget):
         self.list_view.setModel(self.list_model)
 
         self.text_input = QtWidgets.QLineEdit()
-        self.text_input.setPlaceholderText("Enter a Pandas query expression")
+        self.text_input.setPlaceholderText("Enter query expression")
         self.text_input_label = QtWidgets.QLabel('''<a href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.query.html">What's a query expression?</a>''')
         self.text_input_label.linkActivated.connect(lambda link: QDesktopServices.openUrl(QUrl(link)))
         self.text_input.setValidator(None)
@@ -47,6 +47,9 @@ class FilterViewer(QtWidgets.QWidget):
         self.layout.addWidget(self.text_input_label)
         self.layout.addWidget(self.list_view)
         self.setLayout(self.layout)
+
+    def minimumSizeHint(self) -> QtCore.QSize:
+        return QtCore.QSize(280, 100)
 
     def add_filter(self):
         expr = self.text_input.text()

@@ -14,10 +14,10 @@ logger = get_logger(__name__)
 
 @dataclass
 class Settings:
-    # Are table cells editable
-    editable: bool = True
     # Should GUI block code execution until closed
     block: bool = False
+    # Are table cells editable
+    editable: bool = True
 
 
 @dataclass

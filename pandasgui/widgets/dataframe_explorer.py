@@ -29,19 +29,23 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
 
         # DataFrame tab
         self.dataframe_tab = DataFrameViewer(pgdf)
-        self.add_view(self.dataframe_tab, "DataFrame")
+        self.dataframe_dock = self.add_view(self.dataframe_tab, "DataFrame")
 
         # Filters tab
         self.filters_tab = FilterViewer(pgdf)
-        self.add_view(self.filters_tab, "Filters")
+        self.filters_dock = self.add_view(self.filters_tab, "Filters")
 
         # Statistics tab
         self.statistics_tab = self.make_statistics_tab(pgdf)
-        self.add_view(self.statistics_tab, "Statistics")
+        self.statistics_dock = self.add_view(self.statistics_tab, "Statistics")
 
         # Grapher tab
-        graph_maker = Grapher(pgdf)
-        self.add_view(graph_maker, "Grapher")
+        self.grapher_tab = Grapher(pgdf)
+        self.grapher_dock = self.add_view(self.grapher_tab, "Grapher")
+
+        # Layout
+        self.dataframe_tab.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.filters_dock)
 
     def add_view(self, widget: QtWidgets.QWidget, title: str):
         dock = DockWidget(title)
@@ -60,9 +64,10 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
             # Keep the first tab active by default
             self.docks[0].raise_()
         else:
-            self.addDockWidget(Qt.TopDockWidgetArea, dock)
+            self.addDockWidget(Qt.LeftDockWidgetArea, dock)
 
         self.docks.append(dock)
+        return dock
 
     def __reduce__(self):
         # This is so dataclasses.asdict doesn't complain about this being unpicklable
