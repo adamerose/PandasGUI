@@ -303,13 +303,17 @@ def show(*args,
 
     # Make a dictionary of the DataFrames from the position args and get their variable names using inspect
     dataframes = {}
+    untitled_number = 1
     for i, df_object in enumerate(args):
-        df_name = "untitled" + str(i + 1)
+        df_name = None
 
         for var_name, var_val in callers_local_vars:
             if var_val is df_object:
                 df_name = var_name
 
+        if df_name is None:
+            df_name = f"untitled_{untitled_number}"
+            untitled_number += 1
         dataframes[df_name] = df_object
 
     # Add the dictionary of positional args to the kwargs
