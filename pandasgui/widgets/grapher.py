@@ -104,8 +104,6 @@ class Grapher(QtWidgets.QWidget):
             else:
                 kwargs[key] = val
 
-        print(kwargs)
-
         func = current_schema.function
         self.current_worker = Worker(func, kwargs)
         self.current_worker.finished.connect(self.worker_callback)

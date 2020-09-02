@@ -81,23 +81,23 @@ class DataFrameViewer(QtWidgets.QWidget):
         self.gridLayout.addItem(
             QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding), 0, 0, 1, 1, )
 
-        self.columnHeaderNames.setDisabled(True)
-
         # Do this at top so sizeHints are calculated correctly
         self.set_styles()
         self.updateGeometry()
 
     def set_styles(self):
+        self.setStyleSheet("background-color: #FFF;")
         for header in [self.indexHeader, self.columnHeader, self.indexHeaderNames, self.columnHeaderNames]:
             header.setStyleSheet(
-                "background-color: white;"
+                "background-color: #F5F5F5;"
                 "selection-color: black;"
-                "selection-background-color: #EAEAEA;"
+                "selection-background-color: #DDD;"
+                "border: 1px solid lightgrey;"
             )
 
         self.dataView.setStyleSheet(
             "background-color: white;"
-            "alternate-background-color: #F4F6F6;"
+            "alternate-background-color: #FAFAFA;"
             "selection-color: black;"
             "selection-background-color: #BBDEFB;"
         )
@@ -107,7 +107,7 @@ class DataFrameViewer(QtWidgets.QWidget):
             item.setItemDelegate(NoFocusDelegate())
 
         for item in [self.indexHeaderNames, self.columnHeaderNames]:
-            item.setStyleSheet(item.styleSheet() + "color: grey;")
+            item.setStyleSheet(item.styleSheet() + "color: #666;")
 
     def __reduce__(self):
         # This is so dataclasses.asdict doesn't complain about this being unpicklable
