@@ -16,7 +16,7 @@ from pandasgui.widgets.json_viewer import JsonViewer
 
 logger = get_logger(__name__)
 
-# Enables PyQt event loop in iPython
+# Enables PyQt event loop in IPython
 fix_ipython()
 
 

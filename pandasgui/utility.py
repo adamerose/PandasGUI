@@ -103,7 +103,7 @@ def fix_ipython():
         if ipython is not None:
             ipython.magic("gui qt5")
     except ModuleNotFoundError:
-        # Don't need to fix iPython if user doesn't have it
+        # Don't need to fix IPython if user doesn't have it
         return
 
 
