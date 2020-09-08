@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field, asdict
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Iterable
 import pandas as pd
 from pandas import DataFrame
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
@@ -37,13 +37,14 @@ class HistoryItem:
 
 def track_history(func):
     @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        self.history.append(HistoryItem(name=func.__name__,
-                                        args=args,
-                                        kwargs=kwargs,
-                                        time=datetime.now().strftime("%H:%M:%S"))
-                            )
-        func(self, *args, **kwargs)
+    def wrapper(pgdf, *args, **kwargs):
+        history_item = HistoryItem(name=func.__name__,
+                                   args=args,
+                                   kwargs=kwargs,
+                                   time=datetime.now().strftime("%H:%M:%S"))
+        pgdf.history.append(history_item)
+
+        return func(pgdf, *args, **kwargs)
 
     return wrapper
 
@@ -89,6 +90,11 @@ class PandasGuiDataFrame:
             model.beginResetModel()
             model.endResetModel()
 
+        for view in [self.dataframe_viewer.columnHeader,
+                     self.dataframe_viewer.indexHeader]:
+            view.set_spans()
+            view.init_size()
+
     @track_history
     def edit_data(self, row, col, value, skip_update=False):
         # Not using iat here because it won't work with MultiIndex
@@ -106,7 +112,6 @@ class PandasGuiDataFrame:
                 self.edit_data(top_row + i, left_col + j, value, skip_update=True)
         self.apply_filters()
         self.update()
-
 
     @track_history
     def sort_column(self, ix: int):
@@ -196,15 +201,18 @@ class PandasGuiDataFrame:
         self.update()
 
     @staticmethod
-    def cast(x: Union["PandasGuiDataFrame", pd.DataFrame, pd.Series]):
+    def cast(x: Union["PandasGuiDataFrame", pd.DataFrame, pd.Series, Iterable]):
         if type(x) == PandasGuiDataFrame:
             return x
         if type(x) == pd.DataFrame:
             return PandasGuiDataFrame(x)
         elif type(x) == pd.Series:
-            return PandasGuiDataFrame(pd.DataFrame(x))
+            return PandasGuiDataFrame(x.to_frame())
         else:
-            raise TypeError
+            try:
+                return PandasGuiDataFrame(pd.DataFrame(x))
+            except:
+                raise TypeError(f"Could not convert {type(x)} to DataFrame")
 
 
 @dataclass

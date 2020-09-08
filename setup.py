@@ -21,6 +21,7 @@ setup(
         "plotly>=4.4.1",  # Using plotly.express.pie
         "setuptools",
         "appdirs",
-        "dacite"
+        "dacite",
+        "IPython"
     ],
 )

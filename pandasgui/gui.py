@@ -2,6 +2,7 @@ import inspect
 import os
 import sys
 import pprint
+from typing import Union, Iterable
 
 import pandas as pd
 import pkg_resources
@@ -286,11 +287,20 @@ class PandasGui(QtWidgets.QMainWindow):
         self.store_viewer = JsonViewer(d)
         self.store_viewer.show()
 
-    def get_dataframes(self):
+    # Return all DataFrames, or a subset specified by names. Returns a dict of name:df or a single df if there's only 1
+    def get_dataframes(self, names: Union[None, str, list] = None):
+        if type(names) == str:
+            names = [names]
+
         df_dict = {}
         for pgdf in self.store.data:
-            df_dict[pgdf.name] = pgdf.dataframe
-        return df_dict
+            if names is None or pgdf.name in names:
+                df_dict[pgdf.name] = pgdf.dataframe
+
+        if len(df_dict.values()) == 1:
+            return list(df_dict.values())[0]
+        else:
+            return df_dict
 
 
 def show(*args,

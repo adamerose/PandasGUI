@@ -4,10 +4,12 @@ import os
 import pandas as pd
 from pandasgui.utility import get_logger
 from appdirs import user_data_dir
+import numpy as np
 
 logger = get_logger(__name__)
 
 __all__ = ["all_datasets",
+           "simple",
 
            "pokemon",
            "car_crashes",
@@ -18,9 +20,18 @@ __all__ = ["all_datasets",
            "titanic",
            "gapminder",
            "stockdata",
-           "mi_manufacturing", ]
+           "mi_manufacturing"]
 
-dataset_names = [x for x in __all__ if x != "all_datasets"]
+dataset_names = ["pokemon",
+                 "car_crashes",
+                 "iris",
+                 "mpg",
+                 "penguins",
+                 "tips",
+                 "titanic",
+                 "gapminder",
+                 "stockdata",
+                 "mi_manufacturing"]
 
 all_datasets = {}
 
@@ -55,3 +66,16 @@ for ix, name in enumerate(dataset_names):
 # Add the datasets to globals so they can be imported like `from pandasgui.datasets import iris`
 for name in all_datasets.keys():
     globals()[name] = all_datasets[name]
+
+simple = pd.DataFrame({'first': ['A', 'B', 'A', 'B', 'A', 'B', 'A', 'B'],
+                       'second': ['X', 'X', 'Y', 'Y', 'X', 'X', 'Y', 'Y'],
+                       'third': ['foo', 'foo', 'foo', 'foo', 'bar', 'bar', 'bar', 'bar'],
+                       'fourth': [1, 2, 3, 4, 5, 6, 7, 8]})
+
+multiindex = pd.DataFrame(np.random.randn(8, 4),
+                          index=pd.MultiIndex.from_product([('bar', 'baz', 'foo', 'qux'),
+                                                            ('one', 'two')],
+                                                           names=['first', 'second']),
+                          columns=pd.MultiIndex.from_tuples([('A', 'cat'), ('B', 'dog'),
+                                                             ('B', 'cat'), ('A', 'dog')],
+                                                            names=['exp', 'animal']))
