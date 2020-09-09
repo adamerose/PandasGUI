@@ -62,6 +62,7 @@ class PandasGuiDataFrame:
 
         # References to other object instances that may be assigned later
         self.settings: Settings = Settings()
+        self.pandasgui: Union["PandasGui", None] = None
         self.dataframe_explorer: Union["DataFrameExplorer", None] = None
         self.dataframe_viewer: Union["DataFrameViewer", None] = None
         self.filter_viewer: Union["FilterViewer", None] = None
@@ -72,6 +73,7 @@ class PandasGuiDataFrame:
 
         self.filters: List[Filter] = []
 
+    # Refresh PyQt models when the underlying pgdf is changed in anyway that needs to be reflected in the GUI
     def update(self):
         models = []
         if self.dataframe_viewer is not None:

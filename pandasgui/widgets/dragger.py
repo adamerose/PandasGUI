@@ -36,13 +36,6 @@ class Schema:
     icon_path: str
 
 
-ColumnName = str
-OptionalColumnName = Union[str, None]
-ColumnNameList = Iterable[str]
-OptionalColumnNameList = Union[Iterable[str], None]
-OptionList = Iterable[str]
-
-
 class Dragger(QtWidgets.QWidget):
     itemDropped = QtCore.pyqtSignal()
     finished = QtCore.pyqtSignal()

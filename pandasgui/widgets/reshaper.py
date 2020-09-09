@@ -5,7 +5,6 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 import pandas as pd
 import pandasgui
 import os
-from pandasgui.widgets.dragger import ColumnName, OptionalColumnName, ColumnNameList, OptionalColumnNameList, OptionList
 from typing import Union, List, Iterable, Callable
 
 from pandasgui.store import Store, PandasGuiDataFrame, track_history
@@ -13,7 +12,6 @@ from pandasgui.store import Store, PandasGuiDataFrame, track_history
 from pandasgui.utility import flatten_df, get_logger
 from pandasgui.widgets.spinner import Spinner
 from pandasgui.widgets.dragger import Dragger, Schema, ColumnArg, OptionListArg
-from pandasgui import show
 
 logger = get_logger(__name__)
 
@@ -79,27 +77,49 @@ class Reshaper(QtWidgets.QWidget):
         func = current_schema.function
         try:
             new_df = func(**kwargs)
-            show(new_df)
+            if self.pgdf.pandasgui is not None:
+                new_df_name = self.pgdf.name + "_" + current_schema.name
+                self.pgdf.pandasgui.add_df(new_df, new_df_name)
+            else:
+                from pandasgui import show
+                show(new_df)
         except Exception as e:
             logger.exception(e)
+
 
 # ========================================================================
 # Schema
 
 @track_history
-def pivot(pgdf: PandasGuiDataFrame,
-          index: Iterable = None,
-          columns: Iterable = None,
-          values: Iterable = None,
-          aggregation: Callable = 'mean'):
+def aggregate(pgdf: PandasGuiDataFrame,
+              index: Iterable = None,
+              columns: Iterable = None,
+              values: Iterable = None,
+              aggregation: Callable = 'mean'):
     df = pgdf.dataframe
-    return df.pivot_table(index=index, columns=columns, values=values, aggfunc=aggregation)
+    return df.pivot_table(index=index,
+                          columns=columns,
+                          values=values,
+                          aggfunc=aggregation)
+
+
+@track_history
+def stack(pgdf: PandasGuiDataFrame,
+          key_columns: Iterable = None,
+          value_columns: Iterable = None,
+          key_name: Iterable = None,
+          value_name: Callable = 'mean'):
+    df = pgdf.dataframe
+    return df.melt(id_vars=key_columns,
+                   value_vars=value_columns,
+                   var_name=key_name,
+                   value_name=value_name)
 
 
 schemas = [
-    Schema(name="pivot",
-           label="Pivot",
-           function=pivot,
+    Schema(name="aggregate",
+           label="Aggregate",
+           function=aggregate,
            icon_path=os.path.join(pandasgui.__path__[0], "images/plotly/trace-type-histogram.svg"),
            args=[
                ColumnArg(arg_name="index"),
@@ -107,11 +127,19 @@ schemas = [
                ColumnArg(arg_name="values"),
                OptionListArg(arg_name="aggregation", values=['count', 'mean', 'median']),
            ]),
+    Schema(name="stack",
+           label="Stack",
+           function=stack,
+           icon_path=os.path.join(pandasgui.__path__[0], "images/plotly/trace-type-histogram.svg"),
+           args=[
+               ColumnArg(arg_name="key_columns"),
+               ColumnArg(arg_name="value_columns"),
+           ]),
 ]
 
 if __name__ == "__main__":
     from pandasgui.utility import fix_ipython, fix_pyqt
-    from pandasgui.datasets import iris, pokemon
+    from pandasgui.datasets import pokemon
 
     fix_ipython()
     fix_pyqt()

@@ -17,9 +17,6 @@ from pandasgui.widgets.json_viewer import JsonViewer
 
 logger = get_logger(__name__)
 
-# Enables PyQt event loop in IPython
-fix_ipython()
-
 
 def except_hook(cls, exception, traceback):
     sys.__excepthook__(cls, exception, traceback)
@@ -27,6 +24,9 @@ def except_hook(cls, exception, traceback):
 
 # Set the exception hook to our wrapping function
 sys.excepthook = except_hook
+
+# Enables PyQt event loop in IPython
+fix_ipython()
 
 # Keep a list of PandasGui widgets so they don't get garbage collected
 refs = []
@@ -136,6 +136,7 @@ class PandasGui(QtWidgets.QMainWindow):
         """
         pgdf = PandasGuiDataFrame.cast(df)
         pgdf.name = name
+        pgdf.pandasgui = self
         self.store.add_pgdf(pgdf)
 
         dfe = DataFrameExplorer(pgdf)
