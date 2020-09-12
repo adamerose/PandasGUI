@@ -3,9 +3,11 @@ from PyQt5.QtCore import Qt
 
 
 class DockWidget(QtWidgets.QDockWidget):
-    def __init__(self, title: str):
+    def __init__(self, title: str, pgdf_name: str):
         super().__init__(title)
-        self.original_title = title
+        self.title = title
+        self.pgdf_name = pgdf_name
+
         self.setTitleBarWidget(QtWidgets.QWidget())
         self.dockLocationChanged.connect(self.on_dockLocationChanged)
         self.setFeatures(self.DockWidgetFloatable |
@@ -27,6 +29,11 @@ class DockWidget(QtWidgets.QDockWidget):
             else:
                 # Re-enable title bar
                 dock_widget.setTitleBarWidget(None)
+
+        if self.isFloating():
+            self.setWindowTitle(f"{self.title} ({self.pgdf_name})")
+        else:
+            self.setWindowTitle(self.title)
 
     def minimumSizeHint(self) -> QtCore.QSize:
         return QtCore.QSize(100, 100)

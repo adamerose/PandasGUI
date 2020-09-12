@@ -84,6 +84,9 @@ class PandasGui(QtWidgets.QMainWindow):
         pdgui_icon_path = pkg_resources.resource_filename(__name__, pdgui_icon)
         self.app.setWindowIcon(QtGui.QIcon(pdgui_icon_path))
 
+        # Accept drops, for importing files. See methods below: dropEvent, dragEnterEvent, dragMoveEvent
+        self.setAcceptDrops(True)
+
         self.show()
 
     # Create and add all widgets to GUI.
@@ -119,9 +122,6 @@ class PandasGui(QtWidgets.QMainWindow):
         self.make_menu_bar()
         self.setCentralWidget(self.splitter)
 
-    def import_dataframe(self, path):
-        self.store.import_dataframe(path)
-
     ####################
     # Menu bar functions
 
@@ -136,7 +136,8 @@ class PandasGui(QtWidgets.QMainWindow):
 
         items = {'Edit': [MenuItem(name='Find',
                                    func=self.find_bar.show_find_bar,
-                                   shortcut='Ctrl+F')],
+                                   shortcut='Ctrl+F'),
+                          ],
                  'Debug': [MenuItem(name='Print Data Store',
                                     func=self.print_store),
                            MenuItem(name='View Data Store',
@@ -166,13 +167,37 @@ class PandasGui(QtWidgets.QMainWindow):
                 action.triggered.connect(x.func)
                 menu.addAction(action)
 
+    def dropEvent(self, e):
+        if e.mimeData().hasUrls:
+            e.setDropAction(QtCore.Qt.CopyAction)
+            e.accept()
+            fpath_list = []
+            for url in e.mimeData().urls():
+                fpath_list.append(str(url.toLocalFile()))
+
+            for fpath in fpath_list:
+                self.store.import_dataframe(fpath)
+        else:
+            e.ignore()
+
+    def dragEnterEvent(self, e):
+        if e.mimeData().hasUrls:
+            e.accept()
+        else:
+            e.ignore()
+
+    def dragMoveEvent(self, e):
+        if e.mimeData().hasUrls:
+            e.accept()
+        else:
+            e.ignore()
+
     class NavWidget(QtWidgets.QTreeWidget):
         def __init__(self, gui):
             super().__init__()
             self.gui = gui
             self.setHeaderLabels(["HeaderLabel"])
             self.expandAll()
-            self.setAcceptDrops(True)
 
             for i in range(self.columnCount()):
                 self.resizeColumnToContents(i)
@@ -190,31 +215,6 @@ class PandasGui(QtWidgets.QMainWindow):
             for i in range(self.columnCount()):
                 width += self.columnWidth(i)
             return QtCore.QSize(300, 500)
-
-        def dragEnterEvent(self, e):
-            if e.mimeData().hasUrls:
-                e.accept()
-            else:
-                e.ignore()
-
-        def dragMoveEvent(self, e):
-            if e.mimeData().hasUrls:
-                e.accept()
-            else:
-                e.ignore()
-
-        def dropEvent(self, e):
-            if e.mimeData().hasUrls:
-                e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
-                fpath_list = []
-                for url in e.mimeData().urls():
-                    fpath_list.append(str(url.toLocalFile()))
-
-                for fpath in fpath_list:
-                    self.gui.import_dataframe(fpath)
-            else:
-                e.ignore()
 
     def add_df_to_nav(self, df_name, parent=None):
         if parent is None:
@@ -259,7 +259,6 @@ class PandasGui(QtWidgets.QMainWindow):
 
     def view_store(self):
         d = as_dict(self.store)
-        print(d)
         self.store_viewer = JsonViewer(d)
         self.store_viewer.show()
 

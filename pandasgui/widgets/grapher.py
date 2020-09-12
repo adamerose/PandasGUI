@@ -272,7 +272,8 @@ schemas = [Schema(name='histogram',
                         ColumnArg(arg_name='color')],
                   label='Scatter Matrix',
                   function=scatter_matrix,
-                  icon_path=os.path.join(pandasgui.__path__[0], 'images/plotly/trace-type-splom.svg'))]
+                  icon_path=os.path.join(pandasgui.__path__[0], 'images/plotly/trace-type-splom.svg'))
+           ]
 
 if __name__ == "__main__":
     from pandasgui.utility import fix_ipython, fix_pyqt

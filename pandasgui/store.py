@@ -243,16 +243,22 @@ class Store:
         self.gui.add_df_to_nav(name)
 
     def import_dataframe(self, path):
-        try:
-            if os.path.isfile(path) and path.endswith(".csv"):
-                df_name = os.path.split(path)[1]
-                df_object = pd.read_csv(path)
-                self.add_dataframe(df_object, df_name)
+        if not os.path.isfile(path):
+            logger.warning("Path is not a file: " + path)
+        elif path.endswith(".csv"):
+            filename = os.path.split(path)[1].split('.csv')[0]
+            df = pd.read_csv(path)
+            self.add_dataframe(df, filename)
+        elif path.endswith(".xlsx"):
+            filename = os.path.split(path)[1].split('.csv')[0]
+            df_dict = pd.read_excel(path, sheet_name=None)
+            for sheet_name in df_dict.keys():
+                df_name = f"{filename} - {sheet_name}"
+                self.add_dataframe(df_dict[sheet_name], df_name)
 
-            else:
-                logger.warning("Invalid file: ", path)
-        except Exception as e:
-            logger.error(f"Failed to import {path}\n", e)
+        else:
+            logger.warning("Can only import csv / xlsx. Invalid file: " + path)
+
 
     def get_pgdf(self, name):
         return next((x for x in self.data if x.name == name), None)

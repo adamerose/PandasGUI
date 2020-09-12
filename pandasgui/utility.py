@@ -147,24 +147,17 @@ def flatten_multiindex(mi, sep=" - ", format=None):
 
     return flat_index
 
-def fix_iCCP(path):
-    path = r"C:\_MyFiles\Programming\pandasgui\pandasgui\images\stack.png"
-    from PyQt5.QtWidgets import QApplication
-    from PyQt5.QtGui import QPixmap
-    app = QApplication([])
-    pixmap = QPixmap()
-    pixmap.load(path)
-    pixmap.save(path, "PNG")
 
 def unique_name(name, existing_names):
     if name in existing_names:
         for i in range(2, 999):
-            new_name = f"{name}_{i}"
+            new_name = f"{name} ({i})"
             if new_name not in existing_names:
                 return new_name
         raise ValueError("Stopped generating unique name after 1000 attempts")
     else:
         return name
+
 
 event_lookup = {"0": "QEvent::None",
                 "114": "QEvent::ActionAdded",
@@ -312,4 +305,3 @@ event_lookup = {"0": "QEvent::None",
                 "104": "QEvent::WindowUnblocked",
                 "203": "QEvent::WinIdChange",
                 "126": "QEvent::ZOrderChange", }
-

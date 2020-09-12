@@ -53,7 +53,7 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
         # self.addDockWidget(Qt.RightDockWidgetArea, self.filters_dock)
 
     def add_view(self, widget: QtWidgets.QWidget, title: str):
-        dock = DockWidget(title)
+        dock = DockWidget(title, self.pgdf.name)
         dock.setAllowedAreas(Qt.AllDockWidgetAreas)
 
         frame = QtWidgets.QFrame()
