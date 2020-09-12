@@ -24,7 +24,14 @@ class Reshaper(QtWidgets.QWidget):
 
         self.setWindowTitle("Reshaper")
 
+        # Dropdown to select reshape type
         self.reshape_type_picker = QtWidgets.QListWidget()
+        self.reshape_type_picker.setViewMode(self.reshape_type_picker.IconMode)
+        self.plot_type_picker.setWordWrap(True)
+        self.plot_type_picker.setSpacing(20)
+        self.reshape_type_picker.setResizeMode(self.plot_type_picker.Adjust)
+        self.reshape_type_picker.setDragDropMode(self.reshape_type_picker.NoDragDrop)
+
         for schema in schemas:
             icon = QtGui.QIcon(schema.icon_path)
             text = schema.label
@@ -40,6 +47,8 @@ class Reshaper(QtWidgets.QWidget):
         self.layout.addWidget(self.dragger, 1, 0)
         self.layout.setColumnStretch(0, 0)
         self.layout.setColumnStretch(1, 1)
+        self.dragger.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.reshape_type_picker.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
 
         self.setLayout(self.layout)
 
@@ -52,17 +61,19 @@ class Reshaper(QtWidgets.QWidget):
         self.reshape_type_picker.setCurrentRow(0)
         self.on_type_changed()
 
-    # Update the dragger destinations according to the new schema when it is changed
     def on_type_changed(self):
-        selected_plot_label = self.reshape_type_picker.selectedItems()[0].text()
-        current_schema = next(filter(lambda schema: schema.label == selected_plot_label, schemas))
-        arg_list = [arg.arg_name for arg in current_schema.args]
+        if len(self.reshape_type_picker.selectedItems()) == 0:
+            return
+
+        self.selected_plot_label = self.reshape_type_picker.selectedItems()[0].text()
+        self.current_schema = next(filter(lambda schema: schema.label == self.selected_plot_label, schemas))
+        arg_list = [arg.arg_name for arg in self.current_schema.args]
 
         self.dragger.set_destinations(arg_list)
 
     def on_dragger_finished(self):
-        selected_plot_label = self.reshape_type_picker.selectedItems()[0].text()
-        current_schema = next(filter(lambda x: x.label == selected_plot_label, schemas))
+        self.selected_plot_label = self.reshape_type_picker.selectedItems()[0].text()
+        self.current_schema = next(filter(lambda x: x.label == self.selected_plot_label, schemas))
 
         kwargs = {"pgdf": self.pgdf}
         for key, val in self.dragger.get_data().items():
@@ -74,10 +85,10 @@ class Reshaper(QtWidgets.QWidget):
                 kwargs[key] = val
             else:
                 kwargs[key] = val
-        func = current_schema.function
+        func = self.current_schema.function
         try:
             new_df = func(**kwargs)
-            new_df_name = self.pgdf.name + "_" + current_schema.name
+            new_df_name = self.pgdf.name + "_" + self.current_schema.name
             self.pgdf.store.add_dataframe(new_df, new_df_name)
         except Exception as e:
             logger.exception(e)

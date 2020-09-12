@@ -151,7 +151,7 @@ class PandasGui(QtWidgets.QMainWindow):
         for ix, style in enumerate(QtWidgets.QStyleFactory.keys()):
             items['Set Style'].append(
                 MenuItem(name=style,
-                         func=lambda x=style: self.app.setStyle(x),
+                         func=lambda _, s=style: self.app.setStyle(s),
                          )
             )
 
@@ -166,6 +166,7 @@ class PandasGui(QtWidgets.QMainWindow):
                 action.setShortcut(x.shortcut)
                 action.triggered.connect(x.func)
                 menu.addAction(action)
+
 
     def dropEvent(self, e):
         if e.mimeData().hasUrls:
@@ -202,8 +203,18 @@ class PandasGui(QtWidgets.QMainWindow):
             for i in range(self.columnCount()):
                 self.resizeColumnToContents(i)
 
+            self.setDragEnabled(True)
+            self.setDragDropMode(self.DragDrop)
+            self.setDefaultDropAction(Qt.MoveAction)
+            self.setSelectionMode(self.ExtendedSelection)
+            self.apply_tree_settings()
+
             self.setColumnWidth(0, 150)
             self.setColumnWidth(1, 150)
+
+        def dropEvent(self, e: QtGui.QDropEvent):
+            super().dropEvent(e)
+            self.apply_tree_settings()
 
         def rowsInserted(self, parent: QtCore.QModelIndex, start: int, end: int):
             super().rowsInserted(parent, start, end)
@@ -215,6 +226,17 @@ class PandasGui(QtWidgets.QMainWindow):
             for i in range(self.columnCount()):
                 width += self.columnWidth(i)
             return QtCore.QSize(300, 500)
+
+        def apply_tree_settings(self):
+            root = self.invisibleRootItem()
+            root.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled)
+
+            for i in range(root.childCount()):
+                child = root.child(i)
+                child.setExpanded(True)
+
+                child.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
+
 
     def add_df_to_nav(self, df_name, parent=None):
         if parent is None:

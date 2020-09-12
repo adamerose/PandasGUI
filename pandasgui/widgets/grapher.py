@@ -6,6 +6,8 @@ import os
 import plotly.express as px
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtCore import Qt
+
 import pandas as pd
 from pandasgui.store import Store, PandasGuiDataFrame
 
@@ -29,6 +31,14 @@ class Grapher(QtWidgets.QWidget):
 
         # Dropdown to select plot type
         self.plot_type_picker = QtWidgets.QListWidget()
+        self.plot_type_picker.setViewMode(self.plot_type_picker.IconMode)
+        self.plot_type_picker.setWordWrap(True)
+        self.plot_type_picker.setSpacing(20)
+        self.plot_type_picker.setResizeMode(self.plot_type_picker.Adjust)
+        self.plot_type_picker.setDragDropMode(self.plot_type_picker.NoDragDrop)
+
+
+        self.plot_type_picker.sizeHint = lambda: QtCore.QSize(500, 250)
 
         for schema in schemas:
             icon = QtGui.QIcon(schema.icon_path)
@@ -54,6 +64,8 @@ class Grapher(QtWidgets.QWidget):
         self.layout.addWidget(self.figure_viewer, 0, 1, 2, 1)
         self.layout.setColumnStretch(0, 0)
         self.layout.setColumnStretch(1, 1)
+        self.dragger.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.plot_type_picker.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
 
         self.setLayout(self.layout)
 
@@ -69,18 +81,18 @@ class Grapher(QtWidgets.QWidget):
         # Show a blank axis initially
         self.figure_viewer.set_figure(px.scatter())
 
-    # Update the dragger destinations according to the new schema when it is changed
     def on_type_changed(self):
-        selected_plot_label = self.plot_type_picker.selectedItems()[0].text()
-        current_schema = next(filter(lambda schema: schema.label == selected_plot_label, schemas))
-        arg_list = [arg.arg_name for arg in current_schema.args]
+        if len(self.plot_type_picker.selectedItems()) == 0:
+            return
+
+        self.selected_plot_label = self.plot_type_picker.selectedItems()[0].text()
+        self.current_schema = next(filter(lambda schema: schema.label == self.selected_plot_label, schemas))
+        arg_list = [arg.arg_name for arg in self.current_schema.args]
 
         self.dragger.set_destinations(arg_list)
 
     def on_dragger_finished(self):
         self.spinner.start()
-        selected_plot_label = self.plot_type_picker.selectedItems()[0].text()
-        current_schema = next(filter(lambda x: x.label == selected_plot_label, schemas))
 
         df = flatten_df(self.pgdf.dataframe)
         kwargs = {"data_frame": df}
@@ -94,7 +106,7 @@ class Grapher(QtWidgets.QWidget):
             else:
                 kwargs[key] = val
 
-        func = current_schema.function
+        func = self.current_schema.function
         self.current_worker = Worker(func, kwargs)
         self.current_worker.finished.connect(self.worker_callback)
         self.current_worker.finished.connect(self.current_worker.deleteLater)
@@ -179,6 +191,17 @@ def scatter_matrix(**kwargs):
 def contour(**kwargs):
     fig = px.density_contour(**kwargs)
     fig.update_traces(contours_coloring="fill", contours_showlabels=True)
+    return fig
+
+
+def word_cloud(data_frame, columns: Union[str, List[str]]):
+    if type(columns) == str:
+        columns = [columns]
+
+    from wordcloud import WordCloud
+    text = " ".join(pd.concat([data_frame[x].dropna().astype(str) for x in columns]))
+    wc = WordCloud(scale=2, collocations=False).generate(text)
+    fig = px.imshow(wc)
     return fig
 
 
@@ -270,9 +293,16 @@ schemas = [Schema(name='histogram',
            Schema(name='scatter_matrix',
                   args=[ColumnArg(arg_name='dimensions'),
                         ColumnArg(arg_name='color')],
-                  label='Scatter Matrix',
+                  label='Splom',
                   function=scatter_matrix,
-                  icon_path=os.path.join(pandasgui.__path__[0], 'images/plotly/trace-type-splom.svg'))
+                  icon_path=os.path.join(pandasgui.__path__[0], 'images/plotly/trace-type-splom.svg')),
+           Schema(name='word_cloud',
+                  args=[ColumnArg(arg_name='columns'),
+                        ],
+                  label='Word Cloud',
+                  function=word_cloud,
+                  icon_path=os.path.join(pandasgui.__path__[0], 'images/plotly/word-cloud.png'))
+
            ]
 
 if __name__ == "__main__":
