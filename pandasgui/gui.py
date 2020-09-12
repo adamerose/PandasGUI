@@ -2,8 +2,8 @@ import inspect
 import os
 import sys
 import pprint
-from typing import Union, Iterable
-
+from typing import Union, Iterable, Callable
+from dataclasses import dataclass
 import pandas as pd
 import pkg_resources
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -42,6 +42,7 @@ class PandasGui(QtWidgets.QMainWindow):
         refs.append(self)
         self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
         self.store = Store()
+        self.store.gui = self
 
         super().__init__()
         self.init_app()
@@ -53,7 +54,7 @@ class PandasGui(QtWidgets.QMainWindow):
 
         # Adds DataFrames listed in kwargs to data store.
         for df_name, df in kwargs.items():
-            self.add_df(df, df_name)
+            self.store.add_dataframe(df, df_name)
 
         # Default to first item
         self.stacked_widget.setCurrentWidget(self.store.data[0].dataframe_explorer)
@@ -82,7 +83,7 @@ class PandasGui(QtWidgets.QMainWindow):
         pdgui_icon = "images/icon.png"
         pdgui_icon_path = pkg_resources.resource_filename(__name__, pdgui_icon)
         self.app.setWindowIcon(QtGui.QIcon(pdgui_icon_path))
-        # self.app.setFont(QtGui.QFont('Arial'))
+
         self.show()
 
     # Create and add all widgets to GUI.
@@ -119,77 +120,51 @@ class PandasGui(QtWidgets.QMainWindow):
         self.setCentralWidget(self.splitter)
 
     def import_dataframe(self, path):
-        try:
-            if os.path.isfile(path) and path.endswith(".csv"):
-                df_name = os.path.split(path)[1]
-                df_object = pd.read_csv(path)
-                self.add_df(df_object, df_name)
-
-            else:
-                logger.warning("Invalid file: ", path)
-        except Exception as e:
-            logger.error(f"Failed to import {path}\n", e)
-
-    def add_df(self, df: pd.DataFrame, name: str):
-        """
-        Add a new DataFrame to the GUI
-        """
-        pgdf = PandasGuiDataFrame.cast(df)
-        pgdf.name = name
-        pgdf.pandasgui = self
-        self.store.add_pgdf(pgdf)
-
-        dfe = DataFrameExplorer(pgdf)
-        self.stacked_widget.addWidget(dfe)
-
-        self.add_df_to_nav(name)
+        self.store.import_dataframe(path)
 
     ####################
     # Menu bar functions
 
     def make_menu_bar(self):
-        # Create a menu for setting the GUI style.
-        # Uses radio-style buttons in a QActionGroup.
         menubar = self.menuBar()
 
-        # Creates an edit menu
-        editMenu = menubar.addMenu("&Edit")
-        findAction = QtWidgets.QAction("&Find", self)
-        findAction.setShortcut("Ctrl+F")
-        findAction.triggered.connect(self.find_bar.show_find_bar)
-        editMenu.addAction(findAction)
+        @dataclass
+        class MenuItem:
+            name: str
+            func: Callable
+            shortcut: str = ''
 
-        styleMenu = menubar.addMenu("&Set Style")
-        styleGroup = QtWidgets.QActionGroup(styleMenu)
+        items = {'Edit': [MenuItem(name='Find',
+                                   func=self.find_bar.show_find_bar,
+                                   shortcut='Ctrl+F')],
+                 'Debug': [MenuItem(name='Print Data Store',
+                                    func=self.print_store),
+                           MenuItem(name='View Data Store',
+                                    func=self.view_store),
+                           MenuItem(name='Print History (for current DataFrame)',
+                                    func=self.print_history)
+                           ],
+                 'Set Style': []}
 
         # Add an option to the menu for each GUI style that exist for the user's system
         for ix, style in enumerate(QtWidgets.QStyleFactory.keys()):
-            styleAction = QtWidgets.QAction(f"&{style}", self, checkable=True)
-            styleAction.triggered.connect(
-                lambda state, style=style: self.app.setStyle(style)
-                                           and self.app.setStyleSheet("")
+            items['Set Style'].append(
+                MenuItem(name=style,
+                         func=lambda x=style: self.app.setStyle(x),
+                         )
             )
-            styleGroup.addAction(styleAction)
-            styleMenu.addAction(styleAction)
 
             # Set the default style to the last in the options
-            if ix == len(QtWidgets.QStyleFactory.keys()) - 1:
-                styleAction.trigger()
+            self.app.setStyle(QtWidgets.QStyleFactory.keys()[-1])
 
-        # Creates a debug menu.
-        debugMenu = menubar.addMenu("&Debug")
-
-        act = QtWidgets.QAction("&Print Data Store", self)
-        act.triggered.connect(self.print_store)
-        debugMenu.addAction(act)
-
-        act = QtWidgets.QAction("&View Data Store", self)
-        act.triggered.connect(self.view_store)
-        debugMenu.addAction(act)
-
-        act = QtWidgets.QAction("&Print History (for current DataFrame)", self)
-        act.triggered.connect(self.print_history)
-        debugMenu.addAction(act)
+        # Add menu items and actions to UI using the schema defined above
+        for menu_name in items.keys():
+            menu = menubar.addMenu(menu_name)
+            for x in items[menu_name]:
+                action = QtWidgets.QAction(x.name, self)
+                action.setShortcut(x.shortcut)
+                action.triggered.connect(x.func)
+                menu.addAction(action)
 
     class NavWidget(QtWidgets.QTreeWidget):
         def __init__(self, gui):
@@ -290,18 +265,7 @@ class PandasGui(QtWidgets.QMainWindow):
 
     # Return all DataFrames, or a subset specified by names. Returns a dict of name:df or a single df if there's only 1
     def get_dataframes(self, names: Union[None, str, list] = None):
-        if type(names) == str:
-            names = [names]
-
-        df_dict = {}
-        for pgdf in self.store.data:
-            if names is None or pgdf.name in names:
-                df_dict[pgdf.name] = pgdf.dataframe
-
-        if len(df_dict.values()) == 1:
-            return list(df_dict.values())[0]
-        else:
-            return df_dict
+        self.store.get_dataframes(names)
 
 
 def show(*args,

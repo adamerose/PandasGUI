@@ -67,10 +67,12 @@ for ix, name in enumerate(dataset_names):
 for name in all_datasets.keys():
     globals()[name] = all_datasets[name]
 
-simple = pd.DataFrame({'first': ['A', 'B', 'A', 'B', 'A', 'B', 'A', 'B'],
-                       'second': ['X', 'X', 'Y', 'Y', 'X', 'X', 'Y', 'Y'],
-                       'third': ['foo', 'foo', 'foo', 'foo', 'bar', 'bar', 'bar', 'bar'],
-                       'fourth': [1, 2, 3, 4, 5, 6, 7, 8]})
+simple = pd.DataFrame({'name': ['John', 'John', 'Mary', 'Mary', 'Pete', 'Pete', 'Mike', 'Mike'],
+                       'gender': ['m', 'm', 'f', 'f', 'm', 'm', 'm', 'm'],
+                       'trial': ['A', 'B', 'A', 'B', 'A', 'B', 'A', 'B'],
+                       'time': [473, 439, 424, 419, 433, 374, 434, 345],
+                       'points': [13, 16, 13, 18, 9, 20, 5, 18]}
+                      )
 
 multiindex = pd.DataFrame(np.random.randn(8, 4),
                           index=pd.MultiIndex.from_product([('bar', 'baz', 'foo', 'qux'),

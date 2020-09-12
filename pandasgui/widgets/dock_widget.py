@@ -5,8 +5,12 @@ from PyQt5.QtCore import Qt
 class DockWidget(QtWidgets.QDockWidget):
     def __init__(self, title: str):
         super().__init__(title)
+        self.original_title = title
         self.setTitleBarWidget(QtWidgets.QWidget())
         self.dockLocationChanged.connect(self.on_dockLocationChanged)
+        self.setFeatures(self.DockWidgetFloatable |
+                         self.DockWidgetMovable |
+                         self.DockWidgetClosable)
 
     def on_dockLocationChanged(self):
         main: QtWidgets.QMainWindow = self.parent()
@@ -27,6 +31,17 @@ class DockWidget(QtWidgets.QDockWidget):
     def minimumSizeHint(self) -> QtCore.QSize:
         return QtCore.QSize(100, 100)
 
+    def closeEvent(self, event: QtGui.QCloseEvent) -> None:
+        event.ignore()
+        main: QtWidgets.QMainWindow = self.parent()
+        dock_widgets = main.findChildren(QtWidgets.QDockWidget)
+        dock_widgets = [w for w in dock_widgets if not w.isFloating()]
+
+        self.setFloating(False)
+        if len(dock_widgets) > 0:
+            main.tabifyDockWidget(dock_widgets[0], self)
+        else:
+            main.addDockWidget(Qt.LeftDockWidgetArea, self)
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication([])

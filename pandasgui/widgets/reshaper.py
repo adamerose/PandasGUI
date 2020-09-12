@@ -77,12 +77,8 @@ class Reshaper(QtWidgets.QWidget):
         func = current_schema.function
         try:
             new_df = func(**kwargs)
-            if self.pgdf.pandasgui is not None:
-                new_df_name = self.pgdf.name + "_" + current_schema.name
-                self.pgdf.pandasgui.add_df(new_df, new_df_name)
-            else:
-                from pandasgui import show
-                show(new_df)
+            new_df_name = self.pgdf.name + "_" + current_schema.name
+            self.pgdf.store.add_dataframe(new_df, new_df_name)
         except Exception as e:
             logger.exception(e)
 
@@ -91,49 +87,45 @@ class Reshaper(QtWidgets.QWidget):
 # Schema
 
 @track_history
-def aggregate(pgdf: PandasGuiDataFrame,
-              index: Iterable = None,
-              columns: Iterable = None,
-              values: Iterable = None,
-              aggregation: Callable = 'mean'):
+def pivot(pgdf: PandasGuiDataFrame,
+          keys: Iterable = None,
+          categories: Iterable = None,
+          values: Iterable = None,
+          aggregation: Callable = 'mean'):
     df = pgdf.dataframe
-    return df.pivot_table(index=index,
-                          columns=columns,
+    return df.pivot_table(index=keys,
+                          columns=categories,
                           values=values,
                           aggfunc=aggregation)
 
 
 @track_history
 def stack(pgdf: PandasGuiDataFrame,
-          key_columns: Iterable = None,
-          value_columns: Iterable = None,
-          key_name: Iterable = None,
-          value_name: Callable = 'mean'):
+          stack: Iterable = None,
+          keep: Iterable = None):
     df = pgdf.dataframe
-    return df.melt(id_vars=key_columns,
-                   value_vars=value_columns,
-                   var_name=key_name,
-                   value_name=value_name)
+    return df.melt(id_vars=keep,
+                   value_vars=stack)
 
 
 schemas = [
-    Schema(name="aggregate",
-           label="Aggregate",
-           function=aggregate,
-           icon_path=os.path.join(pandasgui.__path__[0], "images/plotly/trace-type-histogram.svg"),
+    Schema(name="pivot",
+           label="Pivot",
+           function=pivot,
+           icon_path=os.path.join(pandasgui.__path__[0], "images/pivot.png"),
            args=[
-               ColumnArg(arg_name="index"),
-               ColumnArg(arg_name="columns"),
+               ColumnArg(arg_name="keys"),
+               ColumnArg(arg_name="categories"),
                ColumnArg(arg_name="values"),
                OptionListArg(arg_name="aggregation", values=['count', 'mean', 'median']),
            ]),
     Schema(name="stack",
            label="Stack",
            function=stack,
-           icon_path=os.path.join(pandasgui.__path__[0], "images/plotly/trace-type-histogram.svg"),
+           icon_path=os.path.join(pandasgui.__path__[0], "images/stack.png"),
            args=[
-               ColumnArg(arg_name="key_columns"),
-               ColumnArg(arg_name="value_columns"),
+               ColumnArg(arg_name="stack"),
+               ColumnArg(arg_name="keep"),
            ]),
 ]
 

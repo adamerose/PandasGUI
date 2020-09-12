@@ -7,7 +7,8 @@ from PyQt5.QtCore import Qt
 import traceback
 from functools import wraps
 from datetime import datetime
-from pandasgui.utility import get_logger
+from pandasgui.utility import get_logger, unique_name
+import os
 
 logger = get_logger(__name__)
 
@@ -62,7 +63,7 @@ class PandasGuiDataFrame:
 
         # References to other object instances that may be assigned later
         self.settings: Settings = Settings()
-        self.pandasgui: Union["PandasGui", None] = None
+        self.store: Union[Store, None] = None
         self.dataframe_explorer: Union["DataFrameExplorer", None] = None
         self.dataframe_viewer: Union["DataFrameViewer", None] = None
         self.filter_viewer: Union["FilterViewer", None] = None
@@ -221,13 +222,54 @@ class PandasGuiDataFrame:
 class Store:
     settings: Settings = Settings()
     data: List[PandasGuiDataFrame] = field(default_factory=list)
+    gui: Union["PandasGui", None] = None
 
-    def add_pgdf(self, pgdf):
-        pgdf.settings = self.settings
+    def add_dataframe(self, pgdf: Union[DataFrame, PandasGuiDataFrame],
+                      name: str = "Untitled"):
+
+        name = unique_name(name, self.get_dataframes().keys())
+
+        pgdf = PandasGuiDataFrame.cast(pgdf)
+        pgdf.name = name
+        pgdf.store = self
+
         self.data.append(pgdf)
+
+        if pgdf.dataframe_explorer is None:
+            from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
+            pgdf.dataframe_explorer = DataFrameExplorer(pgdf)
+        dfe = pgdf.dataframe_explorer
+        self.gui.stacked_widget.addWidget(dfe)
+        self.gui.add_df_to_nav(name)
+
+    def import_dataframe(self, path):
+        try:
+            if os.path.isfile(path) and path.endswith(".csv"):
+                df_name = os.path.split(path)[1]
+                df_object = pd.read_csv(path)
+                self.add_dataframe(df_object, df_name)
+
+            else:
+                logger.warning("Invalid file: ", path)
+        except Exception as e:
+            logger.error(f"Failed to import {path}\n", e)
 
     def get_pgdf(self, name):
         return next((x for x in self.data if x.name == name), None)
+
+    def get_dataframes(self, names: Union[None, str, list] = None):
+        if type(names) == str:
+            names = [names]
+
+        df_dict = {}
+        for pgdf in self.data:
+            if names is None or pgdf.name in names:
+                df_dict[pgdf.name] = pgdf.dataframe
+
+        if len(df_dict.values()) == 1:
+            return list(df_dict.values())[0]
+        else:
+            return df_dict
 
     def to_dict(self):
         import json
