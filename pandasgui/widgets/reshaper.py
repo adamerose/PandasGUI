@@ -27,9 +27,9 @@ class Reshaper(QtWidgets.QWidget):
         # Dropdown to select reshape type
         self.reshape_type_picker = QtWidgets.QListWidget()
         self.reshape_type_picker.setViewMode(self.reshape_type_picker.IconMode)
-        self.plot_type_picker.setWordWrap(True)
-        self.plot_type_picker.setSpacing(20)
-        self.reshape_type_picker.setResizeMode(self.plot_type_picker.Adjust)
+        self.reshape_type_picker.setWordWrap(True)
+        self.reshape_type_picker.setSpacing(20)
+        self.reshape_type_picker.setResizeMode(self.reshape_type_picker.Adjust)
         self.reshape_type_picker.setDragDropMode(self.reshape_type_picker.NoDragDrop)
 
         for schema in schemas:
