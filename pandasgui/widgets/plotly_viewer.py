@@ -40,6 +40,10 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
         self.resize(700, 600)
         self.setWindowTitle("Plotly Viewer")
 
+        QtWebEngineWidgets.QWebEngineProfile.defaultProfile().downloadRequested.connect(
+            self.on_downloadRequested
+        )
+
     def set_figure(self, fig=None):
         self.temp_file.seek(0)
 
@@ -59,6 +63,16 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
 
     def sizeHint(self) -> QtCore.QSize:
         return QtCore.QSize(400, 400)
+
+    # https://stackoverflow.com/questions/55963931/how-to-download-csv-file-with-qwebengineview-and-qurl
+    @QtCore.pyqtSlot("QWebEngineDownloadItem*")
+    def on_downloadRequested(self, download):
+        dialog = QtWidgets.QFileDialog()
+        dialog.setDefaultSuffix(".png")
+        path, _ = dialog.getSaveFileName(self, "Save File", os.path.join(os.getcwd(), "newplot.png"), "*.png")
+        if path:
+            download.setPath(path)
+            download.accept()
 
 if __name__ == "__main__":
     # Create a QtWidgets.QApplication instance or use the existing one if it exists
@@ -85,4 +99,4 @@ if __name__ == "__main__":
     )
 
     pv = PlotlyViewer(fig)
-    # app.exec_()
+    app.exec_()
