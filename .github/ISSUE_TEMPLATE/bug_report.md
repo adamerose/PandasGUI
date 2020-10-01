@@ -7,7 +7,7 @@ assignees: ''
 
 ---
 
-Before making a bug report, please check that you can run the snippet below with no errors. This is to make sure your problem is with pandasgui and not just PyQt5.
+**Before making a bug report, please check that you can run the snippet below with no errors. This is to make sure your problem is with pandasgui and not just PyQt5.**
 ```
 from PyQt5 import QtCore, QtGui, QtWidgets, QtWebEngineWidgets
 app = QtWidgets.QApplication([])
