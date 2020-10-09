@@ -223,6 +223,7 @@ class Store:
     settings: Settings = Settings()
     data: List[PandasGuiDataFrame] = field(default_factory=list)
     gui: Union["PandasGui", None] = None
+    navigator: Union["Navigator", None] = None
 
     def add_dataframe(self, pgdf: Union[DataFrame, PandasGuiDataFrame],
                       name: str = "Untitled"):
@@ -240,14 +241,22 @@ class Store:
             pgdf.dataframe_explorer = DataFrameExplorer(pgdf)
         dfe = pgdf.dataframe_explorer
         self.gui.stacked_widget.addWidget(dfe)
-        self.gui.add_df_to_nav(name)
+
+        # Add to nav
+        shape = pgdf.dataframe.shape
+        shape = str(shape[0]) + " X " + str(shape[1])
+
+        item = QtWidgets.QTreeWidgetItem(self.navigator, [name, shape])
+        self.navigator.itemSelectionChanged.emit()
+        self.navigator.setCurrentItem(item)
+        self.navigator.apply_tree_settings()
 
     def import_dataframe(self, path):
         if not os.path.isfile(path):
             logger.warning("Path is not a file: " + path)
         elif path.endswith(".csv"):
             filename = os.path.split(path)[1].split('.csv')[0]
-            df = pd.read_csv(path)
+            df = pd.read_csv(path, engine='python')
             self.add_dataframe(df, filename)
         elif path.endswith(".xlsx"):
             filename = os.path.split(path)[1].split('.csv')[0]
@@ -258,7 +267,6 @@ class Store:
 
         else:
             logger.warning("Can only import csv / xlsx. Invalid file: " + path)
-
 
     def get_pgdf(self, name):
         return next((x for x in self.data if x.name == name), None)

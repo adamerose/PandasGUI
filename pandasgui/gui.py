@@ -14,6 +14,7 @@ from pandasgui.utility import fix_ipython, fix_pyqt, get_logger, as_dict
 from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
 from pandasgui.widgets.find_toolbar import FindToolbar
 from pandasgui.widgets.json_viewer import JsonViewer
+from pandasgui.widgets.navigator import Navigator
 
 logger = get_logger(__name__)
 
@@ -58,7 +59,7 @@ class PandasGui(QtWidgets.QMainWindow):
 
         # Default to first item
         self.stacked_widget.setCurrentWidget(self.store.data[0].dataframe_explorer)
-        self.nav_tree.setCurrentItem(self.nav_tree.topLevelItem(0))
+        self.navigator.setCurrentItem(self.navigator.topLevelItem(0))
 
         # Start event loop if blocking enabled
         if self.store.settings.block:
@@ -95,14 +96,11 @@ class PandasGui(QtWidgets.QMainWindow):
         self.stacked_widget = QtWidgets.QStackedWidget()
 
         # Make the navigation bar
-        self.nav_tree = self.NavWidget(self)
-        # Creates the headers.
-        self.nav_tree.setHeaderLabels(["Name", "Shape"])
-        self.nav_tree.itemSelectionChanged.connect(self.nav_clicked)
+        self.navigator = Navigator(self.store)
 
         # Make splitter to hold nav and DataFrameExplorers
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
-        self.splitter.addWidget(self.nav_tree)
+        self.splitter.addWidget(self.navigator)
         self.splitter.addWidget(self.stacked_widget)
 
         self.splitter.setCollapsible(0, False)
@@ -110,7 +108,7 @@ class PandasGui(QtWidgets.QMainWindow):
         self.splitter.setStretchFactor(0, 0)
         self.splitter.setStretchFactor(1, 1)
 
-        nav_width = self.nav_tree.sizeHint().width()
+        nav_width = self.navigator.sizeHint().width()
         self.splitter.setSizes([nav_width, self.width() - nav_width])
         self.splitter.setContentsMargins(10, 10, 10, 10)
 
@@ -167,7 +165,6 @@ class PandasGui(QtWidgets.QMainWindow):
                 action.triggered.connect(x.func)
                 menu.addAction(action)
 
-
     def dropEvent(self, e):
         if e.mimeData().hasUrls:
             e.setDropAction(QtCore.Qt.CopyAction)
@@ -192,77 +189,6 @@ class PandasGui(QtWidgets.QMainWindow):
             e.accept()
         else:
             e.ignore()
-
-    class NavWidget(QtWidgets.QTreeWidget):
-        def __init__(self, gui):
-            super().__init__()
-            self.gui = gui
-            self.setHeaderLabels(["HeaderLabel"])
-            self.expandAll()
-
-            for i in range(self.columnCount()):
-                self.resizeColumnToContents(i)
-
-            self.setDragEnabled(True)
-            self.setDragDropMode(self.DragDrop)
-            self.setDefaultDropAction(Qt.MoveAction)
-            self.setSelectionMode(self.ExtendedSelection)
-            self.apply_tree_settings()
-
-            self.setColumnWidth(0, 150)
-            self.setColumnWidth(1, 150)
-
-        def dropEvent(self, e: QtGui.QDropEvent):
-            super().dropEvent(e)
-            self.apply_tree_settings()
-
-        def rowsInserted(self, parent: QtCore.QModelIndex, start: int, end: int):
-            super().rowsInserted(parent, start, end)
-            self.expandAll()
-
-        def sizeHint(self):
-            # Width
-            width = 0
-            for i in range(self.columnCount()):
-                width += self.columnWidth(i)
-            return QtCore.QSize(300, 500)
-
-        def apply_tree_settings(self):
-            root = self.invisibleRootItem()
-            root.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled)
-
-            for i in range(root.childCount()):
-                child = root.child(i)
-                child.setExpanded(True)
-
-                child.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
-
-
-    def add_df_to_nav(self, df_name, parent=None):
-        if parent is None:
-            parent = self.nav_tree
-
-        # Calculate and format the shape of the DataFrame
-        shape = self.store.get_pgdf(df_name).dataframe.shape
-        shape = str(shape[0]) + " X " + str(shape[1])
-
-        item = QtWidgets.QTreeWidgetItem(parent, [df_name, shape])
-        self.nav_tree.itemSelectionChanged.emit()
-        self.nav_tree.setCurrentItem(item)
-
-    def nav_clicked(self):
-        """
-        Show the DataFrameExplorer corresponding to the highlighted nav item.
-        """
-        try:
-            item = self.nav_tree.selectedItems()[0]
-        except IndexError:
-            return
-
-        df_name = item.data(0, Qt.DisplayRole)
-
-        dfe = self.store.get_pgdf(df_name).dataframe_explorer
-        self.stacked_widget.setCurrentWidget(dfe)
 
     def print_store(self):
         d = as_dict(self.store)
