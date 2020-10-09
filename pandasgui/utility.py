@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 class DotDict(dict):
     __getattr__ = dict.__getitem__
     __setattr__ = dict.__setitem__
@@ -158,6 +161,12 @@ def unique_name(name, existing_names):
     else:
         return name
 
+
+def delete_datasets():
+    from pandasgui.datasets import LOCAL_DATA_DIR
+    import shutil
+    logger.info(f"Deleting sample dataset directory ({LOCAL_DATA_DIR})")
+    shutil.rmtree(LOCAL_DATA_DIR)
 
 event_lookup = {"0": "QEvent::None",
                 "114": "QEvent::ActionAdded",

@@ -10,7 +10,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
 from pandasgui.store import Store, PandasGuiDataFrame
-from pandasgui.utility import fix_ipython, fix_pyqt, get_logger, as_dict
+from pandasgui.utility import fix_ipython, fix_pyqt, get_logger, as_dict, delete_datasets
 from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
 from pandasgui.widgets.find_toolbar import FindToolbar
 from pandasgui.widgets.json_viewer import JsonViewer
@@ -141,7 +141,11 @@ class PandasGui(QtWidgets.QMainWindow):
                            MenuItem(name='View Data Store',
                                     func=self.view_store),
                            MenuItem(name='Print History (for current DataFrame)',
-                                    func=self.print_history)
+                                    func=self.print_history),
+                           MenuItem(name='Delete local data',
+                                    func=delete_datasets),
+
+
                            ],
                  'Set Style': []}
 
