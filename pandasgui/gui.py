@@ -58,7 +58,6 @@ class PandasGui(QtWidgets.QMainWindow):
             self.store.add_dataframe(df, df_name)
 
         # Default to first item
-        self.stacked_widget.setCurrentWidget(self.store.data[0].dataframe_explorer)
         self.navigator.setCurrentItem(self.navigator.topLevelItem(0))
 
         # Start event loop if blocking enabled
@@ -135,6 +134,10 @@ class PandasGui(QtWidgets.QMainWindow):
         items = {'Edit': [MenuItem(name='Find',
                                    func=self.find_bar.show_find_bar,
                                    shortcut='Ctrl+F'),
+                          MenuItem(name='Import',
+                                   func=self.import_dialog),
+                          MenuItem(name='Export',
+                                   func=self.export_dialog),
                           ],
                  'Debug': [MenuItem(name='Print Data Store',
                                     func=self.print_store),
@@ -218,6 +221,17 @@ class PandasGui(QtWidgets.QMainWindow):
     def get_dataframes(self, names: Union[None, str, list] = None):
         self.store.get_dataframes(names)
 
+    def import_dialog(self):
+        dialog = QtWidgets.QFileDialog()
+        paths, _ = dialog.getOpenFileNames(filter="*.csv *.xlsx")
+        for path in paths:
+            self.store.import_dataframe(path)
+
+    def export_dialog(self):
+        dialog = QtWidgets.QFileDialog()
+        pgdf = self.store.selected_pgdf
+        path, _ = dialog.getSaveFileName(directory=pgdf.name, filter="*.csv")
+        pgdf.dataframe.to_csv(path, index=False)
 
 def show(*args,
          settings: dict = {},

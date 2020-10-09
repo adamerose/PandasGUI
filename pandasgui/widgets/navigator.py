@@ -93,8 +93,7 @@ class Navigator(QtWidgets.QTreeWidget):
 
         item = self.selectedItems()[0]
         df_name = item.data(0, Qt.DisplayRole)
-        dfe = self.store.get_pgdf(df_name).dataframe_explorer
-        self.store.gui.stacked_widget.setCurrentWidget(dfe)
+        self.store.select_pgdf(df_name)
 
     def dropEvent(self, e: QtGui.QDropEvent):
         super().dropEvent(e)
@@ -114,7 +113,7 @@ class Navigator(QtWidgets.QTreeWidget):
                 if widget.underMouse():
                     return False
                 else:
-                    df.to_csv(path)
+                    df.to_csv(path, index=False)
 
                     return True
 

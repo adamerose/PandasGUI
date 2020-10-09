@@ -224,6 +224,7 @@ class Store:
     data: List[PandasGuiDataFrame] = field(default_factory=list)
     gui: Union["PandasGui", None] = None
     navigator: Union["Navigator", None] = None
+    selected_pgdf: Union[PandasGuiDataFrame, None] = None
 
     def add_dataframe(self, pgdf: Union[DataFrame, PandasGuiDataFrame],
                       name: str = "Untitled"):
@@ -284,6 +285,12 @@ class Store:
             return list(df_dict.values())[0]
         else:
             return df_dict
+
+    def select_pgdf(self, name):
+        pgdf = self.get_pgdf(name)
+        dfe = pgdf.dataframe_explorer
+        self.gui.stacked_widget.setCurrentWidget(dfe)
+        self.selected_pgdf = pgdf
 
     def to_dict(self):
         import json
