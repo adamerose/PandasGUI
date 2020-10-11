@@ -99,24 +99,24 @@ class Reshaper(QtWidgets.QWidget):
 
 @track_history
 def pivot(pgdf: PandasGuiDataFrame,
-          keys: Iterable = None,
-          categories: Iterable = None,
+          index: Iterable = None,
+          columns: Iterable = None,
           values: Iterable = None,
-          aggregation: Callable = 'mean'):
+          aggfunc: Callable = 'mean'):
     df = pgdf.dataframe
-    return df.pivot_table(index=keys,
-                          columns=categories,
+    return df.pivot_table(index=index,
+                          columns=columns,
                           values=values,
-                          aggfunc=aggregation)
+                          aggfunc=aggfunc)
 
 
 @track_history
-def stack(pgdf: PandasGuiDataFrame,
-          stack: Iterable = None,
-          keep: Iterable = None):
+def melt(pgdf: PandasGuiDataFrame,
+          id_vars: Iterable = None,
+          value_vars: Iterable = None):
     df = pgdf.dataframe
-    return df.melt(id_vars=keep,
-                   value_vars=stack)
+    return df.melt(id_vars=id_vars,
+                   value_vars=value_vars)
 
 
 schemas = [
@@ -125,18 +125,18 @@ schemas = [
            function=pivot,
            icon_path=os.path.join(pandasgui.__path__[0], "images/pivot.png"),
            args=[
-               ColumnArg(arg_name="keys"),
-               ColumnArg(arg_name="categories"),
+               ColumnArg(arg_name="index"),
+               ColumnArg(arg_name="columns"),
                ColumnArg(arg_name="values"),
-               OptionListArg(arg_name="aggregation", values=['count', 'mean', 'median']),
+               OptionListArg(arg_name="aggfunc", values=['count', 'mean', 'median']),
            ]),
-    Schema(name="stack",
-           label="Stack",
-           function=stack,
+    Schema(name="melt",
+           label="Melt",
+           function=melt,
            icon_path=os.path.join(pandasgui.__path__[0], "images/stack.png"),
            args=[
-               ColumnArg(arg_name="stack"),
-               ColumnArg(arg_name="keep"),
+               ColumnArg(arg_name="id_vars"),
+               ColumnArg(arg_name="value_vars"),
            ]),
 ]
 
