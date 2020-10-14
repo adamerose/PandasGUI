@@ -219,7 +219,7 @@ class PandasGui(QtWidgets.QMainWindow):
 
     # Return all DataFrames, or a subset specified by names. Returns a dict of name:df or a single df if there's only 1
     def get_dataframes(self, names: Union[None, str, list] = None):
-        self.store.get_dataframes(names)
+        return self.store.get_dataframes(names)
 
     def import_dialog(self):
         dialog = QtWidgets.QFileDialog()

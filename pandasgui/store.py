@@ -96,7 +96,6 @@ class PandasGuiDataFrame:
         for view in [self.dataframe_viewer.columnHeader,
                      self.dataframe_viewer.indexHeader]:
             view.set_spans()
-            view.init_size()
 
     @track_history
     def edit_data(self, row, col, value, skip_update=False):
@@ -281,10 +280,7 @@ class Store:
             if names is None or pgdf.name in names:
                 df_dict[pgdf.name] = pgdf.dataframe
 
-        if len(df_dict.values()) == 1:
-            return list(df_dict.values())[0]
-        else:
-            return df_dict
+        return df_dict
 
     def select_pgdf(self, name):
         pgdf = self.get_pgdf(name)
