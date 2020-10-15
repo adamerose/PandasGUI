@@ -29,7 +29,7 @@ sys.excepthook = except_hook
 # Enables PyQt event loop in IPython
 fix_ipython()
 
-# Keep a list of PandasGui widgets so they don't get garbage collected
+# Keep a list of PandasGUI widgets so they don't get garbage collected
 refs = []
 
 
@@ -79,7 +79,7 @@ class PandasGui(QtWidgets.QMainWindow):
         )
 
         # Set window title and icon
-        self.setWindowTitle("PandasGui")
+        self.setWindowTitle("PandasGUI")
         pdgui_icon = "images/icon.png"
         pdgui_icon_path = pkg_resources.resource_filename(__name__, pdgui_icon)
         self.app.setWindowIcon(QtGui.QIcon(pdgui_icon_path))

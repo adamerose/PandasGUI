@@ -1,8 +1,10 @@
-# PandasGui
+# PandasGUI
 
 A GUI for analyzing Pandas DataFrames.
 
-<img src="https://imgur.com/LEAQfa1.gif" alt="Demo" width="750"/>
+## Demo
+
+[![PandasGUI Demo](https://yt-embed.herokuapp.com/embed?v=NKXdolMxW2Y)](https://www.youtube.com/watch?v=NKXdolMxW2Y "PandasGUI Demo")
 
 ## Installation
 
@@ -62,25 +64,3 @@ This project is still in version 0.x.y and subject to breaking changes. Latest c
 Issues, feedback and pull requests are welcome.
 
 Remember to leave a ⭐ if you like this!
-
-## Screenshots
-
-DataFrame Viewer
-
-<img src="https://imgur.com/hUnuBiY.png" alt="Screenshot" width="500"/>
-
-Filters
-
-<img src="https://imgur.com/Yn0Zqa6.png" alt="Screenshot" width="500"/>
-
-Statistics
-
-<img src="https://imgur.com/mKCaaNM.png" alt="Screenshot" width="500"/>
-
-Grapher
-
-<img src="https://imgur.com/zZIeAzj.png" alt="Screenshot" width="500"/>
-
-MultiIndex Support
-
-<img src="https://imgur.com/2rz9OzC.png" alt="Screenshot" width="500"/>

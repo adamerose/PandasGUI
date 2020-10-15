@@ -161,6 +161,9 @@ def line(**kwargs):
         else:
             raise TypeError
 
+    if key_cols == []:
+        return px.line(**kwargs)
+
     df = kwargs['data_frame'].groupby(key_cols).mean().reset_index()
     kwargs['data_frame'] = df
     return px.line(**kwargs)
@@ -176,6 +179,9 @@ def bar(**kwargs):
             key_cols += [key_cols_subset]
         else:
             raise TypeError
+
+    if key_cols == []:
+        return px.bar(**kwargs)
 
     df = kwargs['data_frame'].groupby(key_cols).mean().reset_index()
     kwargs['data_frame'] = df
