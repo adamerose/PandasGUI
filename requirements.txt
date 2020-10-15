@@ -1,6 +1,9 @@
 pandas
-PyQt5
+PyQt5>=5.15.0
 PyQt5-sip
 PyQtWebEngine
-plotly
+plotly>=4.4.1
 setuptools
+appdirs
+dacite
+IPython

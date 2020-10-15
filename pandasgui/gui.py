@@ -2,22 +2,21 @@ import inspect
 import os
 import sys
 import pprint
-
+from typing import Union, Iterable, Callable
+from dataclasses import dataclass
 import pandas as pd
 import pkg_resources
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
 from pandasgui.store import Store, PandasGuiDataFrame
-from pandasgui.utility import fix_ipython, fix_pyqt, get_logger, as_dict
+from pandasgui.utility import fix_ipython, fix_pyqt, get_logger, as_dict, delete_datasets
 from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
 from pandasgui.widgets.find_toolbar import FindToolbar
 from pandasgui.widgets.json_viewer import JsonViewer
+from pandasgui.widgets.navigator import Navigator
 
 logger = get_logger(__name__)
-
-# Enables PyQt event loop in IPython
-fix_ipython()
 
 
 def except_hook(cls, exception, traceback):
@@ -27,7 +26,10 @@ def except_hook(cls, exception, traceback):
 # Set the exception hook to our wrapping function
 sys.excepthook = except_hook
 
-# Keep a list of PandasGui widgets so they don't get garbage collected
+# Enables PyQt event loop in IPython
+fix_ipython()
+
+# Keep a list of PandasGUI widgets so they don't get garbage collected
 refs = []
 
 
@@ -41,6 +43,7 @@ class PandasGui(QtWidgets.QMainWindow):
         refs.append(self)
         self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
         self.store = Store()
+        self.store.gui = self
 
         super().__init__()
         self.init_app()
@@ -52,11 +55,10 @@ class PandasGui(QtWidgets.QMainWindow):
 
         # Adds DataFrames listed in kwargs to data store.
         for df_name, df in kwargs.items():
-            self.add_df(df, df_name)
+            self.store.add_dataframe(df, df_name)
 
         # Default to first item
-        self.stacked_widget.setCurrentWidget(self.store.data[0].dataframe_explorer)
-        self.nav_tree.setCurrentItem(self.nav_tree.topLevelItem(0))
+        self.navigator.setCurrentItem(self.navigator.topLevelItem(0))
 
         # Start event loop if blocking enabled
         if self.store.settings.block:
@@ -77,11 +79,14 @@ class PandasGui(QtWidgets.QMainWindow):
         )
 
         # Set window title and icon
-        self.setWindowTitle("PandasGui")
+        self.setWindowTitle("PandasGUI")
         pdgui_icon = "images/icon.png"
         pdgui_icon_path = pkg_resources.resource_filename(__name__, pdgui_icon)
         self.app.setWindowIcon(QtGui.QIcon(pdgui_icon_path))
-        # self.app.setFont(QtGui.QFont('Arial'))
+
+        # Accept drops, for importing files. See methods below: dropEvent, dragEnterEvent, dragMoveEvent
+        self.setAcceptDrops(True)
+
         self.show()
 
     # Create and add all widgets to GUI.
@@ -90,14 +95,11 @@ class PandasGui(QtWidgets.QMainWindow):
         self.stacked_widget = QtWidgets.QStackedWidget()
 
         # Make the navigation bar
-        self.nav_tree = self.NavWidget(self)
-        # Creates the headers.
-        self.nav_tree.setHeaderLabels(["Name", "Shape"])
-        self.nav_tree.itemSelectionChanged.connect(self.nav_clicked)
+        self.navigator = Navigator(self.store)
 
         # Make splitter to hold nav and DataFrameExplorers
         self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
-        self.splitter.addWidget(self.nav_tree)
+        self.splitter.addWidget(self.navigator)
         self.splitter.addWidget(self.stacked_widget)
 
         self.splitter.setCollapsible(0, False)
@@ -105,7 +107,7 @@ class PandasGui(QtWidgets.QMainWindow):
         self.splitter.setStretchFactor(0, 0)
         self.splitter.setStretchFactor(1, 1)
 
-        nav_width = self.nav_tree.sizeHint().width()
+        nav_width = self.navigator.sizeHint().width()
         self.splitter.setSizes([nav_width, self.width() - nav_width])
         self.splitter.setContentsMargins(10, 10, 10, 10)
 
@@ -117,153 +119,83 @@ class PandasGui(QtWidgets.QMainWindow):
         self.make_menu_bar()
         self.setCentralWidget(self.splitter)
 
-    def import_dataframe(self, path):
-        try:
-            if os.path.isfile(path) and path.endswith(".csv"):
-                df_name = os.path.split(path)[1]
-                df_object = pd.read_csv(path)
-                self.add_df(df_object, df_name)
-
-            else:
-                logger.warning("Invalid file: ", path)
-        except Exception as e:
-            logger.error(f"Failed to import {path}\n", e)
-
-    def add_df(self, df: pd.DataFrame, name: str):
-        """
-        Add a new DataFrame to the GUI
-        """
-        pgdf = PandasGuiDataFrame.cast(df)
-        pgdf.name = name
-        self.store.add_pgdf(pgdf)
-
-        dfe = DataFrameExplorer(pgdf)
-        self.stacked_widget.addWidget(dfe)
-
-        self.add_df_to_nav(name)
-
     ####################
     # Menu bar functions
 
     def make_menu_bar(self):
-        # Create a menu for setting the GUI style.
-        # Uses radio-style buttons in a QActionGroup.
         menubar = self.menuBar()
 
-        # Creates an edit menu
-        editMenu = menubar.addMenu("&Edit")
-        findAction = QtWidgets.QAction("&Find", self)
-        findAction.setShortcut("Ctrl+F")
-        findAction.triggered.connect(self.find_bar.show_find_bar)
-        editMenu.addAction(findAction)
+        @dataclass
+        class MenuItem:
+            name: str
+            func: Callable
+            shortcut: str = ''
 
-        styleMenu = menubar.addMenu("&Set Style")
-        styleGroup = QtWidgets.QActionGroup(styleMenu)
+        items = {'Edit': [MenuItem(name='Find',
+                                   func=self.find_bar.show_find_bar,
+                                   shortcut='Ctrl+F'),
+                          MenuItem(name='Import',
+                                   func=self.import_dialog),
+                          MenuItem(name='Export',
+                                   func=self.export_dialog),
+                          ],
+                 'Debug': [MenuItem(name='Print Data Store',
+                                    func=self.print_store),
+                           MenuItem(name='View Data Store',
+                                    func=self.view_store),
+                           MenuItem(name='Print History (for current DataFrame)',
+                                    func=self.print_history),
+                           MenuItem(name='Delete local data',
+                                    func=delete_datasets),
+
+
+                           ],
+                 'Set Style': []}
 
         # Add an option to the menu for each GUI style that exist for the user's system
         for ix, style in enumerate(QtWidgets.QStyleFactory.keys()):
-            styleAction = QtWidgets.QAction(f"&{style}", self, checkable=True)
-            styleAction.triggered.connect(
-                lambda state, style=style: self.app.setStyle(style)
-                                           and self.app.setStyleSheet("")
+            items['Set Style'].append(
+                MenuItem(name=style,
+                         func=lambda _, s=style: self.app.setStyle(s),
+                         )
             )
-            styleGroup.addAction(styleAction)
-            styleMenu.addAction(styleAction)
 
             # Set the default style to the last in the options
-            if ix == len(QtWidgets.QStyleFactory.keys()) - 1:
-                styleAction.trigger()
+            self.app.setStyle(QtWidgets.QStyleFactory.keys()[-1])
 
-        # Creates a debug menu.
-        debugMenu = menubar.addMenu("&Debug")
+        # Add menu items and actions to UI using the schema defined above
+        for menu_name in items.keys():
+            menu = menubar.addMenu(menu_name)
+            for x in items[menu_name]:
+                action = QtWidgets.QAction(x.name, self)
+                action.setShortcut(x.shortcut)
+                action.triggered.connect(x.func)
+                menu.addAction(action)
 
-        act = QtWidgets.QAction("&Print Data Store", self)
-        act.triggered.connect(self.print_store)
-        debugMenu.addAction(act)
+    def dropEvent(self, e):
+        if e.mimeData().hasUrls:
+            e.setDropAction(QtCore.Qt.CopyAction)
+            e.accept()
+            fpath_list = []
+            for url in e.mimeData().urls():
+                fpath_list.append(str(url.toLocalFile()))
 
-        act = QtWidgets.QAction("&View Data Store", self)
-        act.triggered.connect(self.view_store)
-        debugMenu.addAction(act)
+            for fpath in fpath_list:
+                self.store.import_dataframe(fpath)
+        else:
+            e.ignore()
 
-        act = QtWidgets.QAction("&Print History (for current DataFrame)", self)
-        act.triggered.connect(self.print_history)
-        debugMenu.addAction(act)
+    def dragEnterEvent(self, e):
+        if e.mimeData().hasUrls:
+            e.accept()
+        else:
+            e.ignore()
 
-    class NavWidget(QtWidgets.QTreeWidget):
-        def __init__(self, gui):
-            super().__init__()
-            self.gui = gui
-            self.setHeaderLabels(["HeaderLabel"])
-            self.expandAll()
-            self.setAcceptDrops(True)
-
-            for i in range(self.columnCount()):
-                self.resizeColumnToContents(i)
-
-            self.setColumnWidth(0, 150)
-            self.setColumnWidth(1, 150)
-
-        def rowsInserted(self, parent: QtCore.QModelIndex, start: int, end: int):
-            super().rowsInserted(parent, start, end)
-            self.expandAll()
-
-        def sizeHint(self):
-            # Width
-            width = 0
-            for i in range(self.columnCount()):
-                width += self.columnWidth(i)
-            return QtCore.QSize(300, 500)
-
-        def dragEnterEvent(self, e):
-            if e.mimeData().hasUrls:
-                e.accept()
-            else:
-                e.ignore()
-
-        def dragMoveEvent(self, e):
-            if e.mimeData().hasUrls:
-                e.accept()
-            else:
-                e.ignore()
-
-        def dropEvent(self, e):
-            if e.mimeData().hasUrls:
-                e.setDropAction(QtCore.Qt.CopyAction)
-                e.accept()
-                fpath_list = []
-                for url in e.mimeData().urls():
-                    fpath_list.append(str(url.toLocalFile()))
-
-                for fpath in fpath_list:
-                    self.gui.import_dataframe(fpath)
-            else:
-                e.ignore()
-
-    def add_df_to_nav(self, df_name, parent=None):
-        if parent is None:
-            parent = self.nav_tree
-
-        # Calculate and format the shape of the DataFrame
-        shape = self.store.get_pgdf(df_name).dataframe.shape
-        shape = str(shape[0]) + " X " + str(shape[1])
-
-        item = QtWidgets.QTreeWidgetItem(parent, [df_name, shape])
-        self.nav_tree.itemSelectionChanged.emit()
-        self.nav_tree.setCurrentItem(item)
-
-    def nav_clicked(self):
-        """
-        Show the DataFrameExplorer corresponding to the highlighted nav item.
-        """
-        try:
-            item = self.nav_tree.selectedItems()[0]
-        except IndexError:
-            return
-
-        df_name = item.data(0, Qt.DisplayRole)
-
-        dfe = self.store.get_pgdf(df_name).dataframe_explorer
-        self.stacked_widget.setCurrentWidget(dfe)
+    def dragMoveEvent(self, e):
+        if e.mimeData().hasUrls:
+            e.accept()
+        else:
+            e.ignore()
 
     def print_store(self):
         d = as_dict(self.store)
@@ -282,16 +214,24 @@ class PandasGui(QtWidgets.QMainWindow):
 
     def view_store(self):
         d = as_dict(self.store)
-        print(d)
         self.store_viewer = JsonViewer(d)
         self.store_viewer.show()
 
-    def get_dataframes(self):
-        df_dict = {}
-        for pgdf in self.store.data:
-            df_dict[pgdf.name] = pgdf.dataframe
-        return df_dict
+    # Return all DataFrames, or a subset specified by names. Returns a dict of name:df or a single df if there's only 1
+    def get_dataframes(self, names: Union[None, str, list] = None):
+        return self.store.get_dataframes(names)
 
+    def import_dialog(self):
+        dialog = QtWidgets.QFileDialog()
+        paths, _ = dialog.getOpenFileNames(filter="*.csv *.xlsx")
+        for path in paths:
+            self.store.import_dataframe(path)
+
+    def export_dialog(self):
+        dialog = QtWidgets.QFileDialog()
+        pgdf = self.store.selected_pgdf
+        path, _ = dialog.getSaveFileName(directory=pgdf.name, filter="*.csv")
+        pgdf.dataframe.to_csv(path, index=False)
 
 def show(*args,
          settings: dict = {},

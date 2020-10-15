@@ -7,6 +7,7 @@ from PyQt5.QtCore import Qt
 from pandasgui.utility import get_logger
 from pandasgui.widgets.dataframe_viewer import DataFrameViewer
 from pandasgui.widgets.grapher import Grapher
+from pandasgui.widgets.reshaper import Reshaper
 from pandasgui.widgets.filter_viewer import FilterViewer
 from pandasgui.widgets.dock_widget import DockWidget
 from pandasgui.store import PandasGuiDataFrame
@@ -43,12 +44,16 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
         self.grapher_tab = Grapher(pgdf)
         self.grapher_dock = self.add_view(self.grapher_tab, "Grapher")
 
+        # Reshaper tab
+        self.reshaper_tab = Reshaper(pgdf)
+        self.reshaper_dock = self.add_view(self.reshaper_tab, "Reshaper")
+
         # Layout
         self.dataframe_tab.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         # self.addDockWidget(Qt.RightDockWidgetArea, self.filters_dock)
 
     def add_view(self, widget: QtWidgets.QWidget, title: str):
-        dock = DockWidget(title)
+        dock = DockWidget(title, self.pgdf.name)
         dock.setAllowedAreas(Qt.AllDockWidgetAreas)
 
         frame = QtWidgets.QFrame()

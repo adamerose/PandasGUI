@@ -3,10 +3,37 @@
 import re
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5.QtCore import Qt
-from typing import List
+from typing import List, Callable
 import os
 import pandasgui
 import ast
+from typing import Union, List, Iterable
+from dataclasses import dataclass
+
+
+# All argument schemas inherit from this
+@dataclass
+class Arg:
+    arg_name: str
+
+
+@dataclass
+class ColumnArg(Arg):
+    pass
+
+
+@dataclass
+class OptionListArg(Arg):
+    values: List[str]
+
+
+@dataclass
+class Schema:
+    name: str
+    args: List[Arg]
+    label: str
+    function: Callable
+    icon_path: str
 
 
 class Dragger(QtWidgets.QWidget):
@@ -211,7 +238,8 @@ class Dragger(QtWidgets.QWidget):
     def set_sources(self, sources: List[str], source_types: List[str]):
 
         for i in range(len(sources)):
-            item = QtWidgets.QTreeWidgetItem(self.source_tree, [sources[i], source_types[i]])
+            item = QtWidgets.QTreeWidgetItem(self.source_tree,
+                                             [str(sources[i]), str(source_types[i])])
 
         self.filter()
 

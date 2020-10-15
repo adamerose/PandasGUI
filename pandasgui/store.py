@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field, asdict
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Iterable
 import pandas as pd
 from pandas import DataFrame
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
@@ -7,7 +7,8 @@ from PyQt5.QtCore import Qt
 import traceback
 from functools import wraps
 from datetime import datetime
-from pandasgui.utility import get_logger
+from pandasgui.utility import get_logger, unique_name
+import os
 
 logger = get_logger(__name__)
 
@@ -37,13 +38,14 @@ class HistoryItem:
 
 def track_history(func):
     @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        self.history.append(HistoryItem(name=func.__name__,
-                                        args=args,
-                                        kwargs=kwargs,
-                                        time=datetime.now().strftime("%H:%M:%S"))
-                            )
-        func(self, *args, **kwargs)
+    def wrapper(pgdf, *args, **kwargs):
+        history_item = HistoryItem(name=func.__name__,
+                                   args=args,
+                                   kwargs=kwargs,
+                                   time=datetime.now().strftime("%H:%M:%S"))
+        pgdf.history.append(history_item)
+
+        return func(pgdf, *args, **kwargs)
 
     return wrapper
 
@@ -61,6 +63,7 @@ class PandasGuiDataFrame:
 
         # References to other object instances that may be assigned later
         self.settings: Settings = Settings()
+        self.store: Union[Store, None] = None
         self.dataframe_explorer: Union["DataFrameExplorer", None] = None
         self.dataframe_viewer: Union["DataFrameViewer", None] = None
         self.filter_viewer: Union["FilterViewer", None] = None
@@ -71,6 +74,7 @@ class PandasGuiDataFrame:
 
         self.filters: List[Filter] = []
 
+    # Refresh PyQt models when the underlying pgdf is changed in anyway that needs to be reflected in the GUI
     def update(self):
         models = []
         if self.dataframe_viewer is not None:
@@ -89,6 +93,10 @@ class PandasGuiDataFrame:
             model.beginResetModel()
             model.endResetModel()
 
+        for view in [self.dataframe_viewer.columnHeader,
+                     self.dataframe_viewer.indexHeader]:
+            view.set_spans()
+
     @track_history
     def edit_data(self, row, col, value, skip_update=False):
         # Not using iat here because it won't work with MultiIndex
@@ -106,7 +114,6 @@ class PandasGuiDataFrame:
                 self.edit_data(top_row + i, left_col + j, value, skip_update=True)
         self.apply_filters()
         self.update()
-
 
     @track_history
     def sort_column(self, ix: int):
@@ -196,28 +203,90 @@ class PandasGuiDataFrame:
         self.update()
 
     @staticmethod
-    def cast(x: Union["PandasGuiDataFrame", pd.DataFrame, pd.Series]):
+    def cast(x: Union["PandasGuiDataFrame", pd.DataFrame, pd.Series, Iterable]):
         if type(x) == PandasGuiDataFrame:
             return x
         if type(x) == pd.DataFrame:
             return PandasGuiDataFrame(x)
         elif type(x) == pd.Series:
-            return PandasGuiDataFrame(pd.DataFrame(x))
+            return PandasGuiDataFrame(x.to_frame())
         else:
-            raise TypeError
+            try:
+                return PandasGuiDataFrame(pd.DataFrame(x))
+            except:
+                raise TypeError(f"Could not convert {type(x)} to DataFrame")
 
 
 @dataclass
 class Store:
     settings: Settings = Settings()
     data: List[PandasGuiDataFrame] = field(default_factory=list)
+    gui: Union["PandasGui", None] = None
+    navigator: Union["Navigator", None] = None
+    selected_pgdf: Union[PandasGuiDataFrame, None] = None
 
-    def add_pgdf(self, pgdf):
-        pgdf.settings = self.settings
+    def add_dataframe(self, pgdf: Union[DataFrame, PandasGuiDataFrame],
+                      name: str = "Untitled"):
+
+        name = unique_name(name, self.get_dataframes().keys())
+
+        pgdf = PandasGuiDataFrame.cast(pgdf)
+        pgdf.name = name
+        pgdf.store = self
+
         self.data.append(pgdf)
+
+        if pgdf.dataframe_explorer is None:
+            from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
+            pgdf.dataframe_explorer = DataFrameExplorer(pgdf)
+        dfe = pgdf.dataframe_explorer
+        self.gui.stacked_widget.addWidget(dfe)
+
+        # Add to nav
+        shape = pgdf.dataframe.shape
+        shape = str(shape[0]) + " X " + str(shape[1])
+
+        item = QtWidgets.QTreeWidgetItem(self.navigator, [name, shape])
+        self.navigator.itemSelectionChanged.emit()
+        self.navigator.setCurrentItem(item)
+        self.navigator.apply_tree_settings()
+
+    def import_dataframe(self, path):
+        if not os.path.isfile(path):
+            logger.warning("Path is not a file: " + path)
+        elif path.endswith(".csv"):
+            filename = os.path.split(path)[1].split('.csv')[0]
+            df = pd.read_csv(path, engine='python')
+            self.add_dataframe(df, filename)
+        elif path.endswith(".xlsx"):
+            filename = os.path.split(path)[1].split('.csv')[0]
+            df_dict = pd.read_excel(path, sheet_name=None)
+            for sheet_name in df_dict.keys():
+                df_name = f"{filename} - {sheet_name}"
+                self.add_dataframe(df_dict[sheet_name], df_name)
+
+        else:
+            logger.warning("Can only import csv / xlsx. Invalid file: " + path)
 
     def get_pgdf(self, name):
         return next((x for x in self.data if x.name == name), None)
+
+    def get_dataframes(self, names: Union[None, str, list] = None):
+        if type(names) == str:
+            names = [names]
+
+        df_dict = {}
+        for pgdf in self.data:
+            if names is None or pgdf.name in names:
+                df_dict[pgdf.name] = pgdf.dataframe
+
+        return df_dict
+
+    def select_pgdf(self, name):
+        pgdf = self.get_pgdf(name)
+        dfe = pgdf.dataframe_explorer
+        self.gui.stacked_widget.setCurrentWidget(dfe)
+        self.selected_pgdf = pgdf
 
     def to_dict(self):
         import json

@@ -3,10 +3,16 @@ from PyQt5.QtCore import Qt
 
 
 class DockWidget(QtWidgets.QDockWidget):
-    def __init__(self, title: str):
+    def __init__(self, title: str, pgdf_name: str):
         super().__init__(title)
+        self.title = title
+        self.pgdf_name = pgdf_name
+
         self.setTitleBarWidget(QtWidgets.QWidget())
         self.dockLocationChanged.connect(self.on_dockLocationChanged)
+        self.setFeatures(self.DockWidgetFloatable |
+                         self.DockWidgetMovable |
+                         self.DockWidgetClosable)
 
     def on_dockLocationChanged(self):
         main: QtWidgets.QMainWindow = self.parent()
@@ -24,9 +30,25 @@ class DockWidget(QtWidgets.QDockWidget):
                 # Re-enable title bar
                 dock_widget.setTitleBarWidget(None)
 
+        if self.isFloating():
+            self.setWindowTitle(f"{self.title} ({self.pgdf_name})")
+        else:
+            self.setWindowTitle(self.title)
+
     def minimumSizeHint(self) -> QtCore.QSize:
         return QtCore.QSize(100, 100)
 
+    def closeEvent(self, event: QtGui.QCloseEvent) -> None:
+        event.ignore()
+        main: QtWidgets.QMainWindow = self.parent()
+        dock_widgets = main.findChildren(QtWidgets.QDockWidget)
+        dock_widgets = [w for w in dock_widgets if not w.isFloating()]
+
+        self.setFloating(False)
+        if len(dock_widgets) > 0:
+            main.tabifyDockWidget(dock_widgets[0], self)
+        else:
+            main.addDockWidget(Qt.LeftDockWidgetArea, self)
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication([])

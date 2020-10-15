@@ -1,3 +1,6 @@
+import logging
+logger = logging.getLogger(__name__)
+
 class DotDict(dict):
     __getattr__ = dict.__getitem__
     __setattr__ = dict.__setitem__
@@ -72,7 +75,7 @@ def get_logger(logger_name=None):
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.INFO)
 
-    formatter = logging.Formatter("PandasGui %(levelname)s — %(name)s — %(message)s")
+    formatter = logging.Formatter("PandasGUI %(levelname)s — %(name)s — %(message)s")
 
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(formatter)
@@ -97,14 +100,16 @@ def fix_pyqt():
 
 # This makes it so PyQt5 windows don't become unresponsive in IPython outside app._exec() loops
 def fix_ipython():
-    try:
-        from IPython import get_ipython
-        ipython = get_ipython()
-        if ipython is not None:
-            ipython.magic("gui qt5")
-    except ModuleNotFoundError:
-        # Don't need to fix IPython if user doesn't have it
-        return
+    from IPython import get_ipython
+    ipython = get_ipython()
+    if ipython is not None:
+        ipython.magic("gui qt5")
+
+
+def flatten_df(df):
+    df = df.reset_index()
+    df.columns = flatten_multiindex(df.columns)
+    return df
 
 
 def flatten_multiindex(mi, sep=" - ", format=None):
@@ -145,6 +150,23 @@ def flatten_multiindex(mi, sep=" - ", format=None):
 
     return flat_index
 
+
+def unique_name(name, existing_names):
+    if name in existing_names:
+        for i in range(2, 999):
+            new_name = f"{name} ({i})"
+            if new_name not in existing_names:
+                return new_name
+        raise ValueError("Stopped generating unique name after 1000 attempts")
+    else:
+        return name
+
+
+def delete_datasets():
+    from pandasgui.datasets import LOCAL_DATA_DIR
+    import shutil
+    logger.info(f"Deleting sample dataset directory ({LOCAL_DATA_DIR})")
+    shutil.rmtree(LOCAL_DATA_DIR)
 
 event_lookup = {"0": "QEvent::None",
                 "114": "QEvent::ActionAdded",

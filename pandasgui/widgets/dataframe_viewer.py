@@ -215,17 +215,6 @@ class DataFrameViewer(QtWidgets.QWidget):
         # if event.key() == Qt.Key_D and (event.modifiers() & Qt.ControlModifier):
         #     print("Ctrl + D")
 
-    def data_changed(self):
-        # Call dataChanged on all models for all data
-        for model in [
-            self.dataView.model(),
-            self.columnHeader.model(),
-            self.indexHeader.model(),
-            self.columnHeaderNames.model(),
-            self.indexHeaderNames.model(),
-        ]:
-            model.dataChanged.emit(QtCore.QModelIndex(), QtCore.QModelIndex())
-
 
 # Remove dotted border on cell focus.  https://stackoverflow.com/a/55252650/3620725
 class NoFocusDelegate(QtWidgets.QStyledItemDelegate):
@@ -404,7 +393,6 @@ class DataTableView(QtWidgets.QTableView):
 
         for i in range(df_to_paste.shape[0]):
             for j in range(df_to_paste.shape[1]):
-
                 self.selectionModel().select(self.model().index(min(rows) + i, min(cols) + j),
                                              QtCore.QItemSelectionModel.Select)
 
@@ -536,7 +524,7 @@ class HeaderView(QtWidgets.QTableView):
 
         # Link selection to DataTable
         self.selectionModel().selectionChanged.connect(self.on_selectionChanged)
-        self.setSpans()
+        self.set_spans()
         self.init_size()
 
         self.horizontalHeader().hide()
@@ -650,9 +638,10 @@ class HeaderView(QtWidgets.QTableView):
                 self.setColumnWidth(col, width + padding)
 
     # This sets spans to group together adjacent cells with the same values
-    def setSpans(self):
-        df = self.pgdf.dataframe
+    def set_spans(self):
 
+        df = self.pgdf.dataframe
+        self.clearSpans()
         # Find spans for horizontal HeaderView
         if self.orientation == Qt.Horizontal:
 
@@ -997,10 +986,14 @@ if __name__ == "__main__":
 
     from pandasgui.datasets import pokemon, mi_manufacturing
 
-    # view = DataFrameViewer(pokemon)
-    # view.show()
+    from pandasgui.datasets import simple
 
-    view2 = DataFrameViewer(mi_manufacturing)
+    # df = simple.set_index(['first', 'second', 'third']).unstack().sort_values(('fourth', 'bar'))
+    df2 = simple.set_index(['first', 'second', 'third']).unstack().sort_index(1)
+
+    # view = DataFrameViewer(df)
+    # view.show()
+    view2 = DataFrameViewer(df2)
     view2.show()
 
     app.exec_()
