@@ -34,12 +34,15 @@ refs = []
 
 
 class PandasGui(QtWidgets.QMainWindow):
-    def __init__(self, settings: dict = {}, **kwargs):
+    def __init__(self, settings: dict = None, **kwargs):
         """
         Args:
             settings: Dict of settings, as defined in pandasgui.store.Settings
             kwargs: Dict of DataFrames where key is name & val is the DataFrame object
         """
+        if settings is None:
+            settings = {}
+
         refs.append(self)
         self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
         self.store = Store()
