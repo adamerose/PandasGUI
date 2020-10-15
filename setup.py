@@ -22,6 +22,7 @@ setup(
         "setuptools",
         "appdirs",
         "dacite",
+        "pynput",
         "IPython"
     ],
 )
