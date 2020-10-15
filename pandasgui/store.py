@@ -219,11 +219,14 @@ class PandasGuiDataFrame:
 
 @dataclass
 class Store:
-    settings: Settings = Settings()
+    settings: Union["Settings", None] = None
     data: List[PandasGuiDataFrame] = field(default_factory=list)
     gui: Union["PandasGui", None] = None
     navigator: Union["Navigator", None] = None
     selected_pgdf: Union[PandasGuiDataFrame, None] = None
+
+    def __post_init__(self):
+        self.settings = Settings()
 
     def add_dataframe(self, pgdf: Union[DataFrame, PandasGuiDataFrame],
                       name: str = "Untitled"):

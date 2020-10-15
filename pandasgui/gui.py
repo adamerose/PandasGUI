@@ -34,15 +34,12 @@ refs = []
 
 
 class PandasGui(QtWidgets.QMainWindow):
-    def __init__(self, settings: dict = None, **kwargs):
+    def __init__(self, settings: dict = {}, **kwargs):
         """
         Args:
             settings: Dict of settings, as defined in pandasgui.store.Settings
             kwargs: Dict of DataFrames where key is name & val is the DataFrame object
         """
-        if settings is None:
-            settings = {}
-
         refs.append(self)
         self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
         self.store = Store()
@@ -237,8 +234,9 @@ class PandasGui(QtWidgets.QMainWindow):
         pgdf.dataframe.to_csv(path, index=False)
 
 def show(*args,
-         settings: dict = {},
+         settings={},
          **kwargs):
+
     # Get the variable names in the scope show() was called from
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
 
