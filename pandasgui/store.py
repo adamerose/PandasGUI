@@ -168,16 +168,6 @@ class PandasGuiDataFrame:
         self.update()
 
     @track_history
-    def change_unhashable_cells(self):
-        def change_unhashable_cells_fn(cell):
-            if isinstance(cell, collections.Hashable):
-                return cell
-            else:
-                return str(cell)
-        self.dataframe = self.dataframe.applymap(change_unhashable_cells_fn)
-        self.update()
-
-    @track_history
     def add_filter(self, expr: str, enabled=True):
         filt = Filter(expr=expr, enabled=enabled, failed=False)
         self.filters.append(filt)

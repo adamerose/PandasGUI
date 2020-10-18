@@ -1,5 +1,8 @@
 import logging
+import pandas as pd
+
 logger = logging.getLogger(__name__)
+
 
 class DotDict(dict):
     __getattr__ = dict.__getitem__
@@ -150,6 +153,18 @@ def flatten_multiindex(mi, sep=" - ", format=None):
 
     return flat_index
 
+# Alternative to df.nunique that works when it contains unhashable items
+def nunique(df):
+    results = {}
+    for col in df.columns:
+        s = df[col]
+        try:
+            results[col] = s.nunique()
+        except TypeError as e:
+            results[col] = s.astype(str).nunique()
+
+    return pd.Series(results)
+
 
 def unique_name(name, existing_names):
     if name in existing_names:
@@ -167,6 +182,7 @@ def delete_datasets():
     import shutil
     logger.info(f"Deleting sample dataset directory ({LOCAL_DATA_DIR})")
     shutil.rmtree(LOCAL_DATA_DIR)
+
 
 event_lookup = {"0": "QEvent::None",
                 "114": "QEvent::ActionAdded",
