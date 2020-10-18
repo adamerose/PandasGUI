@@ -9,6 +9,7 @@ from functools import wraps
 from datetime import datetime
 from pandasgui.utility import get_logger, unique_name
 import os
+import collections
 
 logger = get_logger(__name__)
 
@@ -164,6 +165,16 @@ class PandasGuiDataFrame:
             self.sort_is_ascending = None
 
         self.column_sorted = None
+        self.update()
+
+    @track_history
+    def change_unhashable_cells(self):
+        def change_unhashable_cells_fn(cell):
+            if isinstance(cell, collections.Hashable):
+                return cell
+            else:
+                return str(cell)
+        self.dataframe = self.dataframe.applymap(change_unhashable_cells_fn)
         self.update()
 
     @track_history

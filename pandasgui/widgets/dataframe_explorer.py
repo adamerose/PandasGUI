@@ -79,17 +79,25 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
         return "DataFrameExplorer"
 
     def make_statistics_tab(self, pgdf: PandasGuiDataFrame):
-        stats_df = pd.DataFrame(
-            {
-                "Type": pgdf.dataframe.dtypes.replace("object", "string").astype(str),
-                "Count": pgdf.dataframe.count(),
-                "N Unique": pgdf.dataframe.nunique(),
-                "Mean": pgdf.dataframe.mean(numeric_only=True),
-                "StdDev": pgdf.dataframe.std(numeric_only=True),
-                "Min": pgdf.dataframe.min(numeric_only=True),
-                "Max": pgdf.dataframe.max(numeric_only=True),
-            }
-        )
+        stats_dict = {
+            "Type": pgdf.dataframe.dtypes.replace("object", "string").astype(str),
+            "Count": pgdf.dataframe.count(),
+            "N Unique": None,
+            "Mean": pgdf.dataframe.mean(numeric_only=True),
+            "StdDev": pgdf.dataframe.std(numeric_only=True),
+            "Min": pgdf.dataframe.min(numeric_only=True),
+            "Max": pgdf.dataframe.max(numeric_only=True),
+        }
+
+        try:
+            stats_dict["N Unique"] = pgdf.dataframe.nunique()
+        except:
+            pgdf.change_unhashable_cells()
+            stats_dict["N Unique"] = pgdf.dataframe.nunique()
+            stats_dict["Type"] = pgdf.dataframe.dtypes.replace("object", "string").astype(str)
+            print("WARNING: found unhashable items in the DataFrame. They have been converted to strings")
+
+        stats_df = pd.DataFrame(stats_dict)
 
         stats_pgdf = PandasGuiDataFrame(stats_df.reset_index())
         w = DataFrameViewer(stats_pgdf)
