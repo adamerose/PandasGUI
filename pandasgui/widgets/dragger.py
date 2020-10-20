@@ -55,8 +55,8 @@ class Dragger(QtWidgets.QWidget):
         self.kwargs_dialog = self.CustomKwargsEditor(self)
 
         # Search box
-        self.search_box = QtWidgets.QLineEdit()
-        self.search_box.textChanged.connect(self.filter)
+        self.search_bar = QtWidgets.QLineEdit()
+        self.search_bar.textChanged.connect(self.filter)
 
         # Sources list
         self.source_tree = self.SourceTree(self)
@@ -102,7 +102,7 @@ class Dragger(QtWidgets.QWidget):
 
         # Layout
         self.source_tree_layout = QtWidgets.QVBoxLayout()
-        self.source_tree_layout.addWidget(self.search_box)
+        self.source_tree_layout.addWidget(self.search_bar)
         self.source_tree_layout.addWidget(self.source_tree)
 
         self.button_layout = QtWidgets.QHBoxLayout()
@@ -320,13 +320,13 @@ class SearchableListWidget(QtWidgets.QWidget):
     def __init__(self, items, parent=None):
         super().__init__(parent)
 
-        self.search_box = QtWidgets.QLineEdit()
-        self.search_box.textChanged.connect(self.filter)
+        self.search_bar = QtWidgets.QLineEdit()
+        self.search_bar.textChanged.connect(self.filter)
 
         self.list_widget = QtWidgets.QListWidget()
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.addWidget(self.search_box)
+        layout.addWidget(self.search_bar)
         layout.addWidget(self.list_widget)
         self.setLayout(layout)
 
@@ -337,7 +337,7 @@ class SearchableListWidget(QtWidgets.QWidget):
         filtered_items = [
             item
             for item in self.initial_items
-            if re.search(self.search_box.text().lower(), item.lower())
+            if re.search(self.search_bar.text().lower(), item.lower())
         ]
 
         self.set_items(filtered_items)
