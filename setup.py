@@ -16,9 +16,9 @@ setup(
     long_description_content_type="text/markdown",
     install_requires=[
         "pandas",
-        "PyQt5>=5.15.0",  # Using QtCore.Qt.MatchRegularExpression
+        "PyQt5",
         "PyQtWebEngine",
-        "plotly>=4.4.1",  # Using plotly.express.pie
+        "plotly",
         "setuptools",
         "appdirs",
         "dacite",

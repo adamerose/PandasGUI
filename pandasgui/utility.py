@@ -1,5 +1,8 @@
 import logging
 import pandas as pd
+from PyQt5 import QtWidgets
+from typing import List, Union
+
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +156,7 @@ def flatten_multiindex(mi, sep=" - ", format=None):
 
     return flat_index
 
+
 # Alternative to df.nunique that works when it contains unhashable items
 def nunique(df):
     results = {}
@@ -164,6 +168,20 @@ def nunique(df):
             results[col] = s.astype(str).nunique()
 
     return pd.Series(results)
+
+
+def traverse_tree_widget(tree: Union[QtWidgets.QTreeWidget, QtWidgets.QTreeWidgetItem]) -> List[QtWidgets.QTreeWidgetItem]:
+    if type(tree) == QtWidgets.QTreeWidget:
+        tree = tree.invisibleRootItem()
+
+    items = []
+    for i in range(tree.childCount()):
+        child = tree.child(i)
+        sub_items = traverse_tree_widget(child)
+        items += [child]
+        items += sub_items
+
+    return items
 
 
 def unique_name(name, existing_names):
