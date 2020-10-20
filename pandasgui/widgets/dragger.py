@@ -153,7 +153,8 @@ class Dragger(QtWidgets.QWidget):
             child = root.child(i)
             child.setHidden(True)
 
-        items = self.source_tree.findItems(self.search_box.text(), Qt.MatchRegularExpression, 0)
+        items = self.source_tree.findItems(f".*{self.search_bar.text()}.*",
+                                           Qt.MatchRegExp | Qt.MatchRecursive)
         for item in items:
             item.setHidden(False)
 

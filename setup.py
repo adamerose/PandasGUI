@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf8") as fh:
 
 setup(
     name="pandasgui",
-    version="0.2.4.3",
+    version="0.2.5",
     description="A GUI for Pandas DataFrames.",
     author="Adam Rose",
     author_email="adam.e.rose@hotmail.com",
@@ -16,9 +16,9 @@ setup(
     long_description_content_type="text/markdown",
     install_requires=[
         "pandas",
-        "PyQt5>=5.15.0",  # Using QtCore.Qt.MatchRegularExpression
+        "PyQt5",
         "PyQtWebEngine",
-        "plotly>=4.4.1",  # Using plotly.express.pie
+        "plotly",
         "setuptools",
         "appdirs",
         "dacite",

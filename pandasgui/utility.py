@@ -1,5 +1,11 @@
 import logging
+import pandas as pd
+from PyQt5 import QtWidgets
+from typing import List, Union
+
+
 logger = logging.getLogger(__name__)
+
 
 class DotDict(dict):
     __getattr__ = dict.__getitem__
@@ -151,6 +157,33 @@ def flatten_multiindex(mi, sep=" - ", format=None):
     return flat_index
 
 
+# Alternative to df.nunique that works when it contains unhashable items
+def nunique(df):
+    results = {}
+    for col in df.columns:
+        s = df[col]
+        try:
+            results[col] = s.nunique()
+        except TypeError as e:
+            results[col] = s.astype(str).nunique()
+
+    return pd.Series(results)
+
+
+def traverse_tree_widget(tree: Union[QtWidgets.QTreeWidget, QtWidgets.QTreeWidgetItem]) -> List[QtWidgets.QTreeWidgetItem]:
+    if type(tree) == QtWidgets.QTreeWidget:
+        tree = tree.invisibleRootItem()
+
+    items = []
+    for i in range(tree.childCount()):
+        child = tree.child(i)
+        sub_items = traverse_tree_widget(child)
+        items += [child]
+        items += sub_items
+
+    return items
+
+
 def unique_name(name, existing_names):
     if name in existing_names:
         for i in range(2, 999):
@@ -167,6 +200,7 @@ def delete_datasets():
     import shutil
     logger.info(f"Deleting sample dataset directory ({LOCAL_DATA_DIR})")
     shutil.rmtree(LOCAL_DATA_DIR)
+
 
 event_lookup = {"0": "QEvent::None",
                 "114": "QEvent::ActionAdded",

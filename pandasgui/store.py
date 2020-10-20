@@ -9,6 +9,7 @@ from functools import wraps
 from datetime import datetime
 from pandasgui.utility import get_logger, unique_name
 import os
+import collections
 
 logger = get_logger(__name__)
 

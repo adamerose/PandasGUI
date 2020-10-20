@@ -4,7 +4,7 @@ import pandas as pd
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
-from pandasgui.utility import get_logger
+from pandasgui.utility import get_logger, nunique
 from pandasgui.widgets.dataframe_viewer import DataFrameViewer
 from pandasgui.widgets.grapher import Grapher
 from pandasgui.widgets.reshaper import Reshaper
@@ -79,6 +79,7 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
         return "DataFrameExplorer"
 
     def make_statistics_tab(self, pgdf: PandasGuiDataFrame):
+
         stats_df = pd.DataFrame(
             {
                 "Type": pgdf.dataframe.dtypes.replace("object", "string").astype(str),

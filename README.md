@@ -27,14 +27,14 @@ Create and view a simple DataFrame
 ```python
 import pandas as pd
 from pandasgui import show
-
 df = pd.DataFrame(([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), columns=['a', 'b', 'c'])
 show(df)
 ```
 
-Or if you are running your code as a script instead of in IPython, you will need to block execution until you close the GUI
+If you are running your code as a script instead of in IPython or Jupyter, you need to do this instead:
 
 ```python
+# This will pause the script until you close the GUI
 show(df, settings={'block': True})
 ```
 
@@ -59,8 +59,8 @@ show(**all_datasets)
 
 ## More Info
 
-This project is still in version 0.x.y and subject to breaking changes. Latest changes will be on the `develop` branch, and will be occasionally merged to `master` as a release with a tag indicating the version number, and published to PyPi.
+**Issues, feedback and pull requests are welcome.**
 
-Issues, feedback and pull requests are welcome.
+This project is still in version 0.x.y and subject to breaking changes. Latest changes will be on the `develop` branch, and will be occasionally merged to `master` as a release with a tag indicating the version number, and published to PyPi.
 
 Remember to leave a ⭐ if you like this!

@@ -56,7 +56,7 @@ class JsonViewer(QtWidgets.QWidget):
         result = []
         for col in [0,1]:
             result += self.tree_widget.findItems(text,
-                                                 QtCore.Qt.MatchRegularExpression | QtCore.Qt.MatchRecursive,
+                                                 QtCore.Qt.MatchRegExp | QtCore.Qt.MatchRecursive,
                                                  col)
         self.tree_widget.clearSelection()
         self.tree_widget.setSelectionMode(self.tree_widget.MultiSelection)
