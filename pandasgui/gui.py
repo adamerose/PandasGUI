@@ -41,7 +41,11 @@ class PandasGui(QtWidgets.QMainWindow):
             kwargs: Dict of DataFrames where key is name & val is the DataFrame object
         """
         refs.append(self)
-        self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+
+        self.app = QtWidgets.QApplication(sys.argv)
+        if "Fusion" in QtWidgets.QStyleFactory.keys():
+            self.app.setStyle("fusion")
+
         self.store = Store()
         self.store.gui = self
 
@@ -148,20 +152,7 @@ class PandasGui(QtWidgets.QMainWindow):
                            MenuItem(name='Delete local data',
                                     func=delete_datasets),
 
-
-                           ],
-                 'Set Style': []}
-
-        # Add an option to the menu for each GUI style that exist for the user's system
-        for ix, style in enumerate(QtWidgets.QStyleFactory.keys()):
-            items['Set Style'].append(
-                MenuItem(name=style,
-                         func=lambda _, s=style: self.app.setStyle(s),
-                         )
-            )
-
-            # Set the default style to the last in the options
-            self.app.setStyle(QtWidgets.QStyleFactory.keys()[-1])
+                           ]}
 
         # Add menu items and actions to UI using the schema defined above
         for menu_name in items.keys():
@@ -171,6 +162,18 @@ class PandasGui(QtWidgets.QMainWindow):
                 action.setShortcut(x.shortcut)
                 action.triggered.connect(x.func)
                 menu.addAction(action)
+
+        # Add an extra option list to the menu for each GUI style that exist for the user's system
+        styleMenu = menubar.addMenu("&Set Style")
+        styleGroup = QtWidgets.QActionGroup(styleMenu)
+        for style in QtWidgets.QStyleFactory.keys():
+            styleAction = QtWidgets.QAction(f"&{style}", self, checkable=True)
+            styleAction.triggered.connect(lambda _, s=style: self.app.setStyle(s))
+            styleGroup.addAction(styleAction)
+            styleMenu.addAction(styleAction)
+
+            if self.app.style().objectName().lower() == style.lower():
+                styleAction.trigger()
 
     def dropEvent(self, e):
         if e.mimeData().hasUrls:
@@ -233,10 +236,10 @@ class PandasGui(QtWidgets.QMainWindow):
         path, _ = dialog.getSaveFileName(directory=pgdf.name, filter="*.csv")
         pgdf.dataframe.to_csv(path, index=False)
 
+
 def show(*args,
          settings={},
          **kwargs):
-
     # Get the variable names in the scope show() was called from
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
 
