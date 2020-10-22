@@ -42,20 +42,19 @@ class PandasGui(QtWidgets.QMainWindow):
         """
         refs.append(self)
 
-        self.app = QtWidgets.QApplication(sys.argv)
-        if "Fusion" in QtWidgets.QStyleFactory.keys():
-            self.app.setStyle("fusion")
-
         self.store = Store()
         self.store.gui = self
+        # Add user provided settings to data store
+        for key, value in settings.items():
+            setattr(self.store.settings, key, value)
+
+        self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+        if self.store.settings.style in QtWidgets.QStyleFactory.keys():
+            self.app.setStyle(self.store.settings.style)
 
         super().__init__()
         self.init_app()
         self.init_ui()
-
-        # Add user provided settings to data store
-        for key, value in settings.items():
-            setattr(self.store.settings, key, value)
 
         # Adds DataFrames listed in kwargs to data store.
         for df_name, df in kwargs.items():

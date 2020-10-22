@@ -20,6 +20,7 @@ class Settings:
     block: bool = False
     # Are table cells editable
     editable: bool = True
+    style: str = "Fusion"
 
 
 @dataclass
