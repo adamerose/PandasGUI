@@ -259,8 +259,9 @@ class DataTableModel(QtCore.QAbstractTableModel):
             col = index.column()
             cell = self.pgdf.dataframe.iloc[row, col]
 
-            # NaN case
-            if pd.isnull(cell):
+            # Need to check type since a cell might contain a list or Series, then .isna returns a Series not a bool
+            cell_is_na = pd.isna(cell)
+            if type(cell_is_na) == bool and cell_is_na:
                 return ""
 
             # Float formatting
@@ -274,10 +275,6 @@ class DataTableModel(QtCore.QAbstractTableModel):
             row = index.row()
             col = index.column()
             cell = self.pgdf.dataframe.iloc[row, col]
-
-            # NaN case
-            if pd.isnull(cell):
-                return "NaN"
 
             return str(cell)
 

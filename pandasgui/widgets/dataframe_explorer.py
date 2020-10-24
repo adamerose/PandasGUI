@@ -84,7 +84,7 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
             {
                 "Type": pgdf.dataframe.dtypes.replace("object", "string").astype(str),
                 "Count": pgdf.dataframe.count(),
-                "N Unique": pgdf.dataframe.nunique(),
+                "N Unique": nunique(pgdf.dataframe),
                 "Mean": pgdf.dataframe.mean(numeric_only=True),
                 "StdDev": pgdf.dataframe.std(numeric_only=True),
                 "Min": pgdf.dataframe.min(numeric_only=True),
