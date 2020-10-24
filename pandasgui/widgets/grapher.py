@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import pandasgui
 import os
 import plotly.express as px
+import plotly
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
@@ -79,7 +80,7 @@ class Grapher(QtWidgets.QWidget):
         self.on_type_changed()
 
         # Show a blank axis initially
-        self.figure_viewer.set_figure(px.scatter())
+        self.figure_viewer.set_figure(plotly.graph_objs.Figure())
 
     def on_type_changed(self):
         if len(self.plot_type_picker.selectedItems()) == 0:
