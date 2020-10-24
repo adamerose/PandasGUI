@@ -2,19 +2,25 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 import tempfile
 import os
-from pynput import mouse
 
+try:
+    # We use this to track whether mb1 is down. This is checked in the retrieveData MIME event to identify the once that
+    # happens when the user releases a drop into a file folder (mb1 will then be up)
+    from pynput import mouse
+    class MouseState(mouse.Listener):
+        def __init__(self):
+            self.pressed = False
 
-class MouseState(mouse.Listener):
-    def __init__(self):
-        self.pressed = False
+            self.listener = mouse.Listener(on_click=self.on_click)
+            self.listener.start()
 
-        self.listener = mouse.Listener(on_click=self.on_click)
-        self.listener.start()
-
-    def on_click(self, x, y, button, pressed):
-        self.pressed = pressed
-
+        def on_click(self, x, y, button, pressed):
+            self.pressed = pressed
+except Exception as e:
+    # We catch exceptions importing pynput because it is nonessential and doesn't work in Google Colab. Use this dummy
+    # class instead when it fails which just always says the mouse is not pressed
+    class MouseState():
+        pressed = False
 
 mouse_state = MouseState()
 
