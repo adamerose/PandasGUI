@@ -7,7 +7,7 @@ assignees: ''
 
 ---
 
-**Before making an issue, please check that you are able to run the code snippet below with no errors. It should display a window with a button. If this doesn't work, your problem with with PyQt5 and not PandasGUI specifically.**
+**Before making a bug report, please check that you are able to run the code snippet below with no errors. It should display a window with a button. If this doesn't work, your problem with with PyQt5 and not PandasGUI specifically.**
 
 ```
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
