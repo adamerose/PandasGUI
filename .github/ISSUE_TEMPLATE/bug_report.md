@@ -9,6 +9,8 @@ assignees: ''
 
 **Before making a bug report, please check that you are able to run the code snippet below with no errors. It should display a window with a button. If this doesn't work, your problem with with PyQt5 and not PandasGUI specifically.**
 
+**Also make sure you have the latest release (run `pip install --upgrade pandasgui`) and ensure you're still able to reproduce the bug.**
+
 ```
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5 import QtWebEngineWidgets
@@ -17,10 +19,7 @@ test = QtWidgets.QPushButton("test")
 test.show()
 app.exec_()
 ```
-
-**Also make sure you have the latest release (run `pip install --upgrade pandasgui`) and ensure you're still able to reproduce the bug.**
-
----
+-----------------------
 
 **Describe the bug**  
 A clear and concise description of what the bug is and how to reproduce it. If applicable, add screenshots.
