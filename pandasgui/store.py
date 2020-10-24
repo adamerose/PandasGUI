@@ -7,7 +7,7 @@ from PyQt5.QtCore import Qt
 import traceback
 from functools import wraps
 from datetime import datetime
-from pandasgui.utility import get_logger, unique_name
+from pandasgui.utility import get_logger, unique_name, run_from_ipython
 import os
 import collections
 
@@ -17,10 +17,20 @@ logger = get_logger(__name__)
 @dataclass
 class Settings:
     # Should GUI block code execution until closed
-    block: bool = False
+    block: bool
     # Are table cells editable
     editable: bool = True
     style: str = "Fusion"
+
+    def __init__(self, block=None):
+        # If it's not specified then set the default blocking behavior based on whether we are in IPython.
+        if block is None:
+            # Don't block in IPython, so you can view GUI and still continue running commands
+            if run_from_ipython():
+                self.block = False
+            # If in a script, we need to block or the script will continue and finish without allowing GUI interaction
+            else:
+                self.block = True
 
 
 @dataclass

@@ -111,6 +111,12 @@ def fix_ipython():
     if ipython is not None:
         ipython.magic("gui qt5")
 
+def run_from_ipython():
+    try:
+        __IPYTHON__
+        return True
+    except NameError:
+        return False
 
 def flatten_df(df):
     df = df.reset_index()
