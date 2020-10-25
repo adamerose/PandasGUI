@@ -31,19 +31,12 @@ df = pd.DataFrame(([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), columns=['a', 'b', 'c'])
 show(df)
 ```
 
-If you are running your code as a script instead of in IPython or Jupyter, you need to do this instead:
-
-```python
-# This will pause the script until you close the GUI
-show(df, settings={'block': True})
-```
-
-PandasGUI comes with sample datasets that will download on first use. You can also import `all_datasets` which is a dictionary of all the sample datasets
+PandasGUI comes with sample datasets that will download on first use.   
+You can also import `all_datasets` which is a dictionary of all the sample datasets
 
 ```python
 from pandasgui import show
 from pandasgui.datasets import pokemon, titanic, all_datasets
-show(pokemon, titanic)
 show(**all_datasets)
 ```
 
