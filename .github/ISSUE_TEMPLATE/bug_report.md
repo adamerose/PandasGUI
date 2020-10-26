@@ -25,7 +25,7 @@ A clear and concise description of what the bug is and how to reproduce it. If a
 
 **Package versions. To get all relevant versions, run this command in bash and paste the output**  
 ```
-pip freeze | grep -i "pyqt\|pandasgui\|plotly\|ipython"
+pip freeze | grep -i "pyqt\|pandasgui\|plotly\|ipython\|jupyter\|notebook"
 ```
 ```
 # Example output
