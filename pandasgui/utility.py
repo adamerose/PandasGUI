@@ -2,7 +2,7 @@ import logging
 import pandas as pd
 from PyQt5 import QtWidgets
 from typing import List, Union
-
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -111,12 +111,11 @@ def fix_ipython():
     if ipython is not None:
         ipython.magic("gui qt5")
 
-def run_from_ipython():
-    try:
-        __IPYTHON__
-        return True
-    except NameError:
-        return False
+
+def in_interactive_console():
+    # https://stackoverflow.com/a/64523765/3620725
+    return hasattr(sys, 'ps1')
+
 
 def flatten_df(df):
     df = df.reset_index()
@@ -176,7 +175,8 @@ def nunique(df):
     return pd.Series(results)
 
 
-def traverse_tree_widget(tree: Union[QtWidgets.QTreeWidget, QtWidgets.QTreeWidgetItem]) -> List[QtWidgets.QTreeWidgetItem]:
+def traverse_tree_widget(tree: Union[QtWidgets.QTreeWidget, QtWidgets.QTreeWidgetItem]) -> List[
+    QtWidgets.QTreeWidgetItem]:
     if type(tree) == QtWidgets.QTreeWidget:
         tree = tree.invisibleRootItem()
 

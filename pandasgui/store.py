@@ -7,7 +7,7 @@ from PyQt5.QtCore import Qt
 import traceback
 from functools import wraps
 from datetime import datetime
-from pandasgui.utility import get_logger, unique_name, run_from_ipython
+from pandasgui.utility import get_logger, unique_name, in_interactive_console
 import os
 import collections
 
@@ -23,13 +23,13 @@ class Settings:
     style: str = "Fusion"
 
     def __init__(self, block=None):
-        # If it's not specified then set the default blocking behavior based on whether we are in IPython.
+        # Default blocking behavior
         if block is None:
-            # Don't block in IPython, so you can view GUI and still continue running commands
-            if run_from_ipython():
+            if in_interactive_console():
+                # Don't block if in an interactive console (so you can view GUI and still continue running commands)
                 self.block = False
-            # If in a script, we need to block or the script will continue and finish without allowing GUI interaction
             else:
+                # If in a script, we need to block or the script will continue and finish without allowing GUI interaction
                 self.block = True
 
 
