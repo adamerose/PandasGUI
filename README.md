@@ -4,7 +4,7 @@ A GUI for analyzing Pandas DataFrames.
 
 ## Demo
 
-[![PandasGUI Demo](https://yt-embed.herokuapp.com/embed?v=NKXdolMxW2Y)](https://www.youtube.com/watch?v=NKXdolMxW2Y "PandasGUI Demo")
+[![PandasGUI Demo](https://i.imgur.com/u3BzdoS.png)](https://www.youtube.com/watch?v=NKXdolMxW2Y "PandasGUI Demo")
 
 ## Installation
 
