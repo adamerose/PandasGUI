@@ -496,9 +496,6 @@ class HeaderView(QtWidgets.QTableView):
         self.resize_start_position = None
         self.initial_header_size = None
 
-        # Events
-        self.clicked.connect(self.on_clicked)
-
         # Handled by self.eventFilter()
         self.setMouseTracking(True)
         self.viewport().setMouseTracking(True)
@@ -532,10 +529,23 @@ class HeaderView(QtWidgets.QTableView):
         # Set initial size
         self.resize(self.sizeHint())
 
-    def on_clicked(self, ix: QtCore.QModelIndex):
-        # When a header is clicked, sort the DataFrame by that column
-        if self.orientation == Qt.Horizontal:
-            self.pgdf.sort_column(ix.column())
+    def mousePressEvent(self, event):
+        point = event.pos()
+        ix = self.indexAt(point)
+        if event.button() == QtCore.Qt.LeftButton:
+            # When a header is clicked, sort the DataFrame by that column
+            if self.orientation == Qt.Horizontal:
+                self.pgdf.sort_column(ix.column())
+            else:
+                self.on_selectionChanged()
+        elif event.button() == QtCore.Qt.RightButton:
+            pass
+            menu = QtWidgets.QMenu(self)
+            action = QtWidgets.QAction("Sort")
+            action.triggered.connect(lambda: self.pgdf.sort_column(ix.column()))
+            menu.addAction(action)
+            menu.exec_(self.mapToGlobal(point))
+        super().mousePressEvent(event)
 
     # Header
     def on_selectionChanged(self):
@@ -983,14 +993,7 @@ if __name__ == "__main__":
 
     from pandasgui.datasets import pokemon, mi_manufacturing
 
-    from pandasgui.datasets import simple
+    view = DataFrameViewer(mi_manufacturing)
 
-    # df = simple.set_index(['first', 'second', 'third']).unstack().sort_values(('fourth', 'bar'))
-    df2 = simple.set_index(['first', 'second', 'third']).unstack().sort_index(1)
-
-    # view = DataFrameViewer(df)
-    # view.show()
-    view2 = DataFrameViewer(df2)
-    view2.show()
-
+    view.show()
     app.exec_()
