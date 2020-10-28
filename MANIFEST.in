@@ -1,5 +1,0 @@
-include *.py
-include *.txt
-recursive-include pandasgui *.png
-recursive-include pandasgui *.svg
-recursive-exclude pandasgui scratch*.py
