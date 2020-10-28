@@ -51,10 +51,12 @@ class HistoryItem:
 def track_history(func):
     @wraps(func)
     def wrapper(pgdf, *args, **kwargs):
-        history_item = HistoryItem(name=func.__name__,
-                                   args=args,
-                                   kwargs=kwargs,
-                                   time=datetime.now().strftime("%H:%M:%S"))
+        history_item = HistoryItem(
+            name=func.__name__,
+            args=args,
+            kwargs=kwargs,
+            time=datetime.now().strftime("%H:%M:%S"),
+        )
         pgdf.history.append(history_item)
 
         return func(pgdf, *args, **kwargs)
@@ -63,7 +65,7 @@ def track_history(func):
 
 
 class PandasGuiDataFrame:
-    def __init__(self, df: DataFrame, name: str = 'Untitled'):
+    def __init__(self, df: DataFrame, name: str = "Untitled"):
         super().__init__()
         df = df.copy()
 
@@ -90,29 +92,35 @@ class PandasGuiDataFrame:
     def update(self):
         models = []
         if self.dataframe_viewer is not None:
-            models += [self.dataframe_viewer.dataView.model(),
-                       self.dataframe_viewer.columnHeader.model(),
-                       self.dataframe_viewer.indexHeader.model(),
-                       self.dataframe_viewer.columnHeaderNames.model(),
-                       self.dataframe_viewer.indexHeaderNames.model(),
-                       ]
+            models += [
+                self.dataframe_viewer.dataView.model(),
+                self.dataframe_viewer.columnHeader.model(),
+                self.dataframe_viewer.indexHeader.model(),
+                self.dataframe_viewer.columnHeaderNames.model(),
+                self.dataframe_viewer.indexHeaderNames.model(),
+            ]
 
         if self.filter_viewer is not None:
-            models += [self.filter_viewer.list_model,
-                       ]
+            models += [
+                self.filter_viewer.list_model,
+            ]
 
         for model in models:
             model.beginResetModel()
             model.endResetModel()
 
-        for view in [self.dataframe_viewer.columnHeader,
-                     self.dataframe_viewer.indexHeader]:
+        for view in [
+            self.dataframe_viewer.columnHeader,
+            self.dataframe_viewer.indexHeader,
+        ]:
             view.set_spans()
 
     @track_history
     def edit_data(self, row, col, value, skip_update=False):
         # Not using iat here because it won't work with MultiIndex
-        self.dataframe_original.at[self.dataframe.index[row], self.dataframe.columns[col]] = value
+        self.dataframe_original.at[
+            self.dataframe.index[row], self.dataframe.columns[col]
+        ] = value
         if not skip_update:
             self.apply_filters()
             self.update()
@@ -133,19 +141,25 @@ class PandasGuiDataFrame:
 
         # Clicked an unsorted column
         if ix != self.column_sorted:
-            self.dataframe = self.dataframe.sort_values(col_name, ascending=True, kind="mergesort")
+            self.dataframe = self.dataframe.sort_values(
+                col_name, ascending=True, kind="mergesort"
+            )
             self.column_sorted = ix
             self.sort_is_ascending = True
 
         # Clicked a sorted column
         elif ix == self.column_sorted and self.sort_is_ascending:
-            self.dataframe = self.dataframe.sort_values(col_name, ascending=False, kind="mergesort")
+            self.dataframe = self.dataframe.sort_values(
+                col_name, ascending=False, kind="mergesort"
+            )
             self.column_sorted = ix
             self.sort_is_ascending = False
 
         # Clicked a reverse sorted column - reset to the original unsorted order
         elif ix == self.column_sorted:
-            unsorted_index = self.dataframe_original[self.dataframe_original.index.isin(self.dataframe.index)].index
+            unsorted_index = self.dataframe_original[
+                self.dataframe_original.index.isin(self.dataframe.index)
+            ].index
             self.dataframe = self.dataframe.reindex(unsorted_index)
             self.column_sorted = None
             self.sort_is_ascending = None
@@ -157,19 +171,25 @@ class PandasGuiDataFrame:
     def sort_index(self, ix: int):
         # Clicked an unsorted index level
         if ix != self.index_sorted:
-            self.dataframe = self.dataframe.sort_index(level=ix, ascending=True, kind="mergesort")
+            self.dataframe = self.dataframe.sort_index(
+                level=ix, ascending=True, kind="mergesort"
+            )
             self.index_sorted = ix
             self.sort_is_ascending = True
 
         # Clicked a sorted index level
         elif ix == self.index_sorted and self.sort_is_ascending:
-            self.dataframe = self.dataframe.sort_index(level=ix, ascending=False, kind="mergesort")
+            self.dataframe = self.dataframe.sort_index(
+                level=ix, ascending=False, kind="mergesort"
+            )
             self.index_sorted = ix
             self.sort_is_ascending = False
 
         # Clicked a reverse sorted index level - reset to the original unsorted order
         elif ix == self.index_sorted:
-            unsorted_index = self.dataframe_original[self.dataframe_original.index.isin(self.dataframe.index)].index
+            unsorted_index = self.dataframe_original[
+                self.dataframe_original.index.isin(self.dataframe.index)
+            ].index
             self.dataframe = self.dataframe.reindex(unsorted_index)
 
             self.index_sorted = None
@@ -240,8 +260,9 @@ class Store:
     def __post_init__(self):
         self.settings = Settings()
 
-    def add_dataframe(self, pgdf: Union[DataFrame, PandasGuiDataFrame],
-                      name: str = "Untitled"):
+    def add_dataframe(
+        self, pgdf: Union[DataFrame, PandasGuiDataFrame], name: str = "Untitled"
+    ):
 
         name = unique_name(name, self.get_dataframes().keys())
 
@@ -253,6 +274,7 @@ class Store:
 
         if pgdf.dataframe_explorer is None:
             from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
+
             pgdf.dataframe_explorer = DataFrameExplorer(pgdf)
         dfe = pgdf.dataframe_explorer
         self.gui.stacked_widget.addWidget(dfe)
@@ -270,11 +292,11 @@ class Store:
         if not os.path.isfile(path):
             logger.warning("Path is not a file: " + path)
         elif path.endswith(".csv"):
-            filename = os.path.split(path)[1].split('.csv')[0]
-            df = pd.read_csv(path, engine='python')
+            filename = os.path.split(path)[1].split(".csv")[0]
+            df = pd.read_csv(path, engine="python")
             self.add_dataframe(df, filename)
         elif path.endswith(".xlsx"):
-            filename = os.path.split(path)[1].split('.csv')[0]
+            filename = os.path.split(path)[1].split(".csv")[0]
             df_dict = pd.read_excel(path, sheet_name=None)
             for sheet_name in df_dict.keys():
                 df_name = f"{filename} - {sheet_name}"
@@ -305,4 +327,5 @@ class Store:
 
     def to_dict(self):
         import json
+
         return json.loads(json.dumps(self, default=lambda o: o.__dict__))

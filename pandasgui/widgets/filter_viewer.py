@@ -28,8 +28,12 @@ class FilterViewer(QtWidgets.QWidget):
 
         self.text_input = QtWidgets.QLineEdit()
         self.text_input.setPlaceholderText("Enter query expression")
-        self.text_input_label = QtWidgets.QLabel('''<a href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.query.html">What's a query expression?</a>''')
-        self.text_input_label.linkActivated.connect(lambda link: QDesktopServices.openUrl(QUrl(link)))
+        self.text_input_label = QtWidgets.QLabel(
+            """<a href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.query.html">What's a query expression?</a>"""
+        )
+        self.text_input_label.linkActivated.connect(
+            lambda link: QDesktopServices.openUrl(QUrl(link))
+        )
         self.text_input.setValidator(None)
 
         self.submit_button = QtWidgets.QPushButton("Add Filter")
@@ -71,8 +75,12 @@ class FilterViewer(QtWidgets.QWidget):
                 col = self.palette().placeholderText().color()
                 painter.setPen(col)
                 fm = self.fontMetrics()
-                elided_text = fm.elidedText("No filters defined", QtCore.Qt.ElideRight, self.viewport().width())
-                painter.drawText(self.viewport().rect(), QtCore.Qt.AlignCenter, elided_text)
+                elided_text = fm.elidedText(
+                    "No filters defined", QtCore.Qt.ElideRight, self.viewport().width()
+                )
+                painter.drawText(
+                    self.viewport().rect(), QtCore.Qt.AlignCenter, elided_text
+                )
                 painter.restore()
 
     class ListModel(QtCore.QAbstractListModel):
@@ -104,10 +112,12 @@ class FilterViewer(QtWidgets.QWidget):
             return len(self.pgdf.filters)
 
         def flags(self, index):
-            return (QtCore.Qt.ItemIsEditable |
-                    QtCore.Qt.ItemIsEnabled |
-                    QtCore.Qt.ItemIsSelectable |
-                    QtCore.Qt.ItemIsUserCheckable)
+            return (
+                QtCore.Qt.ItemIsEditable
+                | QtCore.Qt.ItemIsEnabled
+                | QtCore.Qt.ItemIsSelectable
+                | QtCore.Qt.ItemIsUserCheckable
+            )
 
         def setData(self, index, value, role=QtCore.Qt.DisplayRole):
             row = index.row()
@@ -129,9 +139,9 @@ if __name__ == "__main__":
 
     stacked_widget = QtWidgets.QStackedWidget()
     pokemon = PandasGuiDataFrame(pokemon)
-    pokemon.add_filter('Generation > 3', enabled=False)
-    pokemon.add_filter('Attack > 50', enabled=True)
-    pokemon.add_filter('Defense < 30', enabled=True)
+    pokemon.add_filter("Generation > 3", enabled=False)
+    pokemon.add_filter("Attack > 50", enabled=True)
+    pokemon.add_filter("Defense < 30", enabled=True)
     fv = FilterViewer(pokemon)
     stacked_widget.addWidget(fv)
     stacked_widget.show()

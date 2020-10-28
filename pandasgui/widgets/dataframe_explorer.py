@@ -25,7 +25,9 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
 
         # Dock setup
         self.docks: List[DockWidget] = []
-        self.setDockOptions(self.GroupedDragging | self.AllowTabbedDocks | self.AllowNestedDocks)
+        self.setDockOptions(
+            self.GroupedDragging | self.AllowTabbedDocks | self.AllowNestedDocks
+        )
         self.setTabPosition(Qt.AllDockWidgetAreas, QtWidgets.QTabWidget.North)
 
         # DataFrame tab
@@ -49,7 +51,9 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
         self.reshaper_dock = self.add_view(self.reshaper_tab, "Reshaper")
 
         # Layout
-        self.dataframe_tab.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.dataframe_tab.setSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
         # self.addDockWidget(Qt.RightDockWidgetArea, self.filters_dock)
 
     def add_view(self, widget: QtWidgets.QWidget, title: str):

@@ -16,7 +16,10 @@ logger = get_logger(__name__)
 try:
     from PyQt5 import QtWebEngineWidgets
 except ImportError as e:
-    if e.msg == "QtWebEngineWidgets must be imported before a QCoreApplication instance is created":
+    if (
+        e.msg
+        == "QtWebEngineWidgets must be imported before a QCoreApplication instance is created"
+    ):
         logger.info("Killing QtWidgets.QApplication to reimport QtWebEngineWidgets")
 
         app = QtWidgets.QApplication.instance()
@@ -34,7 +37,9 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
         super().__init__()
 
         # https://stackoverflow.com/a/8577226/3620725
-        self.temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False)
+        self.temp_file = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".html", delete=False
+        )
         self.set_figure(fig)
 
         self.resize(700, 600)
@@ -69,10 +74,13 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
     def on_downloadRequested(self, download):
         dialog = QtWidgets.QFileDialog()
         dialog.setDefaultSuffix(".png")
-        path, _ = dialog.getSaveFileName(self, "Save File", os.path.join(os.getcwd(), "newplot.png"), "*.png")
+        path, _ = dialog.getSaveFileName(
+            self, "Save File", os.path.join(os.getcwd(), "newplot.png"), "*.png"
+        )
         if path:
             download.setPath(path)
             download.accept()
+
 
 if __name__ == "__main__":
     # Create a QtWidgets.QApplication instance or use the existing one if it exists

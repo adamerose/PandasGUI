@@ -40,16 +40,17 @@ class Dragger(QtWidgets.QWidget):
     itemDropped = QtCore.pyqtSignal()
     finished = QtCore.pyqtSignal()
 
-    def __init__(self, sources: List[str],
-                 destinations: List[str], source_types: List[str]):
+    def __init__(
+        self, sources: List[str], destinations: List[str], source_types: List[str]
+    ):
         super().__init__()
         self.remembered_values = {}
         self.source_tree_unfiltered = []
 
         # Ensure no duplicates
-        assert (len(sources) == len(set(sources)))
-        assert (len(destinations) == len(set(destinations)))
-        assert (len(sources) == len(source_types))
+        assert len(sources) == len(set(sources))
+        assert len(destinations) == len(set(destinations))
+        assert len(sources) == len(source_types)
 
         # Custom kwargs dialog
         self.kwargs_dialog = self.CustomKwargsEditor(self)
@@ -60,7 +61,7 @@ class Dragger(QtWidgets.QWidget):
 
         # Sources list
         self.source_tree = self.SourceTree(self)
-        self.source_tree.setHeaderLabels(['Name', 'Type'])
+        self.source_tree.setHeaderLabels(["Name", "Type"])
         self.set_sources(sources, source_types)
         self.source_tree.setSortingEnabled(True)
 
@@ -69,7 +70,7 @@ class Dragger(QtWidgets.QWidget):
 
         # Destinations tree
         self.dest_tree = self.DestinationTree(self)
-        self.dest_tree.setHeaderLabels(['Name', ''])
+        self.dest_tree.setHeaderLabels(["Name", ""])
         self.dest_tree.setColumnHidden(1, True)
         self.dest_tree.setItemsExpandable(False)
         self.dest_tree.setRootIsDecorated(False)
@@ -117,7 +118,7 @@ class Dragger(QtWidgets.QWidget):
 
         self.setLayout(self.main_layout)
 
-        image_dir = os.path.join(pandasgui.__path__[0], 'images')
+        image_dir = os.path.join(pandasgui.__path__[0], "images")
         # Styling (https://doc.qt.io/qt-5/stylesheet-examples.html#customizing-qtreeview)
         stylesheet = """
                                      QTreeView::branch:has-siblings:adjoins-item {
@@ -153,8 +154,9 @@ class Dragger(QtWidgets.QWidget):
             child = root.child(i)
             child.setHidden(True)
 
-        items = self.source_tree.findItems(f".*{self.search_bar.text()}.*",
-                                           Qt.MatchRegExp | Qt.MatchRecursive)
+        items = self.source_tree.findItems(
+            f".*{self.search_bar.text()}.*", Qt.MatchRegExp | Qt.MatchRecursive
+        )
         for item in items:
             item.setHidden(False)
 
@@ -190,11 +192,15 @@ class Dragger(QtWidgets.QWidget):
             child = root.child(i)
             child.setExpanded(True)
 
-            child.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled)
+            child.setFlags(
+                Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled
+            )
 
             for j in range(child.childCount()):
                 sub_child = child.child(j)
-                sub_child.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
+                sub_child.setFlags(
+                    Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled
+                )
 
         # Source tree
         root = self.source_tree.invisibleRootItem()
@@ -202,7 +208,9 @@ class Dragger(QtWidgets.QWidget):
 
         for i in range(root.childCount()):
             child = root.child(i)
-            child.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
+            child.setFlags(
+                Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled
+            )
 
         # Remember values
         self.remembered_values.update(self.get_data())
@@ -239,8 +247,9 @@ class Dragger(QtWidgets.QWidget):
     def set_sources(self, sources: List[str], source_types: List[str]):
 
         for i in range(len(sources)):
-            item = QtWidgets.QTreeWidgetItem(self.source_tree,
-                                             [str(sources[i]), str(source_types[i])])
+            item = QtWidgets.QTreeWidgetItem(
+                self.source_tree, [str(sources[i]), str(source_types[i])]
+            )
 
         self.filter()
 
@@ -276,7 +285,7 @@ class Dragger(QtWidgets.QWidget):
             self.setWindowTitle("Custom Kwargs")
 
             self.tree_widget = QtWidgets.QTreeWidget()
-            self.tree_widget.setHeaderLabels(['Kwarg Name', 'Kwarg Value'])
+            self.tree_widget.setHeaderLabels(["Kwarg Name", "Kwarg Value"])
             self.kwarg_name = QtWidgets.QLineEdit()
             self.kwarg_value = QtWidgets.QLineEdit()
             self.submit_button = QtWidgets.QPushButton("Add")
@@ -309,7 +318,9 @@ class Dragger(QtWidgets.QWidget):
 
                 item = QtWidgets.QTreeWidgetItem(self.tree_widget, [name, value])
 
-                item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable)
+                item.setFlags(
+                    Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
+                )
 
         def delete(self):
             for item in self.tree_widget.selectedItems():
@@ -378,8 +389,11 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
 
-    test = Dragger(sources=pokemon.columns, destinations=["x", "y", "color"],
-                   source_types=pokemon.dtypes.values.astype(str))
+    test = Dragger(
+        sources=pokemon.columns,
+        destinations=["x", "y", "color"],
+        source_types=pokemon.dtypes.values.astype(str),
+    )
     test.finished.connect(lambda: print(test.get_data()))
     test.show()
 

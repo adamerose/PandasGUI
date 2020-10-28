@@ -106,7 +106,9 @@ class DetachableTabWidget(QtWidgets.QTabWidget):
         # Create an image of the main window icon (for comparison)
         if not icon.isNull():
             try:
-                windowIconPixmap = self.window().windowIcon().pixmap(icon.availableSizes()[0])
+                windowIconPixmap = (
+                    self.window().windowIcon().pixmap(icon.availableSizes()[0])
+                )
                 windowIconImage = windowIconPixmap.toImage()
             except IndexError:
                 windowIconImage = None
@@ -183,7 +185,6 @@ class DetachableTabWidget(QtWidgets.QTabWidget):
             # Re-attach the tab at the given index
             self.attachTab(contentWidget, name, icon, index)
 
-
         # If the drop did not occur on an existing tab, determine if the drop
         # occurred in the tab bar area (the area to the side of the QTabBar)
         else:
@@ -248,7 +249,9 @@ class DetachableTabWidget(QtWidgets.QTabWidget):
         #
         #  @param    event    a close event
         def closeEvent(self, event):
-            self.onCloseSignal.emit(self.contentWidget, self.objectName(), self.windowIcon())
+            self.onCloseSignal.emit(
+                self.contentWidget, self.objectName(), self.windowIcon()
+            )
 
         ##
         #  An event filter class to detect a QMainWindow drop event
@@ -326,21 +329,28 @@ class DetachableTabWidget(QtWidgets.QTabWidget):
 
             # Determine if the current movement is detected as a drag
             if not self.dragStartPos.isNull() and (
-                    (event.pos() - self.dragStartPos).manhattanLength() < QtWidgets.QApplication.startDragDistance()):
+                (event.pos() - self.dragStartPos).manhattanLength()
+                < QtWidgets.QApplication.startDragDistance()
+            ):
                 self.dragInitiated = True
 
             # If the current movement is a drag initiated by the left button
-            if (((event.buttons() & QtCore.Qt.LeftButton)) and self.dragInitiated):
+            if ((event.buttons() & QtCore.Qt.LeftButton)) and self.dragInitiated:
 
                 # Stop the move event
-                finishMoveEvent = QtGui.QMouseEvent(QtCore.QEvent.MouseMove, event.pos(), QtCore.Qt.NoButton,
-                                                    QtCore.Qt.NoButton, QtCore.Qt.NoModifier)
+                finishMoveEvent = QtGui.QMouseEvent(
+                    QtCore.QEvent.MouseMove,
+                    event.pos(),
+                    QtCore.Qt.NoButton,
+                    QtCore.Qt.NoButton,
+                    QtCore.Qt.NoModifier,
+                )
                 QtWidgets.QTabBar.mouseMoveEvent(self, finishMoveEvent)
 
                 # Convert the move event into a drag
                 drag = QtGui.QDrag(self)
                 mimeData = QtCore.QMimeData()
-                mimeData.setData('action', b'application/tab-detach')
+                mimeData.setData("action", b"application/tab-detach")
                 drag.setMimeData(mimeData)
 
                 # Create the appearance of dragging the tab content
@@ -365,13 +375,18 @@ class DetachableTabWidget(QtWidgets.QTabWidget):
                 # the content to the current cursor position
                 if dropAction == QtCore.Qt.IgnoreAction:
                     event.accept()
-                    self.onDetachTabSignal.emit(self.tabAt(self.dragStartPos), self.mouseCursor.pos())
+                    self.onDetachTabSignal.emit(
+                        self.tabAt(self.dragStartPos), self.mouseCursor.pos()
+                    )
 
                 # Else if the drag completed inside the tab bar, move the selected tab to the new position
                 elif dropAction == QtCore.Qt.MoveAction:
                     if not self.dragDropedPos.isNull():
                         event.accept()
-                        self.onMoveTabSignal.emit(self.tabAt(self.dragStartPos), self.tabAt(self.dragDropedPos))
+                        self.onMoveTabSignal.emit(
+                            self.tabAt(self.dragStartPos),
+                            self.tabAt(self.dragDropedPos),
+                        )
             else:
                 QtWidgets.QTabBar.mouseMoveEvent(self, event)
 
@@ -383,7 +398,10 @@ class DetachableTabWidget(QtWidgets.QTabWidget):
             mimeData = event.mimeData()
             formats = mimeData.formats()
 
-            if 'action' in formats and mimeData.data('action') == 'application/tab-detach':
+            if (
+                "action" in formats
+                and mimeData.data("action") == "application/tab-detach"
+            ):
                 event.acceptProposedAction()
 
             QtWidgets.QTabBar.dragMoveEvent(self, event)
@@ -408,21 +426,21 @@ class DetachableTabWidget(QtWidgets.QTabWidget):
             self.detachedTabDropSignal.emit(name, index, dropPos)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     app = QtWidgets.QApplication(sys.argv)
 
     tabWidget = DetachableTabWidget()
 
-    tab1 = QtWidgets.QLabel('Test Widget 1')
-    tabWidget.addTab(tab1, 'Tab1')
+    tab1 = QtWidgets.QLabel("Test Widget 1")
+    tabWidget.addTab(tab1, "Tab1")
 
-    tab2 = QtWidgets.QLabel('Test Widget 2')
-    tabWidget.addTab(tab2, 'Tab2')
+    tab2 = QtWidgets.QLabel("Test Widget 2")
+    tabWidget.addTab(tab2, "Tab2")
 
-    tab3 = QtWidgets.QLabel('Test Widget 3')
-    tabWidget.addTab(tab3, 'Tab3')
+    tab3 = QtWidgets.QLabel("Test Widget 3")
+    tabWidget.addTab(tab3, "Tab3")
 
     tabWidget.show()
 

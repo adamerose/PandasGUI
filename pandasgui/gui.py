@@ -10,7 +10,13 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
 from pandasgui.store import Store, PandasGuiDataFrame
-from pandasgui.utility import fix_ipython, fix_pyqt, get_logger, as_dict, delete_datasets
+from pandasgui.utility import (
+    fix_ipython,
+    fix_pyqt,
+    get_logger,
+    as_dict,
+    delete_datasets,
+)
 from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
 from pandasgui.widgets.find_toolbar import FindToolbar
 from pandasgui.widgets.json_viewer import JsonViewer
@@ -70,8 +76,12 @@ class PandasGui(QtWidgets.QMainWindow):
     # Configure app settings
     def init_app(self):
 
-        self.resize(QtCore.QSize(int(0.7 * QtWidgets.QDesktopWidget().screenGeometry().width()),
-                                 int(0.7 * QtWidgets.QDesktopWidget().screenGeometry().height())))
+        self.resize(
+            QtCore.QSize(
+                int(0.7 * QtWidgets.QDesktopWidget().screenGeometry().width()),
+                int(0.7 * QtWidgets.QDesktopWidget().screenGeometry().height()),
+            )
+        )
 
         # Center window on screen
         screen = QtWidgets.QDesktopWidget().screenGeometry()
@@ -132,26 +142,26 @@ class PandasGui(QtWidgets.QMainWindow):
         class MenuItem:
             name: str
             func: Callable
-            shortcut: str = ''
+            shortcut: str = ""
 
-        items = {'Edit': [MenuItem(name='Find',
-                                   func=self.find_bar.show_find_bar,
-                                   shortcut='Ctrl+F'),
-                          MenuItem(name='Import',
-                                   func=self.import_dialog),
-                          MenuItem(name='Export',
-                                   func=self.export_dialog),
-                          ],
-                 'Debug': [MenuItem(name='Print Data Store',
-                                    func=self.print_store),
-                           MenuItem(name='View Data Store',
-                                    func=self.view_store),
-                           MenuItem(name='Print History (for current DataFrame)',
-                                    func=self.print_history),
-                           MenuItem(name='Delete local data',
-                                    func=delete_datasets),
-
-                           ]}
+        items = {
+            "Edit": [
+                MenuItem(
+                    name="Find", func=self.find_bar.show_find_bar, shortcut="Ctrl+F"
+                ),
+                MenuItem(name="Import", func=self.import_dialog),
+                MenuItem(name="Export", func=self.export_dialog),
+            ],
+            "Debug": [
+                MenuItem(name="Print Data Store", func=self.print_store),
+                MenuItem(name="View Data Store", func=self.view_store),
+                MenuItem(
+                    name="Print History (for current DataFrame)",
+                    func=self.print_history,
+                ),
+                MenuItem(name="Delete local data", func=delete_datasets),
+            ],
+        }
 
         # Add menu items and actions to UI using the schema defined above
         for menu_name in items.keys():
@@ -208,11 +218,11 @@ class PandasGui(QtWidgets.QMainWindow):
         if len(pgdf.history) == 0:
             print(f"No actions recorded yet for {pgdf.name}")
         else:
-            header = f'---- History ({pgdf.name}) ----'
+            header = f"---- History ({pgdf.name}) ----"
             print(header)
             for h in pgdf.history:
                 print(h)
-            print('-' * len(header))
+            print("-" * len(header))
 
     def view_store(self):
         d = as_dict(self.store)
@@ -236,9 +246,7 @@ class PandasGui(QtWidgets.QMainWindow):
         pgdf.dataframe.to_csv(path, index=False)
 
 
-def show(*args,
-         settings={},
-         **kwargs):
+def show(*args, settings={}, **kwargs):
     # Get the variable names in the scope show() was called from
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
 
@@ -259,7 +267,9 @@ def show(*args,
 
     # Add the dictionary of positional args to the kwargs
     if any([key in kwargs.keys() for key in dataframes.keys()]):
-        logger.warning("Duplicate DataFrame names were provided, duplicates were ignored.")
+        logger.warning(
+            "Duplicate DataFrame names were provided, duplicates were ignored."
+        )
 
     kwargs = {**kwargs, **dataframes}
 
@@ -270,4 +280,4 @@ def show(*args,
 if __name__ == "__main__":
     from pandasgui.datasets import all_datasets
 
-    gui = show(**all_datasets, settings={'block': True})
+    gui = show(**all_datasets, settings={"block": True})

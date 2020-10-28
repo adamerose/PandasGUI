@@ -9,30 +9,33 @@ from pandasgui.constants import LOCAL_DATA_DIR
 
 logger = get_logger(__name__)
 
-__all__ = ["all_datasets",
-           "simple",
+__all__ = [
+    "all_datasets",
+    "simple",
+    "pokemon",
+    "car_crashes",
+    "iris",
+    "mpg",
+    "penguins",
+    "tips",
+    "titanic",
+    "gapminder",
+    "stockdata",
+    "mi_manufacturing",
+]
 
-           "pokemon",
-           "car_crashes",
-           "iris",
-           "mpg",
-           "penguins",
-           "tips",
-           "titanic",
-           "gapminder",
-           "stockdata",
-           "mi_manufacturing"]
-
-dataset_names = ["pokemon",
-                 "car_crashes",
-                 "iris",
-                 "mpg",
-                 "penguins",
-                 "tips",
-                 "titanic",
-                 "gapminder",
-                 "stockdata",
-                 "mi_manufacturing"]
+dataset_names = [
+    "pokemon",
+    "car_crashes",
+    "iris",
+    "mpg",
+    "penguins",
+    "tips",
+    "titanic",
+    "gapminder",
+    "stockdata",
+    "mi_manufacturing",
+]
 
 all_datasets = {}
 
@@ -46,9 +49,10 @@ def read_csv(path):
 
 def to_csv(df, path):
     if "mi_manufacturing" in path:
-        return df.to_csv(path, encoding='UTF-8')
+        return df.to_csv(path, encoding="UTF-8")
     else:
-        return df.to_csv(path, encoding='UTF-8', index=False)
+        return df.to_csv(path, encoding="UTF-8", index=False)
+
 
 for ix, name in enumerate(dataset_names):
     local_data_path = os.path.join(LOCAL_DATA_DIR, f"{name}.csv")
@@ -65,17 +69,23 @@ for ix, name in enumerate(dataset_names):
 for name in all_datasets.keys():
     globals()[name] = all_datasets[name]
 
-simple = pd.DataFrame({'name': ['John', 'John', 'Mary', 'Mary', 'Pete', 'Pete', 'Mike', 'Mike'],
-                       'gender': ['m', 'm', 'f', 'f', 'm', 'm', 'm', 'm'],
-                       'trial': ['A', 'B', 'A', 'B', 'A', 'B', 'A', 'B'],
-                       'time': [473, 439, 424, 419, 433, 374, 434, 345],
-                       'points': [13, 16, 13, 18, 9, 20, 5, 18]}
-                      )
+simple = pd.DataFrame(
+    {
+        "name": ["John", "John", "Mary", "Mary", "Pete", "Pete", "Mike", "Mike"],
+        "gender": ["m", "m", "f", "f", "m", "m", "m", "m"],
+        "trial": ["A", "B", "A", "B", "A", "B", "A", "B"],
+        "time": [473, 439, 424, 419, 433, 374, 434, 345],
+        "points": [13, 16, 13, 18, 9, 20, 5, 18],
+    }
+)
 
-multiindex = pd.DataFrame(np.random.randn(8, 4),
-                          index=pd.MultiIndex.from_product([('bar', 'baz', 'foo', 'qux'),
-                                                            ('one', 'two')],
-                                                           names=['first', 'second']),
-                          columns=pd.MultiIndex.from_tuples([('A', 'cat'), ('B', 'dog'),
-                                                             ('B', 'cat'), ('A', 'dog')],
-                                                            names=['exp', 'animal']))
+multiindex = pd.DataFrame(
+    np.random.randn(8, 4),
+    index=pd.MultiIndex.from_product(
+        [("bar", "baz", "foo", "qux"), ("one", "two")], names=["first", "second"]
+    ),
+    columns=pd.MultiIndex.from_tuples(
+        [("A", "cat"), ("B", "dog"), ("B", "cat"), ("A", "dog")],
+        names=["exp", "animal"],
+    ),
+)

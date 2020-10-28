@@ -6,7 +6,6 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 
 class JsonViewer(QtWidgets.QWidget):
-
     def __init__(self, jdata: Union[list, dict], parent=None):
         super().__init__(parent)
 
@@ -40,10 +39,9 @@ class JsonViewer(QtWidgets.QWidget):
 
         self.setLayout(layout)
 
-        self.resize(QtCore.QSize(400,500))
+        self.resize(QtCore.QSize(400, 500))
 
         self.show()
-
 
     def find(self):
 
@@ -54,10 +52,10 @@ class JsonViewer(QtWidgets.QWidget):
             return
 
         result = []
-        for col in [0,1]:
-            result += self.tree_widget.findItems(text,
-                                                 QtCore.Qt.MatchRegExp | QtCore.Qt.MatchRecursive,
-                                                 col)
+        for col in [0, 1]:
+            result += self.tree_widget.findItems(
+                text, QtCore.Qt.MatchRegExp | QtCore.Qt.MatchRecursive, col
+            )
         self.tree_widget.clearSelection()
         self.tree_widget.setSelectionMode(self.tree_widget.MultiSelection)
 
@@ -92,28 +90,27 @@ class JsonViewer(QtWidgets.QWidget):
 
 if "__main__" == __name__:
     qt_app = QtWidgets.QApplication(sys.argv)
-    data_list = [{
-        "name": "Tim",
-        "age": 22,
-        "cars": {
-            "car1": "Mazda",
-        }
-    }, {
-        "name": "John",
-        "age": 30,
-        "cars": {
-            "car1": "Ford",
-            "car2": "BMW",
-            "car3": "Fiat"
-        }
-    }]
+    data_list = [
+        {
+            "name": "Tim",
+            "age": 22,
+            "cars": {
+                "car1": "Mazda",
+            },
+        },
+        {
+            "name": "John",
+            "age": 30,
+            "cars": {"car1": "Ford", "car2": "BMW", "car3": "Fiat"},
+        },
+    ]
 
     data_dict = {
         "name": "Tim",
         "age": 22,
         "cars": {
             "car1": "Mazda",
-        }
+        },
     }
     json_viewer = JsonViewer(data_list)
     json_viewer2 = JsonViewer(data_dict)

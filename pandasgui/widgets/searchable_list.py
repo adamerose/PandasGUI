@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
 
-    test = SearchableListWidget(['cat', 'dog', 'hotdog', 'catch'])
+    test = SearchableListWidget(["cat", "dog", "hotdog", "catch"])
     test.show()
 
     sys.exit(app.exec_())

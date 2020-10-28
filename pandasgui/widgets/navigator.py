@@ -79,9 +79,13 @@ class Navigator(QtWidgets.QTreeWidget):
             child = root.child(i)
             child.setExpanded(True)
 
-            child.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
+            child.setFlags(
+                Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled
+            )
 
-    def selectionChanged(self, selected: QtCore.QItemSelection, deselected: QtCore.QItemSelection) -> None:
+    def selectionChanged(
+        self, selected: QtCore.QItemSelection, deselected: QtCore.QItemSelection
+    ) -> None:
         """
         Show the DataFrameExplorer corresponding to the highlighted nav item.
         """
@@ -105,7 +109,7 @@ class Navigator(QtWidgets.QTreeWidget):
         mime = DelayedMimeData()
         path_list = []
         for name in names:
-            path = os.path.join(tempfile.gettempdir(), 'DragTest', name + ".csv")
+            path = os.path.join(tempfile.gettempdir(), "DragTest", name + ".csv")
             os.makedirs(os.path.dirname(path), exist_ok=True)
             df = self.store.get_pgdf(name).dataframe
 
@@ -121,7 +125,11 @@ class Navigator(QtWidgets.QTreeWidget):
 
             path_list.append(QtCore.QUrl.fromLocalFile(path))
         mime.setUrls(path_list)
-        mime.setData('application/x-qabstractitemmodeldatalist',
-                     self.mimeData(self.selectedItems()).data('application/x-qabstractitemmodeldatalist'))
+        mime.setData(
+            "application/x-qabstractitemmodeldatalist",
+            self.mimeData(self.selectedItems()).data(
+                "application/x-qabstractitemmodeldatalist"
+            ),
+        )
         drag.setMimeData(mime)
         drag.exec_(Qt.MoveAction)

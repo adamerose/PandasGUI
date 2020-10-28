@@ -10,9 +10,9 @@ class DockWidget(QtWidgets.QDockWidget):
 
         self.setTitleBarWidget(QtWidgets.QWidget())
         self.dockLocationChanged.connect(self.on_dockLocationChanged)
-        self.setFeatures(self.DockWidgetFloatable |
-                         self.DockWidgetMovable |
-                         self.DockWidgetClosable)
+        self.setFeatures(
+            self.DockWidgetFloatable | self.DockWidgetMovable | self.DockWidgetClosable
+        )
 
     def on_dockLocationChanged(self):
         main: QtWidgets.QMainWindow = self.parent()
@@ -50,6 +50,7 @@ class DockWidget(QtWidgets.QDockWidget):
         else:
             main.addDockWidget(Qt.LeftDockWidgetArea, self)
 
+
 if __name__ == "__main__":
     app = QtWidgets.QApplication([])
     main = QtWidgets.QMainWindow()
@@ -82,7 +83,9 @@ if __name__ == "__main__":
     main.tabifyDockWidget(dock1, dock2)
     main.addDockWidget(Qt.RightDockWidgetArea, dock3)
 
-    main.setDockOptions(main.GroupedDragging | main.AllowTabbedDocks | main.AllowNestedDocks)
+    main.setDockOptions(
+        main.GroupedDragging | main.AllowTabbedDocks | main.AllowNestedDocks
+    )
 
     main.setTabPosition(Qt.AllDockWidgetAreas, QtWidgets.QTabWidget.North)
     main.resize(400, 200)

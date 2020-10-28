@@ -79,7 +79,14 @@ class DataFrameViewer(QtWidgets.QWidget):
         self.gridLayout.setRowStretch(4, 1)
 
         self.gridLayout.addItem(
-            QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding), 0, 0, 1, 1, )
+            QtWidgets.QSpacerItem(
+                0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+            ),
+            0,
+            0,
+            1,
+            1,
+        )
 
         # Do this at top so sizeHints are calculated correctly
         self.set_styles()
@@ -87,7 +94,12 @@ class DataFrameViewer(QtWidgets.QWidget):
 
     def set_styles(self):
         self.setStyleSheet("background-color: #FFF;")
-        for header in [self.indexHeader, self.columnHeader, self.indexHeaderNames, self.columnHeaderNames]:
+        for header in [
+            self.indexHeader,
+            self.columnHeader,
+            self.indexHeaderNames,
+            self.columnHeaderNames,
+        ]:
             header.setStyleSheet(
                 "background-color: #F5F5F5;"
                 "selection-color: black;"
@@ -101,7 +113,13 @@ class DataFrameViewer(QtWidgets.QWidget):
             "selection-color: black;"
             "selection-background-color: #BBDEFB;"
         )
-        for item in [self.dataView, self.columnHeader, self.indexHeader, self.indexHeaderNames, self.columnHeaderNames]:
+        for item in [
+            self.dataView,
+            self.columnHeader,
+            self.indexHeader,
+            self.indexHeaderNames,
+            self.columnHeaderNames,
+        ]:
             item.setContentsMargins(0, 0, 0, 0)
             item.setStyleSheet(item.styleSheet() + "border: 0px solid black;")
             item.setItemDelegate(NoFocusDelegate())
@@ -191,7 +209,11 @@ class DataFrameViewer(QtWidgets.QWidget):
             # This constrained width, with the flag of Qt.TextWordWrap
             # gets the height the cell would have to be to fit the text.
             constrained_rect = QtCore.QRect(0, 0, cell_width, 0)
-            h = self.dataView.fontMetrics().boundingRect(constrained_rect, Qt.TextWordWrap, text).height()
+            h = (
+                self.dataView.fontMetrics()
+                .boundingRect(constrained_rect, Qt.TextWordWrap, text)
+                .height()
+            )
             height = max(height, h)
 
         height += padding
@@ -219,10 +241,10 @@ class DataFrameViewer(QtWidgets.QWidget):
 # Remove dotted border on cell focus.  https://stackoverflow.com/a/55252650/3620725
 class NoFocusDelegate(QtWidgets.QStyledItemDelegate):
     def paint(
-            self,
-            painter: QtGui.QPainter,
-            item: QtWidgets.QStyleOptionViewItem,
-            ix: QtCore.QModelIndex,
+        self,
+        painter: QtGui.QPainter,
+        item: QtWidgets.QStyleOptionViewItem,
+        ix: QtCore.QModelIndex,
     ):
         if item.state & QtWidgets.QStyle.State_HasFocus:
             item.state = item.state ^ QtWidgets.QStyle.State_HasFocus
@@ -251,9 +273,9 @@ class DataTableModel(QtCore.QAbstractTableModel):
     # Returns the data from the DataFrame
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if (
-                role == QtCore.Qt.DisplayRole
-                or role == QtCore.Qt.EditRole
-                or role == QtCore.Qt.ToolTipRole
+            role == QtCore.Qt.DisplayRole
+            or role == QtCore.Qt.EditRole
+            or role == QtCore.Qt.ToolTipRole
         ):
             row = index.row()
             col = index.column()
@@ -280,7 +302,11 @@ class DataTableModel(QtCore.QAbstractTableModel):
 
     def flags(self, index):
         if self.parent().pgdf.settings.editable:
-            return QtCore.Qt.ItemIsEditable | QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
+            return (
+                QtCore.Qt.ItemIsEditable
+                | QtCore.Qt.ItemIsEnabled
+                | QtCore.Qt.ItemIsSelectable
+            )
         else:
             return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
 
@@ -362,7 +388,9 @@ class DataTableView(QtWidgets.QTableView):
         rows = [ix.row() for ix in indexes]
         cols = [ix.column() for ix in indexes]
 
-        df = self.pgdf.dataframe.iloc[min(rows): max(rows) + 1, min(cols): max(cols) + 1]
+        df = self.pgdf.dataframe.iloc[
+            min(rows) : max(rows) + 1, min(cols) : max(cols) + 1
+        ]
 
         # Special case for single-cell copy since df.to_clipboard appends extra newline
         if df.shape == (1, 1):
@@ -371,10 +399,12 @@ class DataTableView(QtWidgets.QTableView):
             clipboard.setText(value)
         else:
             # If I try to use Pyperclip without starting new thread large selections give access denied error
-            threading.Thread(target=lambda df: df.to_clipboard(index=False, header=False), args=(df,)).start()
+            threading.Thread(
+                target=lambda df: df.to_clipboard(index=False, header=False), args=(df,)
+            ).start()
 
     def paste(self):
-        df_to_paste = pd.read_clipboard(sep=',|\t', header=None)
+        df_to_paste = pd.read_clipboard(sep=",|\t", header=None)
 
         # Get the bounds using the top left and bottom right selected cells
         indexes = self.selectionModel().selection().indexes()
@@ -390,8 +420,10 @@ class DataTableView(QtWidgets.QTableView):
 
         for i in range(df_to_paste.shape[0]):
             for j in range(df_to_paste.shape[1]):
-                self.selectionModel().select(self.model().index(min(rows) + i, min(cols) + j),
-                                             QtCore.QItemSelectionModel.Select)
+                self.selectionModel().select(
+                    self.model().index(min(rows) + i, min(cols) + j),
+                    QtCore.QItemSelectionModel.Select,
+                )
 
         self.setSelectionMode(temp)
 
@@ -413,7 +445,6 @@ class DataTableView(QtWidgets.QTableView):
 
 
 class HeaderModel(QtCore.QAbstractTableModel):
-
     def __init__(self, parent, orientation):
         super().__init__(parent)
         self.orientation = orientation
@@ -453,11 +484,19 @@ class HeaderModel(QtCore.QAbstractTableModel):
 
         if role == QtCore.Qt.DecorationRole:
             if self.pgdf.sort_is_ascending:
-                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "images/sort-ascending.png"))
+                icon = QtGui.QIcon(
+                    os.path.join(pandasgui.__path__[0], "images/sort-ascending.png")
+                )
             else:
-                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "images/sort-descending.png"))
+                icon = QtGui.QIcon(
+                    os.path.join(pandasgui.__path__[0], "images/sort-descending.png")
+                )
 
-            if col == self.pgdf.column_sorted and row == self.rowCount() - 1 and self.orientation == Qt.Horizontal:
+            if (
+                col == self.pgdf.column_sorted
+                and row == self.rowCount() - 1
+                and self.orientation == Qt.Horizontal
+            ):
                 return icon
 
     # The headers of this table will show the level names of the MultiIndex
@@ -549,7 +588,7 @@ class HeaderView(QtWidgets.QTableView):
 
             # Set selection mode so selecting one row or column at a time adds to selection each time
             if (
-                    self.orientation == Qt.Horizontal
+                self.orientation == Qt.Horizontal
             ):  # This case is for the horizontal header
                 # Get the header's selected columns
                 selection = self.selectionModel().selection()
@@ -603,12 +642,16 @@ class HeaderView(QtWidgets.QTableView):
                 # Loop over the rows above this one
                 for row in range(ix.row()):
                     ix2 = self.model().index(row, ix.column())
-                    self.setSelection(self.visualRect(ix2), QtCore.QItemSelectionModel.Select)
+                    self.setSelection(
+                        self.visualRect(ix2), QtCore.QItemSelectionModel.Select
+                    )
             else:
                 # Loop over the columns left of this one
                 for col in range(ix.column()):
                     ix2 = self.model().index(ix.row(), col)
-                    self.setSelection(self.visualRect(ix2), QtCore.QItemSelectionModel.Select)
+                    self.setSelection(
+                        self.visualRect(ix2), QtCore.QItemSelectionModel.Select
+                    )
 
     # Fits columns to contents but with a minimum width and added padding
     def init_size(self):
@@ -793,15 +836,19 @@ class HeaderView(QtWidgets.QTableView):
             if self.header_being_resized is not None:
 
                 size = self.initial_header_size + (
-                        mouse_position - self.resize_start_position
+                    mouse_position - self.resize_start_position
                 )
                 if size > 10:
                     if self.orientation == Qt.Horizontal:
                         self.setColumnWidth(self.header_being_resized, size)
-                        self.parent().dataView.setColumnWidth(self.header_being_resized, size)
+                        self.parent().dataView.setColumnWidth(
+                            self.header_being_resized, size
+                        )
                     if self.orientation == Qt.Vertical:
                         self.setRowHeight(self.header_being_resized, size)
-                        self.parent().dataView.setRowHeight(self.header_being_resized, size)
+                        self.parent().dataView.setRowHeight(
+                            self.header_being_resized, size
+                        )
 
                     self.updateGeometry()
                     self.parent().dataView.updateGeometry()
@@ -849,7 +896,6 @@ class HeaderView(QtWidgets.QTableView):
 
 
 class HeaderNamesModel(QtCore.QAbstractTableModel):
-
     def __init__(self, parent, orientation):
         super().__init__(parent)
         self.orientation = orientation
@@ -887,9 +933,13 @@ class HeaderNamesModel(QtCore.QAbstractTableModel):
 
         if role == QtCore.Qt.DecorationRole:
             if self.pgdf.sort_is_ascending:
-                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "images/sort-ascending.png"))
+                icon = QtGui.QIcon(
+                    os.path.join(pandasgui.__path__[0], "images/sort-ascending.png")
+                )
             else:
-                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "images/sort-descending.png"))
+                icon = QtGui.QIcon(
+                    os.path.join(pandasgui.__path__[0], "images/sort-descending.png")
+                )
 
             if col == self.pgdf.index_sorted and self.orientation == Qt.Vertical:
                 return icon
@@ -986,7 +1036,7 @@ if __name__ == "__main__":
     from pandasgui.datasets import simple
 
     # df = simple.set_index(['first', 'second', 'third']).unstack().sort_values(('fourth', 'bar'))
-    df2 = simple.set_index(['first', 'second', 'third']).unstack().sort_index(1)
+    df2 = simple.set_index(["first", "second", "third"]).unstack().sort_index(1)
 
     # view = DataFrameViewer(df)
     # view.show()
