@@ -7,7 +7,7 @@ from PyQt5.QtCore import Qt
 
 
 class FindToolbar(QtWidgets.QToolBar):
-    def __init__(self, parent):
+    def __init__(self, parent=None):
         """
         Creates modified toolbar with only a find textbox and match modification.
 
@@ -24,7 +24,7 @@ class FindToolbar(QtWidgets.QToolBar):
         # Current QModelIndex
         self.search_selection = None
         self.match_flags = {"regex": False, "case": False, "whole word": False}
-        self.image_folder = "../images"
+        self.image_folder = "../resources/images"
 
         # main toolbar widget
         find_toolbar_widget = QtWidgets.QWidget()
@@ -329,8 +329,6 @@ class ButtonLineEdit(QtWidgets.QLineEdit):
         # makes sure text doesn't type behind the buttons
         totalWidth = sum([b.sizeHint().width() for b in self.buttons])
         frameWidth = self.style().pixelMetric(QtWidgets.QStyle.PM_DefaultFrameWidth)
-        right_padding = int(totalWidth + frameWidth + 1)
-        self.setStyleSheet(f"QLineEdit {{padding-right: {right_padding}px; }}")
 
         # makes sure the typing area doesn't get too small if toolbar is shrunk.
         maxHeight = max([b.sizeHint().height() for b in self.buttons])

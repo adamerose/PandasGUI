@@ -10,27 +10,44 @@ from datetime import datetime
 from pandasgui.utility import get_logger, unique_name, in_interactive_console
 import os
 import collections
+from enum import Enum
 
 logger = get_logger(__name__)
 
 
 @dataclass
+class Setting:
+    label: str
+    value: any
+    description: str
+    type: Union[type(str), type(bool), Enum]
+
+
+@dataclass
 class Settings:
-    # Should GUI block code execution until closed
-    block: bool
-    # Are table cells editable
-    editable: bool = True
-    style: str = "Fusion"
+    block = Setting(label="Block",
+                    value=True,
+                    description="Should GUI block code execution until closed?",
+                    type=bool)
+
+    editable = Setting(label="Editable",
+                       value=True,
+                       description="Are table cells editable?",
+                       type=bool)
+
+    style = Setting(label="Style",
+                    value="Fusion",
+                    description="PyQt UI style",
+                    type=Enum("StylesEnum", QtWidgets.QStyleFactory.keys()))
 
     def __init__(self, block=None):
-        # Default blocking behavior
         if block is None:
             if in_interactive_console():
                 # Don't block if in an interactive console (so you can view GUI and still continue running commands)
-                self.block = False
+                self.block.value = False
             else:
                 # If in a script, we need to block or the script will continue and finish without allowing GUI interaction
-                self.block = True
+                self.block.value = True
 
 
 @dataclass

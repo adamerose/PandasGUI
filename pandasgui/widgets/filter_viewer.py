@@ -97,7 +97,7 @@ class FilterViewer(QtWidgets.QWidget):
                     return Qt.Unchecked
 
             if role == QtCore.Qt.DecorationRole and self.pgdf.filters[row].failed:
-                path = os.path.join(pandasgui.__path__[0], "images/alert.svg")
+                path = os.path.join(pandasgui.__path__[0], "resources/images/alert.svg")
                 return QtGui.QIcon(path)
 
         def rowCount(self, parent=None):

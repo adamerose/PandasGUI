@@ -40,6 +40,14 @@ class PandasGui(QtWidgets.QMainWindow):
             settings: Dict of settings, as defined in pandasgui.store.Settings
             kwargs: Dict of DataFrames where key is name & val is the DataFrame object
         """
+        self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+        super().__init__()
+
+        self.stacked_widget = None
+        self.navigator = None
+        self.splitter = None
+        self.find_bar = None
+
         refs.append(self)
 
         self.store = Store()
@@ -48,12 +56,10 @@ class PandasGui(QtWidgets.QMainWindow):
         for key, value in settings.items():
             setattr(self.store.settings, key, value)
 
-        self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
-        if self.store.settings.style in QtWidgets.QStyleFactory.keys():
-            self.app.setStyle(self.store.settings.style)
+        # This will silently fail if the style isn't available on the OS, which is okay
+        self.app.setStyle(QtWidgets.QStyleFactory.create(self.store.settings.style.value))
 
-        super().__init__()
-        self.init_app()
+        # Create all widgets
         self.init_ui()
 
         # Adds DataFrames listed in kwargs to data store.
@@ -64,36 +70,29 @@ class PandasGui(QtWidgets.QMainWindow):
         self.navigator.setCurrentItem(self.navigator.topLevelItem(0))
 
         # Start event loop if blocking enabled
-        if self.store.settings.block:
+        if self.store.settings.block.value:
             self.app.exec_()
 
-    # Configure app settings
-    def init_app(self):
-
+    # Create and add all widgets to GUI.
+    def init_ui(self):
         self.resize(QtCore.QSize(int(0.7 * QtWidgets.QDesktopWidget().screenGeometry().width()),
                                  int(0.7 * QtWidgets.QDesktopWidget().screenGeometry().height())))
 
         # Center window on screen
         screen = QtWidgets.QDesktopWidget().screenGeometry()
         size = self.geometry()
-        self.move(
-            int((screen.width() - size.width()) / 2),
-            int((screen.height() - size.height()) / 2),
-        )
+        self.move(int((screen.width() - size.width()) / 2),
+                  int((screen.height() - size.height()) / 2), )
 
         # Set window title and icon
         self.setWindowTitle("PandasGUI")
-        pdgui_icon = "images/icon.png"
-        pdgui_icon_path = pkg_resources.resource_filename(__name__, pdgui_icon)
+        pdgui_icon_path = pkg_resources.resource_filename(__name__, "resources/images/icon.png")
         self.app.setWindowIcon(QtGui.QIcon(pdgui_icon_path))
 
         # Accept drops, for importing files. See methods below: dropEvent, dragEnterEvent, dragMoveEvent
         self.setAcceptDrops(True)
 
         self.show()
-
-    # Create and add all widgets to GUI.
-    def init_ui(self):
         # This holds the DataFrameExplorer for each DataFrame
         self.stacked_widget = QtWidgets.QStackedWidget()
 
@@ -121,6 +120,7 @@ class PandasGui(QtWidgets.QMainWindow):
         # QMainWindow setup
         self.make_menu_bar()
         self.setCentralWidget(self.splitter)
+        self.show()
 
     ####################
     # Menu bar functions
@@ -163,16 +163,27 @@ class PandasGui(QtWidgets.QMainWindow):
                 menu.addAction(action)
 
         # Add an extra option list to the menu for each GUI style that exist for the user's system
-        styleMenu = menubar.addMenu("&Set Style")
-        styleGroup = QtWidgets.QActionGroup(styleMenu)
-        for style in QtWidgets.QStyleFactory.keys():
-            styleAction = QtWidgets.QAction(f"&{style}", self, checkable=True)
-            styleAction.triggered.connect(lambda _, s=style: self.app.setStyle(s))
-            styleGroup.addAction(styleAction)
-            styleMenu.addAction(styleAction)
+        # TODO - finish dark theme. temporarily disable this menu for now
+        if 0:
+            theme_menu = menubar.addMenu("&Set Theme")
+            theme_group = QtWidgets.QActionGroup(theme_menu)
+            for theme in ["classic", "light", "dark"]:
+                theme_action = QtWidgets.QAction(f"&{theme}", self, checkable=True)
+                theme_action.triggered.connect(lambda _, s=theme: self.set_theme(s))
+                theme_group.addAction(theme_action)
+                theme_menu.addAction(theme_action)
 
-            if self.app.style().objectName().lower() == style.lower():
-                styleAction.trigger()
+                # Set the default theme
+                if theme == "classic":
+                    theme_action.trigger()
+
+    def set_theme(self, name: str):
+        if name == "classic":
+            self.setStyleSheet("")
+        elif name == "dark":
+            pass
+            # TODO
+
 
     def dropEvent(self, e):
         if e.mimeData().hasUrls:
@@ -235,6 +246,10 @@ class PandasGui(QtWidgets.QMainWindow):
         path, _ = dialog.getSaveFileName(directory=pgdf.name, filter="*.csv")
         pgdf.dataframe.to_csv(path, index=False)
 
+    def closeEvent(self, e: QtGui.QCloseEvent) -> None:
+        refs.remove(self)
+        super().closeEvent(e)
+
 
 def show(*args,
          settings={},
@@ -264,10 +279,11 @@ def show(*args,
     kwargs = {**kwargs, **dataframes}
 
     pandas_gui = PandasGui(settings=settings, **kwargs)
+
     return pandas_gui
 
 
 if __name__ == "__main__":
-    from pandasgui.datasets import all_datasets
+    from pandasgui.datasets import all_datasets, pokemon, mi_manufacturing
 
-    gui = show(**all_datasets, settings={'block': True})
+    gui = show(pokemon, mi_manufacturing)

@@ -20,7 +20,6 @@ class DataFrameViewer(QtWidgets.QWidget):
 
         pgdf = PandasGuiDataFrame.cast(pgdf)
         pgdf.dataframe_viewer = self
-
         self.pgdf = pgdf
 
         # Indicates whether the widget has been shown yet. Set to True in
@@ -38,32 +37,22 @@ class DataFrameViewer(QtWidgets.QWidget):
 
         # Set up layout
         self.gridLayout = QtWidgets.QGridLayout()
-        self.setLayout(self.gridLayout)
-
-        # Link scrollbars
-        # Scrolling in data table also scrolls the headers
-        self.dataView.horizontalScrollBar().valueChanged.connect(
-            self.columnHeader.horizontalScrollBar().setValue
-        )
-        self.dataView.verticalScrollBar().valueChanged.connect(
-            self.indexHeader.verticalScrollBar().setValue
-        )
-        # Scrolling in headers also scrolls the data table
-        self.columnHeader.horizontalScrollBar().valueChanged.connect(
-            self.dataView.horizontalScrollBar().setValue
-        )
-        self.indexHeader.verticalScrollBar().valueChanged.connect(
-            self.dataView.verticalScrollBar().setValue
-        )
-
-        self.dataView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.dataView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-        # Disable scrolling on the headers. Even though the scrollbars are hidden, scrolling by dragging desyncs them
-        self.indexHeader.horizontalScrollBar().valueChanged.connect(lambda: None)
-
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.gridLayout.setSpacing(0)
+        self.setLayout(self.gridLayout)
+
+        # Linking scrollbars
+        # Scrolling in data table also scrolls the headers
+        self.dataView.horizontalScrollBar().valueChanged.connect(self.columnHeader.horizontalScrollBar().setValue)
+        self.dataView.verticalScrollBar().valueChanged.connect(self.indexHeader.verticalScrollBar().setValue)
+        # Scrolling in headers also scrolls the data table
+        self.columnHeader.horizontalScrollBar().valueChanged.connect(self.dataView.horizontalScrollBar().setValue)
+        self.indexHeader.verticalScrollBar().valueChanged.connect(self.dataView.verticalScrollBar().setValue)
+        # Turn off default scrollbars
+        self.dataView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.dataView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        # Disable scrolling on the headers. Even though the scrollbars are hidden, scrolling by dragging desyncs them
+        self.indexHeader.horizontalScrollBar().valueChanged.connect(lambda: None)
 
         # Add items to 4x4 grid layout
         self.gridLayout.addWidget(self.columnHeader, 0, 1, 1, 2)
@@ -78,36 +67,31 @@ class DataFrameViewer(QtWidgets.QWidget):
         self.gridLayout.setColumnStretch(4, 1)
         self.gridLayout.setRowStretch(4, 1)
 
-        self.gridLayout.addItem(
-            QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding), 0, 0, 1, 1, )
+        self.gridLayout.addItem(QtWidgets.QSpacerItem(0, 0,
+                                                      QtWidgets.QSizePolicy.Expanding,
+                                                      QtWidgets.QSizePolicy.Expanding), 0, 0, 1, 1, )
 
-        # Do this at top so sizeHints are calculated correctly
         self.set_styles()
-        self.updateGeometry()
+        self.indexHeader.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum)
+        self.columnHeader.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding)
 
     def set_styles(self):
-        self.setStyleSheet("background-color: #FFF;")
-        for header in [self.indexHeader, self.columnHeader, self.indexHeaderNames, self.columnHeaderNames]:
-            header.setStyleSheet(
-                "background-color: #F5F5F5;"
-                "selection-color: black;"
-                "selection-background-color: #DDD;"
-                "border: 1px solid lightgrey;"
-            )
 
-        self.dataView.setStyleSheet(
-            "background-color: white;"
-            "alternate-background-color: #FAFAFA;"
-            "selection-color: black;"
-            "selection-background-color: #BBDEFB;"
-        )
         for item in [self.dataView, self.columnHeader, self.indexHeader, self.indexHeaderNames, self.columnHeaderNames]:
             item.setContentsMargins(0, 0, 0, 0)
-            item.setStyleSheet(item.styleSheet() + "border: 0px solid black;")
+            item.setStyleSheet(item.styleSheet() + "QTableView{border: 0px solid black;}")
             item.setItemDelegate(NoFocusDelegate())
 
-        for item in [self.indexHeaderNames, self.columnHeaderNames]:
-            item.setStyleSheet(item.styleSheet() + "color: #666;")
+        # Style table data cells
+        # self.dataView.setStyleSheet(self.dataView.styleSheet() + "")
+
+        # # Style header cells
+        # for header in [self.columnHeader, self.indexHeader]:
+        #     header.setStyleSheet(header.styleSheet() + ";")
+
+        # # Style header level name labels
+        # for header_label in [self.indexHeaderNames, self.columnHeaderNames]:
+        #     header_label.setStyleSheet(header_label.styleSheet() + "")
 
     def __reduce__(self):
         # This is so dataclasses.asdict doesn't complain about this being unpicklable
@@ -319,7 +303,6 @@ class DataTableView(QtWidgets.QTableView):
         # Settings
         # self.setWordWrap(True)
         # self.resizeRowsToContents()
-        self.setAlternatingRowColors(True)
         self.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
 
@@ -453,9 +436,9 @@ class HeaderModel(QtCore.QAbstractTableModel):
 
         if role == QtCore.Qt.DecorationRole:
             if self.pgdf.sort_is_ascending:
-                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "images/sort-ascending.png"))
+                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "resources/images/sort-ascending.png"))
             else:
-                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "images/sort-descending.png"))
+                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "resources/images/sort-descending.png"))
 
             if col == self.pgdf.column_sorted and row == self.rowCount() - 1 and self.orientation == Qt.Horizontal:
                 return icon
@@ -519,7 +502,7 @@ class HeaderView(QtWidgets.QTableView):
         # Link selection to DataTable
         self.selectionModel().selectionChanged.connect(self.on_selectionChanged)
         self.set_spans()
-        self.init_size()
+        self.init_column_sizes()
 
         self.horizontalHeader().hide()
         self.verticalHeader().hide()
@@ -621,7 +604,7 @@ class HeaderView(QtWidgets.QTableView):
                     self.setSelection(self.visualRect(ix2), QtCore.QItemSelectionModel.Select)
 
     # Fits columns to contents but with a minimum width and added padding
-    def init_size(self):
+    def init_column_sizes(self):
         padding = 30
 
         if self.orientation == Qt.Horizontal:
@@ -830,8 +813,7 @@ class HeaderView(QtWidgets.QTableView):
 
     # Return the size of the header needed to match the corresponding DataTableView
     def sizeHint(self):
-
-        # Horizontal HeaderView
+        # Columm headers
         if self.orientation == Qt.Horizontal:
             # Width of DataTableView
             width = self.table.sizeHint().width() + self.verticalHeader().width()
@@ -840,7 +822,7 @@ class HeaderView(QtWidgets.QTableView):
             for i in range(self.model().rowCount()):
                 height += self.rowHeight(i)
 
-        # Vertical HeaderView
+        # Index header
         else:
             # Height of DataTableView
             height = self.table.sizeHint().height() + self.horizontalHeader().height()
@@ -897,9 +879,9 @@ class HeaderNamesModel(QtCore.QAbstractTableModel):
 
         if role == QtCore.Qt.DecorationRole:
             if self.pgdf.sort_is_ascending:
-                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "images/sort-ascending.png"))
+                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "resources/images/sort-ascending.png"))
             else:
-                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "images/sort-descending.png"))
+                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "resources/images/sort-descending.png"))
 
             if col == self.pgdf.index_sorted and self.orientation == Qt.Vertical:
                 return icon
@@ -990,10 +972,9 @@ class TrackingSpacer(QtWidgets.QFrame):
 # Examples
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-
     from pandasgui.datasets import pokemon, mi_manufacturing
 
-    view = DataFrameViewer(mi_manufacturing)
+    view = DataFrameViewer(pokemon)
 
     view.show()
     app.exec_()
