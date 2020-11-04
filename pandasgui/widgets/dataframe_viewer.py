@@ -439,14 +439,14 @@ class HeaderModel(QtCore.QAbstractTableModel):
 
             if self.orientation == Qt.Horizontal:
 
-                if type(self.pgdf.dataframe.columns) == pd.MultiIndex:
+                if isinstance(self.pgdf.dataframe.columns, pd.MultiIndex):
                     return str(self.pgdf.dataframe.columns.values[col][row])
                 else:
                     return str(self.pgdf.dataframe.columns.values[col])
 
             elif self.orientation == Qt.Vertical:
 
-                if type(self.pgdf.dataframe.index) == pd.MultiIndex:
+                if isinstance(self.pgdf.dataframe.index, pd.MultiIndex):
                     return str(self.pgdf.dataframe.index.values[row][col])
                 else:
                     return str(self.pgdf.dataframe.index.values[row])
@@ -465,12 +465,12 @@ class HeaderModel(QtCore.QAbstractTableModel):
         if role in [QtCore.Qt.DisplayRole, QtCore.Qt.ToolTipRole]:
 
             if self.orientation == Qt.Horizontal and orientation == Qt.Vertical:
-                if type(self.pgdf.dataframe.columns) == pd.MultiIndex:
+                if isinstance(self.pgdf.dataframe.columns, pd.MultiIndex):
                     return str(self.pgdf.dataframe.columns.names[section])
                 else:
                     return str(self.pgdf.dataframe.columns.name)
             elif self.orientation == Qt.Vertical and orientation == Qt.Horizontal:
-                if type(self.pgdf.dataframe.index) == pd.MultiIndex:
+                if isinstance(self.pgdf.dataframe.index, pd.MultiIndex):
                     return str(self.pgdf.dataframe.index.names[section])
                 else:
                     return str(self.pgdf.dataframe.index.name)
@@ -653,14 +653,14 @@ class HeaderView(QtWidgets.QTableView):
         if self.orientation == Qt.Horizontal:
 
             # Find how many levels the MultiIndex has
-            if type(df.columns) == pd.MultiIndex:
+            if isinstance(df.columns, pd.MultiIndex):
                 N = len(df.columns[0])
             else:
                 N = 1
 
             for level in range(N):  # Iterates over the levels
                 # Find how many segments the MultiIndex has
-                if type(df.columns) == pd.MultiIndex:
+                if isinstance(df.columns, pd.MultiIndex):
                     arr = [df.columns[i][level] for i in range(len(df.columns))]
                 else:
                     arr = df.columns
@@ -689,7 +689,7 @@ class HeaderView(QtWidgets.QTableView):
         # Find spans for vertical HeaderView
         else:
             # Find how many levels the MultiIndex has
-            if type(df.index) == pd.MultiIndex:
+            if isinstance(df.index, pd.MultiIndex):
                 N = len(df.index[0])
             else:
                 N = 1
@@ -697,7 +697,7 @@ class HeaderView(QtWidgets.QTableView):
             for level in range(N):  # Iterates over the levels
 
                 # Find how many segments the MultiIndex has
-                if type(df.index) == pd.MultiIndex:
+                if isinstance(df.index, pd.MultiIndex):
                     arr = [df.index[i][level] for i in range(len(df.index))]
                 else:
                     arr = df.index

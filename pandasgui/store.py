@@ -216,11 +216,11 @@ class PandasGuiDataFrame:
 
     @staticmethod
     def cast(x: Union["PandasGuiDataFrame", pd.DataFrame, pd.Series, Iterable]):
-        if type(x) == PandasGuiDataFrame:
+        if isinstance(x, PandasGuiDataFrame):
             return x
-        if type(x) == pd.DataFrame:
+        if isinstance(x, pd.DataFrame):
             return PandasGuiDataFrame(x)
-        elif type(x) == pd.Series:
+        elif isinstance(x, pd.Series):
             return PandasGuiDataFrame(x.to_frame())
         else:
             try:
