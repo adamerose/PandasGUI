@@ -15,39 +15,46 @@ from enum import Enum
 logger = get_logger(__name__)
 
 
-@dataclass
-class Setting:
-    label: str
-    value: any
-    description: str
-    type: Union[type(str), type(bool), Enum]
+class DictLike:
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
 
 
-@dataclass
-class Settings:
-    block = Setting(label="Block",
-                    value=True,
-                    description="Should GUI block code execution until closed?",
-                    type=bool)
+class Setting(DictLike):
+    def __init__(self, label, value, description, dtype):
+        self.label: str = label
+        self.value: any = value
+        self.description: str = description
+        self.dtype: Union[type(str), type(bool), Enum] = dtype
 
-    editable = Setting(label="Editable",
-                       value=True,
-                       description="Are table cells editable?",
-                       type=bool)
 
-    style = Setting(label="Style",
-                    value="Fusion",
-                    description="PyQt UI style",
-                    type=Enum("StylesEnum", QtWidgets.QStyleFactory.keys()))
-
-    def __init__(self, block=None):
+class Settings(DictLike):
+    def __init__(self, editable=False, style="Fusion", block=None):
         if block is None:
             if in_interactive_console():
                 # Don't block if in an interactive console (so you can view GUI and still continue running commands)
-                self.block.value = False
+                block = False
             else:
                 # If in a script, we need to block or the script will continue and finish without allowing GUI interaction
-                self.block.value = True
+                block = True
+
+        self.block = Setting(label="Block",
+                             value=block,
+                             description="Should GUI block code execution until closed?",
+                             dtype=bool)
+
+        self.editable = Setting(label="Editable",
+                                value=editable,
+                                description="Are table cells editable?",
+                                dtype=bool)
+
+        self.style = Setting(label="Style",
+                             value=style,
+                             description="PyQt UI style",
+                             dtype=Enum("StylesEnum", QtWidgets.QStyleFactory.keys()))
 
 
 @dataclass
@@ -261,8 +268,8 @@ class Store:
                       name: str = "Untitled"):
 
         name = unique_name(name, self.get_dataframes().keys())
-
         pgdf = PandasGuiDataFrame.cast(pgdf)
+        pgdf.settings = self.settings
         pgdf.name = name
         pgdf.store = self
 

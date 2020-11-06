@@ -54,7 +54,8 @@ class PandasGui(QtWidgets.QMainWindow):
         self.store.gui = self
         # Add user provided settings to data store
         for key, value in settings.items():
-            setattr(self.store.settings, key, value)
+            setting = self.store.settings[key]
+            setting.value = value
 
         # This will silently fail if the style isn't available on the OS, which is okay
         self.app.setStyle(QtWidgets.QStyleFactory.create(self.store.settings.style.value))
@@ -68,7 +69,6 @@ class PandasGui(QtWidgets.QMainWindow):
 
         # Default to first item
         self.navigator.setCurrentItem(self.navigator.topLevelItem(0))
-
         # Start event loop if blocking enabled
         if self.store.settings.block.value:
             self.app.exec_()
