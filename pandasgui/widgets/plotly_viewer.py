@@ -10,6 +10,10 @@ from pandasgui.utility import get_logger
 
 logger = get_logger(__name__)
 
+# https://stackoverflow.com/a/64743807/3620725
+os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-logging --log-level=3"
+
+
 # Since pandasgui might be imported after other packages already created a QApplication,
 # we need to hack around this import restriction on QtWebEngineWidgets
 # https://stackoverflow.com/a/57436077/3620725
@@ -17,7 +21,7 @@ try:
     from PyQt5 import QtWebEngineWidgets
 except ImportError as e:
     if e.msg == "QtWebEngineWidgets must be imported before a QCoreApplication instance is created":
-        logger.info("Killing QtWidgets.QApplication to reimport QtWebEngineWidgets")
+        logger.info("Reinitialized existing QApplication instance to allow import of QtWebEngineWidgets.")
 
         app = QtWidgets.QApplication.instance()
         app.quit()
