@@ -118,22 +118,6 @@ class Dragger(QtWidgets.QWidget):
         self.setLayout(self.main_layout)
 
         image_dir = os.path.join(pandasgui.__path__[0], 'images')
-        # Styling (https://doc.qt.io/qt-5/stylesheet-examples.html#customizing-qtreeview)
-        stylesheet = """
-                                     QTreeView::branch:has-siblings:adjoins-item {
-                                         border-image: url(%s) 0;
-                                     }
-
-                                     QTreeView::branch:!has-children:!has-siblings:adjoins-item {
-                                         border-image: url(%s) 0;
-                                     }
-
-                                     QTreeView { background-color: white; padding: 0px 5px; }
-                                     """ % (
-            os.path.join(image_dir, "stylesheet-branch-more.png").replace("\\", "/"),
-            os.path.join(image_dir, "stylesheet-branch-end.png").replace("\\", "/"),
-        )
-        self.dest_tree.setStyleSheet(stylesheet)
 
     def handle_double_click(self, item, column):
 
