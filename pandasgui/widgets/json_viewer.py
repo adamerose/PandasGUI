@@ -42,7 +42,6 @@ class JsonViewer(QtWidgets.QWidget):
 
         self.resize(QtCore.QSize(400,500))
 
-        self.show()
 
 
     def find(self):

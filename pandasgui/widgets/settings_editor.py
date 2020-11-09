@@ -35,7 +35,6 @@ class SettingsEditor(QtWidgets.QWidget):
         layout.addItem(QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding))
 
         self.setLayout(layout)
-        self.show()
 
     def text_editor(self, key, val, setter):
         layout = QtWidgets.QHBoxLayout()

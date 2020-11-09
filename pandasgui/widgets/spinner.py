@@ -121,7 +121,6 @@ class Spinner(QWidget):
     def start(self):
         self.updatePosition()
         self.mIsSpinning = True
-        self.show()
 
         if self.parentWidget() and self.mDisableParentWhenSpinning:
             self.parentWidget().setEnabled(False)

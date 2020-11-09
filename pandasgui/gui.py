@@ -69,6 +69,8 @@ class PandasGui(QtWidgets.QMainWindow):
 
         # Default to first item
         self.navigator.setCurrentItem(self.navigator.topLevelItem(0))
+
+        self.show()
         # Start event loop if blocking enabled
         if self.store.settings.block.value:
             self.app.exec_()
@@ -92,7 +94,6 @@ class PandasGui(QtWidgets.QMainWindow):
         # Accept drops, for importing files. See methods below: dropEvent, dragEnterEvent, dragMoveEvent
         self.setAcceptDrops(True)
 
-        self.show()
         # This holds the DataFrameExplorer for each DataFrame
         self.stacked_widget = QtWidgets.QStackedWidget()
 
@@ -120,7 +121,6 @@ class PandasGui(QtWidgets.QMainWindow):
         # QMainWindow setup
         self.make_menu_bar()
         self.setCentralWidget(self.splitter)
-        self.show()
 
     ####################
     # Menu bar functions
