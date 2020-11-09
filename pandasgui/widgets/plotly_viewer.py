@@ -6,9 +6,8 @@ from plotly.io import to_html
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5.QtCore import Qt
 
-from pandasgui.utility import get_logger
-
-logger = get_logger(__name__)
+import logging
+logger = logging.getLogger(__name__)
 
 # https://stackoverflow.com/a/64743807/3620725
 os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-logging --log-level=3"

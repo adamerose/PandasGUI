@@ -74,22 +74,6 @@ def as_dict(obj, recurse_list=None):
         return result
 
 
-def get_logger(logger_name=None):
-    import logging
-    import sys
-
-    logger = logging.getLogger(logger_name)
-    logger.setLevel(logging.INFO)
-
-    formatter = logging.Formatter("PandasGUI %(levelname)s — %(name)s — %(message)s")
-
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-
-    return logger
-
-
 # https://stackoverflow.com/a/47275100/3620725
 def fix_pyqt():
     import sys

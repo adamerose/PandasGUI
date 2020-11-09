@@ -4,7 +4,7 @@ import pandas as pd
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
-from pandasgui.utility import get_logger, nunique
+from pandasgui.utility import nunique
 from pandasgui.widgets.dataframe_viewer import DataFrameViewer
 from pandasgui.widgets.grapher import Grapher
 from pandasgui.widgets.reshaper import Reshaper
@@ -12,8 +12,8 @@ from pandasgui.widgets.filter_viewer import FilterViewer
 from pandasgui.widgets.dock_widget import DockWidget
 from pandasgui.store import PandasGuiDataFrame
 
-logger = get_logger(__name__)
-
+import logging
+logger = logging.getLogger(__name__)
 
 class DataFrameExplorer(QtWidgets.QMainWindow):
     def __init__(self, pgdf: PandasGuiDataFrame):

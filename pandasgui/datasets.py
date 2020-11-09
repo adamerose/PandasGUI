@@ -3,11 +3,10 @@
 import os
 import shutil
 import pandas as pd
-from pandasgui.utility import get_logger
 import numpy as np
 from pandasgui.constants import LOCAL_DATA_DIR
-
-logger = get_logger(__name__)
+import logging
+logger = logging.getLogger(__name__)
 
 __all__ = ["all_datasets",
            "simple",

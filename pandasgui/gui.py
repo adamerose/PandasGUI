@@ -10,13 +10,14 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
 from pandasgui.store import Store, PandasGuiDataFrame
-from pandasgui.utility import fix_ipython, fix_pyqt, get_logger, as_dict, delete_datasets
+from pandasgui.utility import fix_ipython, fix_pyqt, as_dict, delete_datasets
 from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
 from pandasgui.widgets.find_toolbar import FindToolbar
 from pandasgui.widgets.json_viewer import JsonViewer
 from pandasgui.widgets.navigator import Navigator
 
-logger = get_logger(__name__)
+import logging
+logger = logging.getLogger(__name__)
 
 
 def except_hook(cls, exception, traceback):

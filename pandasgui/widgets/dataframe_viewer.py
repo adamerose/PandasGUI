@@ -7,11 +7,11 @@ import pandas as pd
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
-from pandasgui.utility import get_logger
 from pandasgui.store import Store, PandasGuiDataFrame
 import pandasgui
 
-logger = get_logger(__name__)
+import logging
+logger = logging.getLogger(__name__)
 
 
 class DataFrameViewer(QtWidgets.QWidget):

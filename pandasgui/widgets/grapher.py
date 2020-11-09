@@ -12,12 +12,13 @@ from PyQt5.QtCore import Qt
 import pandas as pd
 from pandasgui.store import Store, PandasGuiDataFrame
 
-from pandasgui.utility import flatten_df, get_logger
+from pandasgui.utility import flatten_df
 from pandasgui.widgets.plotly_viewer import PlotlyViewer
 from pandasgui.widgets.spinner import Spinner
 from pandasgui.widgets.dragger import Dragger, ColumnArg, Schema
 
-logger = get_logger(__name__)
+import logging
+logger = logging.getLogger(__name__)
 
 
 class Grapher(QtWidgets.QWidget):

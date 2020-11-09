@@ -7,13 +7,13 @@ from PyQt5.QtCore import Qt
 import traceback
 from functools import wraps
 from datetime import datetime
-from pandasgui.utility import get_logger, unique_name, in_interactive_console
+from pandasgui.utility import unique_name, in_interactive_console
 import os
 import collections
 from enum import Enum
 
-logger = get_logger(__name__)
-
+import logging
+logger = logging.getLogger(__name__)
 
 class DictLike:
     def __getitem__(self, key):

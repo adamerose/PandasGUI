@@ -9,12 +9,12 @@ from typing import Union, List, Iterable, Callable
 
 from pandasgui.store import Store, PandasGuiDataFrame, track_history
 
-from pandasgui.utility import flatten_df, get_logger
+from pandasgui.utility import flatten_df
 from pandasgui.widgets.spinner import Spinner
 from pandasgui.widgets.dragger import Dragger, Schema, ColumnArg, OptionListArg
 
-logger = get_logger(__name__)
-
+import logging
+logger = logging.getLogger(__name__)
 
 class Reshaper(QtWidgets.QWidget):
     def __init__(self, pgdf: PandasGuiDataFrame):

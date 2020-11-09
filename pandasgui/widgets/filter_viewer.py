@@ -7,12 +7,12 @@ from PyQt5.QtCore import QModelIndex
 from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtCore import QUrl
 
-from pandasgui.utility import get_logger
 from pandasgui.store import PandasGuiDataFrame
 import typing
 import pandasgui
 
-logger = get_logger(__name__)
+import logging
+logger = logging.getLogger(__name__)
 
 
 class FilterViewer(QtWidgets.QWidget):
