@@ -54,22 +54,32 @@ class DataFrameViewer(QtWidgets.QWidget):
         # Disable scrolling on the headers. Even though the scrollbars are hidden, scrolling by dragging desyncs them
         self.indexHeader.horizontalScrollBar().valueChanged.connect(lambda: None)
 
-        # Add items to 4x4 grid layout
-        self.gridLayout.addWidget(self.columnHeader, 0, 1, 1, 2)
-        self.gridLayout.addWidget(self.indexHeader, 1, 0, 2, 2)
-        self.gridLayout.addWidget(self.dataView, 2, 2, 1, 1)
-        self.gridLayout.addWidget(self.dataView.horizontalScrollBar(), 3, 2, 1, 1)
-        self.gridLayout.addWidget(self.dataView.verticalScrollBar(), 2, 3, 1, 1)
-        self.gridLayout.addWidget(self.columnHeaderNames, 0, 3, 1, 1)
-        self.gridLayout.addWidget(self.indexHeaderNames, 0, 0, 1, 1, Qt.AlignBottom)
+        class CornerWidget(QtWidgets.QWidget):
+            def __init__(self):
+                super().__init__()
+                # https://stackoverflow.com/questions/32313469/stylesheet-in-pyside-not-working
+                self.setAttribute(QtCore.Qt.WA_StyledBackground)
+
+        self.corner_widget = CornerWidget()
+        self.corner_widget.setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding,
+                                                               QtWidgets.QSizePolicy.Expanding))
+        # Add items to grid layout
+        self.gridLayout.addWidget(self.corner_widget, 0, 0)
+        self.gridLayout.addWidget(self.columnHeader, 0, 1, 2, 2)
+        self.gridLayout.addWidget(self.columnHeaderNames, 0, 3, 2, 1)
+        self.gridLayout.addWidget(self.indexHeader, 2, 0, 2, 2)
+        self.gridLayout.addWidget(self.indexHeaderNames, 1, 0, 1, 1, Qt.AlignBottom)
+        self.gridLayout.addWidget(self.dataView, 3, 2, 1, 1)
+        self.gridLayout.addWidget(self.dataView.horizontalScrollBar(), 4, 2, 1, 1)
+        self.gridLayout.addWidget(self.dataView.verticalScrollBar(), 3, 3, 1, 1)
 
         # These expand when the window is enlarged instead of having the grid squares spread out
         self.gridLayout.setColumnStretch(4, 1)
-        self.gridLayout.setRowStretch(4, 1)
-
-        self.gridLayout.addItem(QtWidgets.QSpacerItem(0, 0,
-                                                      QtWidgets.QSizePolicy.Expanding,
-                                                      QtWidgets.QSizePolicy.Expanding), 0, 0, 1, 1, )
+        self.gridLayout.setRowStretch(5, 1)
+        #
+        # self.gridLayout.addItem(QtWidgets.QSpacerItem(0, 0,
+        #                                               QtWidgets.QSizePolicy.Expanding,
+        #                                               QtWidgets.QSizePolicy.Expanding), 0, 0, 1, 1, )
 
         self.set_styles()
         self.indexHeader.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum)
@@ -79,8 +89,7 @@ class DataFrameViewer(QtWidgets.QWidget):
 
         for item in [self.dataView, self.columnHeader, self.indexHeader, self.indexHeaderNames, self.columnHeaderNames]:
             item.setContentsMargins(0, 0, 0, 0)
-            item.setStyleSheet(item.styleSheet() + "QTableView{border: 0px solid black;}")
-            item.setItemDelegate(NoFocusDelegate())
+            # item.setItemDelegate(NoFocusDelegate())
 
         # Style table data cells
         # self.dataView.setStyleSheet(self.dataView.styleSheet() + "")
@@ -469,6 +478,7 @@ class HeaderView(QtWidgets.QTableView):
     def __init__(self, parent: DataFrameViewer, orientation):
         super().__init__(parent)
         self.pgdf: PandasGuiDataFrame = parent.pgdf
+        self.setProperty('orientation', 'horizontal' if orientation==1 else 'vertical')  # Used in stylesheet
 
         # Setup
         self.orientation = orientation
@@ -891,6 +901,7 @@ class HeaderNamesView(QtWidgets.QTableView):
     def __init__(self, parent: DataFrameViewer, orientation):
         super().__init__(parent)
         self.pgdf: PandasGuiDataFrame = parent.pgdf
+        self.setProperty('orientation', 'horizontal' if orientation==1 else 'vertical')  # Used in stylesheet
 
         # Setup
         self.orientation = orientation
@@ -931,7 +942,7 @@ class HeaderNamesView(QtWidgets.QTableView):
             height = self.parent().columnHeader.sizeHint().height()
         else:  # Vertical
             width = self.parent().indexHeader.sizeHint().width()
-            height = self.rowHeight(0)
+            height = self.rowHeight(0) + 2
 
         return QtCore.QSize(width, height)
 

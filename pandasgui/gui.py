@@ -15,6 +15,7 @@ from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
 from pandasgui.widgets.find_toolbar import FindToolbar
 from pandasgui.widgets.json_viewer import JsonViewer
 from pandasgui.widgets.navigator import Navigator
+from pandasgui.themes import qstylish
 
 import logging
 logger = logging.getLogger(__name__)
@@ -164,26 +165,26 @@ class PandasGui(QtWidgets.QMainWindow):
                 menu.addAction(action)
 
         # Add an extra option list to the menu for each GUI style that exist for the user's system
-        # TODO - finish dark theme. temporarily disable this menu for now
-        if 0:
-            theme_menu = menubar.addMenu("&Set Theme")
-            theme_group = QtWidgets.QActionGroup(theme_menu)
-            for theme in ["classic", "light", "dark"]:
-                theme_action = QtWidgets.QAction(f"&{theme}", self, checkable=True)
-                theme_action.triggered.connect(lambda _, s=theme: self.set_theme(s))
-                theme_group.addAction(theme_action)
-                theme_menu.addAction(theme_action)
+        theme_menu = menubar.addMenu("&Set Theme")
+        theme_group = QtWidgets.QActionGroup(theme_menu)
+        for theme in ["light", "dark", "classic"]:
+            theme_action = QtWidgets.QAction(f"&{theme}", self, checkable=True)
+            theme_action.triggered.connect(lambda checked, theme=theme: self.set_theme(theme))
+            theme_group.addAction(theme_action)
+            theme_menu.addAction(theme_action)
 
-                # Set the default theme
-                if theme == "classic":
-                    theme_action.trigger()
+            # Set the default theme
+            if theme == "light":
+                theme_action.trigger()
 
+    @QtCore.pyqtSlot()
     def set_theme(self, name: str):
         if name == "classic":
             self.setStyleSheet("")
         elif name == "dark":
-            pass
-            # TODO
+            self.setStyleSheet(qstylish.dark())
+        elif name == "light":
+            self.setStyleSheet(qstylish.light())
 
 
     def dropEvent(self, e):
