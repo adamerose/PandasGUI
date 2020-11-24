@@ -1,5 +1,3 @@
-
-import qtsass
 import os
 import sys
 sys.path.append(os.path.dirname(__file__))
@@ -34,6 +32,7 @@ def qdarkstyle():
 
 
 def compile():
+    import qtsass
     # Compule SCSS into QSS
     qtsass.compile_filename(os.path.join(dirname, "./styling/dark.scss"),
                             os.path.join(dirname, "./compiled/dark.qss"))
