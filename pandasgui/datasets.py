@@ -4,7 +4,7 @@ import os
 import shutil
 import pandas as pd
 import numpy as np
-from pandasgui.constants import LOCAL_DATA_DIR
+from pandasgui.constants import LOCAL_DATASET_DIR
 import logging
 logger = logging.getLogger(__name__)
 
@@ -50,15 +50,15 @@ def to_csv(df, path):
         return df.to_csv(path, encoding='UTF-8', index=False)
 
 for ix, name in enumerate(dataset_names):
-    local_data_path = os.path.join(LOCAL_DATA_DIR, f"{name}.csv")
-    os.makedirs(LOCAL_DATA_DIR, exist_ok=True)
+    local_data_path = os.path.join(LOCAL_DATASET_DIR, f"{name}.csv")
+    os.makedirs(LOCAL_DATASET_DIR, exist_ok=True)
     if os.path.exists(local_data_path):
         all_datasets[name] = read_csv(local_data_path)
     else:
         url = f"https://raw.githubusercontent.com/adamerose/datasets/master/{name}.csv"
         all_datasets[name] = read_csv(url)
         to_csv(all_datasets[name], local_data_path)
-        logger.info(f"Saved {url} to {LOCAL_DATA_DIR}")
+        logger.info(f"Saved {url} to {LOCAL_DATASET_DIR}")
 
 # Add the datasets to globals so they can be imported like `from pandasgui.datasets import iris`
 for name in all_datasets.keys():

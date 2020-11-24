@@ -186,10 +186,10 @@ def unique_name(name, existing_names):
 
 
 def delete_datasets():
-    from pandasgui.datasets import LOCAL_DATA_DIR
+    from pandasgui.datasets import LOCAL_DATASET_DIR
     import shutil
-    logger.info(f"Deleting sample dataset directory ({LOCAL_DATA_DIR})")
-    shutil.rmtree(LOCAL_DATA_DIR)
+    logger.info(f"Deleting sample dataset directory ({LOCAL_DATASET_DIR})")
+    shutil.rmtree(LOCAL_DATASET_DIR)
 
 
 event_lookup = {"0": "QEvent::None",

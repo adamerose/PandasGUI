@@ -174,17 +174,20 @@ class PandasGui(QtWidgets.QMainWindow):
             theme_menu.addAction(theme_action)
 
             # Set the default theme
-            if theme == "light":
+            if theme == self.store.settings.theme.value:
                 theme_action.trigger()
 
     @QtCore.pyqtSlot()
     def set_theme(self, name: str):
         if name == "classic":
             self.setStyleSheet("")
+            self.store.settings.theme.value = 'classic'
         elif name == "dark":
             self.setStyleSheet(qstylish.dark())
+            self.store.settings.theme.value = 'dark'
         elif name == "light":
             self.setStyleSheet(qstylish.light())
+            self.store.settings.theme.value = 'light'
 
 
     def dropEvent(self, e):

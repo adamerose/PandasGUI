@@ -8,12 +8,25 @@ import traceback
 from functools import wraps
 from datetime import datetime
 from pandasgui.utility import unique_name, in_interactive_console
+from pandasgui.constants import LOCAL_DATA_DIR
 import os
 import collections
 from enum import Enum
+import json
 
 import logging
+
 logger = logging.getLogger(__name__)
+
+# JSON file that stores persistent user preferences
+preferences_path = os.path.join(LOCAL_DATA_DIR, 'preferences.json')
+if not os.path.exists(preferences_path):
+    with open(preferences_path, 'w') as f:
+        json.dump({'theme': "light"}, f)
+
+with open(preferences_path) as f:
+    preferences = json.load(f)
+
 
 class DictLike:
     def __getitem__(self, key):
@@ -24,15 +37,27 @@ class DictLike:
 
 
 class Setting(DictLike):
-    def __init__(self, label, value, description, dtype):
+    def __init__(self, label, value, description, dtype, persist):
         self.label: str = label
         self.value: any = value
         self.description: str = description
         self.dtype: Union[type(str), type(bool), Enum] = dtype
+        self.persist: bool = persist
 
+    def __setattr__(self, key, value):
+        try:
+            if self.persist:
+                preferences[self.label] = value
+                with open(preferences_path, 'w') as f:
+                    json.dump(preferences, f)
+        except AttributeError:
+            # Get attribute error because of __setattr__ happening in __init__ before self.persist is set
+            pass
+
+        super().__setattr__(key, value)
 
 class Settings(DictLike):
-    def __init__(self, editable=False, style="Fusion", block=None):
+    def __init__(self, editable=False, style="Fusion", block=None, theme=preferences['theme']):
         if block is None:
             if in_interactive_console():
                 # Don't block if in an interactive console (so you can view GUI and still continue running commands)
@@ -41,20 +66,29 @@ class Settings(DictLike):
                 # If in a script, we need to block or the script will continue and finish without allowing GUI interaction
                 block = True
 
-        self.block = Setting(label="Block",
+        self.block = Setting(label="block",
                              value=block,
                              description="Should GUI block code execution until closed?",
-                             dtype=bool)
+                             dtype=bool,
+                             persist=False)
 
-        self.editable = Setting(label="Editable",
+        self.editable = Setting(label="editable",
                                 value=editable,
                                 description="Are table cells editable?",
-                                dtype=bool)
+                                dtype=bool,
+                                persist=False)
 
-        self.style = Setting(label="Style",
+        self.style = Setting(label="style",
                              value=style,
-                             description="PyQt UI style",
-                             dtype=Enum("StylesEnum", QtWidgets.QStyleFactory.keys()))
+                             description="PyQt app style",
+                             dtype=Enum("StylesEnum", QtWidgets.QStyleFactory.keys()),
+                             persist=False)
+
+        self.theme = Setting(label="theme",
+                             value=theme,
+                             description="UI theme",
+                             dtype=str,
+                             persist=True)
 
 
 @dataclass
