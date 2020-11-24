@@ -56,6 +56,7 @@ class Setting(DictLike):
 
         super().__setattr__(key, value)
 
+
 class Settings(DictLike):
     def __init__(self, editable=False, style="Fusion", block=None, theme=preferences['theme']):
         if block is None:
@@ -182,6 +183,7 @@ class PandasGuiDataFrame:
             for j in range(df_to_paste.shape[1]):
                 value = df_to_paste.iloc[i, j]
                 self.edit_data(top_row + i, left_col + j, value, skip_update=True)
+
         self.apply_filters()
         self.update()
 
@@ -260,7 +262,6 @@ class PandasGuiDataFrame:
         self.apply_filters()
 
     def apply_filters(self):
-
         df = self.dataframe_original
         for ix, filt in enumerate(self.filters):
             if filt.enabled and not filt.failed:
