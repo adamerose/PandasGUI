@@ -185,6 +185,18 @@ def unique_name(name, existing_names):
         return name
 
 
+# Take a df and rename duplicates by appending numbers
+def rename_duplicates(df):
+    new_columns = list(df.columns)
+    suffix = {key: 2 for key in set(new_columns)}
+    dup = pd.Series(new_columns).duplicated()
+    for ix, item in enumerate(new_columns):
+        if dup[ix]:
+            new_columns[ix] = item + f"_{suffix[item]}"
+            suffix[item] += 1
+    df.columns = new_columns
+
+
 def delete_datasets():
     from pandasgui.datasets import LOCAL_DATASET_DIR
     import shutil

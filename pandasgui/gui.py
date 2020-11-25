@@ -199,7 +199,7 @@ class PandasGui(QtWidgets.QMainWindow):
                 fpath_list.append(str(url.toLocalFile()))
 
             for fpath in fpath_list:
-                self.store.import_dataframe(fpath)
+                self.store.import_file(fpath)
         else:
             e.ignore()
 
@@ -243,7 +243,7 @@ class PandasGui(QtWidgets.QMainWindow):
         dialog = QtWidgets.QFileDialog()
         paths, _ = dialog.getOpenFileNames(filter="*.csv *.xlsx")
         for path in paths:
-            self.store.import_dataframe(path)
+            self.store.import_file(path)
 
     def export_dialog(self):
         dialog = QtWidgets.QFileDialog()

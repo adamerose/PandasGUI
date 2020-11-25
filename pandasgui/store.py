@@ -7,7 +7,7 @@ from PyQt5.QtCore import Qt
 import traceback
 from functools import wraps
 from datetime import datetime
-from pandasgui.utility import unique_name, in_interactive_console
+from pandasgui.utility import unique_name, in_interactive_console, rename_duplicates
 from pandasgui.constants import LOCAL_DATA_DIR
 import os
 import collections
@@ -302,6 +302,16 @@ class Store:
     def add_dataframe(self, pgdf: Union[DataFrame, PandasGuiDataFrame],
                       name: str = "Untitled"):
 
+        # Check for duplicate columns
+        if type(pgdf) == DataFrame:
+            df = pgdf
+        else:
+            df = pgdf.dataframe
+        if any(df.columns.duplicated()):
+            logger.warning(f"Automatically renamed duplicate columns: {set(df.columns[df.columns.duplicated()])}")
+            rename_duplicates(df)
+
+
         name = unique_name(name, self.get_dataframes().keys())
         pgdf = PandasGuiDataFrame.cast(pgdf)
         pgdf.settings = self.settings
@@ -325,7 +335,7 @@ class Store:
         self.navigator.setCurrentItem(item)
         self.navigator.apply_tree_settings()
 
-    def import_dataframe(self, path):
+    def import_file(self, path):
         if not os.path.isfile(path):
             logger.warning("Path is not a file: " + path)
         elif path.endswith(".csv"):
@@ -338,7 +348,6 @@ class Store:
             for sheet_name in df_dict.keys():
                 df_name = f"{filename} - {sheet_name}"
                 self.add_dataframe(df_dict[sheet_name], df_name)
-
         else:
             logger.warning("Can only import csv / xlsx. Invalid file: " + path)
 
