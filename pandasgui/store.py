@@ -145,36 +145,15 @@ class PandasGuiDataFrame:
 
         self.filters: List[Filter] = []
 
-    # Refresh PyQt models when the underlying pgdf is changed in anyway that needs to be reflected in the GUI
-    def update(self):
-        models = []
-        if self.dataframe_viewer is not None:
-            models += [self.dataframe_viewer.dataView.model(),
-                       self.dataframe_viewer.columnHeader.model(),
-                       self.dataframe_viewer.indexHeader.model(),
-                       self.dataframe_viewer.columnHeaderNames.model(),
-                       self.dataframe_viewer.indexHeaderNames.model(),
-                       ]
-
-        if self.filter_viewer is not None:
-            models += [self.filter_viewer.list_model,
-                       ]
-
-        for model in models:
-            model.beginResetModel()
-            model.endResetModel()
-
-        for view in [self.dataframe_viewer.columnHeader,
-                     self.dataframe_viewer.indexHeader]:
-            view.set_spans()
+    ###################################
+    # Editing cell data
 
     @track_history
-    def edit_data(self, row, col, value, skip_update=False):
+    def edit_data(self, row, col, value):
         # Not using iat here because it won't work with MultiIndex
         self.dataframe_original.at[self.dataframe.index[row], self.dataframe.columns[col]] = value
-        if not skip_update:
-            self.apply_filters()
-            self.update()
+        self.apply_filters_and_sorting()
+        self.update()
 
     @track_history
     def paste_data(self, top_row, left_col, df_to_paste):
@@ -182,10 +161,14 @@ class PandasGuiDataFrame:
         for i in range(df_to_paste.shape[0]):
             for j in range(df_to_paste.shape[1]):
                 value = df_to_paste.iloc[i, j]
-                self.edit_data(top_row + i, left_col + j, value, skip_update=True)
+                self.dataframe_original.at[self.dataframe.index[top_row + i],
+                                           self.dataframe.columns[left_col + j]] = value
 
-        self.apply_filters()
+        self.apply_filters_and_sorting()
         self.update()
+
+    ###################################
+    # Sorting
 
     @track_history
     def sort_column(self, ix: int):
@@ -238,30 +221,33 @@ class PandasGuiDataFrame:
         self.column_sorted = None
         self.update()
 
+    ###################################
+    # Filters
+
     @track_history
     def add_filter(self, expr: str, enabled=True):
         filt = Filter(expr=expr, enabled=enabled, failed=False)
         self.filters.append(filt)
-        self.apply_filters()
+        self.apply_filters_and_sorting()
 
     @track_history
     def remove_filter(self, index: int):
         self.filters.pop(index)
-        self.apply_filters()
+        self.apply_filters_and_sorting()
 
     @track_history
     def edit_filter(self, index: int, expr: str):
         filt = self.filters[index]
         filt.expr = expr
         filt.failed = False
-        self.apply_filters()
+        self.apply_filters_and_sorting()
 
     @track_history
     def toggle_filter(self, index: int):
         self.filters[index].enabled = not self.filters[index].enabled
-        self.apply_filters()
+        self.apply_filters_and_sorting()
 
-    def apply_filters(self):
+    def apply_filters_and_sorting(self):
         df = self.dataframe_original
         for ix, filt in enumerate(self.filters):
             if filt.enabled and not filt.failed:
@@ -270,8 +256,38 @@ class PandasGuiDataFrame:
                 except Exception as e:
                     self.filters[ix].failed = True
                     logger.exception(e)
+        if self.index_sorted is not None:
+            df = df.sort_index(level=self.index_sorted, ascending=self.sort_is_ascending, kind="mergesort")
+        if self.column_sorted is not None:
+            df = df.sort_values(df.columns[self.column_sorted], ascending=self.sort_is_ascending, kind="mergesort")
+
         self.dataframe = df
         self.update()
+
+    ###################################
+    # Other
+    # Refresh PyQt models when the underlying pgdf is changed in anyway that needs to be reflected in the GUI
+    def update(self):
+        models = []
+        if self.dataframe_viewer is not None:
+            models += [self.dataframe_viewer.dataView.model(),
+                       self.dataframe_viewer.columnHeader.model(),
+                       self.dataframe_viewer.indexHeader.model(),
+                       self.dataframe_viewer.columnHeaderNames.model(),
+                       self.dataframe_viewer.indexHeaderNames.model(),
+                       ]
+
+        if self.filter_viewer is not None:
+            models += [self.filter_viewer.list_model,
+                       ]
+
+        for model in models:
+            model.beginResetModel()
+            model.endResetModel()
+
+        for view in [self.dataframe_viewer.columnHeader,
+                     self.dataframe_viewer.indexHeader]:
+            view.set_spans()
 
     @staticmethod
     def cast(x: Union["PandasGuiDataFrame", pd.DataFrame, pd.Series, Iterable]):
@@ -308,9 +324,9 @@ class Store:
         else:
             df = pgdf.dataframe
         if any(df.columns.duplicated()):
-            logger.warning(f"Renamed duplicate column names in {name}: {list(set(df.columns[df.columns.duplicated()]))}")
+            logger.warning(
+                f"Renamed duplicate column names in {name}: {list(set(df.columns[df.columns.duplicated()]))}")
             rename_duplicates(df)
-
 
         name = unique_name(name, self.get_dataframes().keys())
         pgdf = PandasGuiDataFrame.cast(pgdf)
