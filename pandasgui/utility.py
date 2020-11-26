@@ -185,16 +185,36 @@ def unique_name(name, existing_names):
         return name
 
 
-# Take a df and rename duplicates by appending numbers
+# Take a df and rename duplicate columns by appending number suffixes
 def rename_duplicates(df):
-    new_columns = list(df.columns)
+    import copy
+    new_columns = df.columns.values
     suffix = {key: 2 for key in set(new_columns)}
     dup = pd.Series(new_columns).duplicated()
-    for ix, item in enumerate(new_columns):
-        if dup[ix]:
-            new_columns[ix] = item + f"_{suffix[item]}"
-            suffix[item] += 1
-    df.columns = new_columns
+
+    if type(df.columns) == pd.core.indexes.multi.MultiIndex:
+        # Need to be mutable, make it list instead of tuples
+        for i in range(len(new_columns)):
+            new_columns[i] = list(new_columns[i])
+        for ix, item in enumerate(new_columns):
+            item_orig = copy.copy(item)
+            if dup[ix]:
+                for level in range(len(new_columns[ix])):
+                    new_columns[ix][level] = new_columns[ix][level] + f"_{suffix[tuple(item_orig)]}"
+                suffix[tuple(item_orig)] += 1
+
+        # Convert back from list to tuples now that we're done mutating values
+        for i in range(len(new_columns)):
+            new_columns[i] = tuple(new_columns[i])
+
+        df.columns = pd.MultiIndex.from_tuples(new_columns)
+    # Not a MultiIndex
+    else:
+        for ix, item in enumerate(new_columns):
+            if dup[ix]:
+                new_columns[ix] = item + f"_{suffix[item]}"
+                suffix[item] += 1
+        df.columns = new_columns
 
 
 def delete_datasets():

@@ -308,7 +308,7 @@ class Store:
         else:
             df = pgdf.dataframe
         if any(df.columns.duplicated()):
-            logger.warning(f"Automatically renamed duplicate columns: {set(df.columns[df.columns.duplicated()])}")
+            logger.warning(f"Renamed duplicate column names in {name}: {list(set(df.columns[df.columns.duplicated()]))}")
             rename_duplicates(df)
 
 
