@@ -8,11 +8,11 @@ from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5.QtCore import Qt
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 # https://stackoverflow.com/a/64743807/3620725
 os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-logging --log-level=3"
-
 
 # Since pandasgui might be imported after other packages already created a QApplication,
 # we need to hack around this import restriction on QtWebEngineWidgets
@@ -50,17 +50,19 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
         self.setWindowTitle("Plotly Viewer")
 
     def set_figure(self, fig=None):
-        dark = self.store is not None and self.store.settings.theme.value=="dark"
 
         self.temp_file.seek(0)
 
         if fig is None:
             fig = go.Figure()
 
+        dark = self.store is not None and self.store.settings.theme.value == "dark"
         if dark:
-            fig.update_layout(template="plotly_dark")
+            fig.update_layout(template="plotly_dark", autosize=True)
         html = to_html(fig, config={"responsive": True})
-        html += "\n<style>body{margin: 0;}</style>"
+        html += "\n<style>body{margin: 0;}" \
+                "\n.plot-container,.main-svg,.svg-container{width:100% !important; height:100% !important;}</style>"
+
         self.temp_file.write(html)
         self.temp_file.truncate()
         self.temp_file.seek(0)
@@ -82,6 +84,7 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
         if path:
             download.setPath(path)
             download.accept()
+
 
 if __name__ == "__main__":
     # Create a QtWidgets.QApplication instance or use the existing one if it exists

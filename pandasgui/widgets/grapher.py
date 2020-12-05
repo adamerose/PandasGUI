@@ -34,11 +34,12 @@ class Grapher(QtWidgets.QWidget):
         # Dropdown to select plot type
         self.plot_type_picker = QtWidgets.QListWidget()
         self.plot_type_picker.setViewMode(self.plot_type_picker.IconMode)
-        self.plot_type_picker.setWordWrap(True)
+        self.plot_type_picker.setWordWrap(False)
         self.plot_type_picker.setSpacing(20)
         self.plot_type_picker.setResizeMode(self.plot_type_picker.Adjust)
         self.plot_type_picker.setDragDropMode(self.plot_type_picker.NoDragDrop)
-
+        self.plot_type_picker.setStyleSheet("QListView::item {border: 2px solid transparent; padding: 3px;}"
+                                            "QListView::item:selected {background: none; border: 2px solid #777;}")
 
         self.plot_type_picker.sizeHint = lambda: QtCore.QSize(500, 250)
 
