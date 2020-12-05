@@ -49,7 +49,7 @@ class Grapher(QtWidgets.QWidget):
             self.plot_type_picker.addItem(item)
 
         # UI setup
-        self.figure_viewer = PlotlyViewer()
+        self.figure_viewer = PlotlyViewer(store=self.pgdf.store)
         self.figure_viewer.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
                                          QtWidgets.QSizePolicy.Expanding)
 

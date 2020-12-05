@@ -3,6 +3,7 @@ import sys
 import tempfile
 
 from plotly.io import to_html
+import plotly.graph_objs as go
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5.QtCore import Qt
 
@@ -33,9 +34,9 @@ except ImportError as e:
 
 
 class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
-    def __init__(self, fig=None):
+    def __init__(self, fig=None, store=None):
         super().__init__()
-
+        self.store = store
         self.page().profile().downloadRequested.connect(self.on_downloadRequested)
 
         # https://stackoverflow.com/a/8577226/3620725
@@ -45,16 +46,22 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
         self.resize(700, 600)
         self.setWindowTitle("Plotly Viewer")
 
-
-
     def set_figure(self, fig=None):
+        dark = self.store is not None and self.store.settings.theme.value=="dark"
+
         self.temp_file.seek(0)
 
-        if fig:
-            self.temp_file.write(to_html(fig, config={"responsive": True}))
-        else:
-            self.temp_file.write("")
+        if fig is None:
+            fig = go.Figure()
 
+        if dark:
+            fig.update_layout(template="plotly_dark")
+        html = to_html(fig, config={"responsive": True})
+        if dark:
+            html += "\n<style>body{margin: 0; background-color: #111111;}</style>"
+        else:
+            html += "\n<style>body{margin: 0; background-color: white;}</style>"
+        self.temp_file.write(html)
         self.temp_file.truncate()
         self.temp_file.seek(0)
         self.load(QtCore.QUrl.fromLocalFile(self.temp_file.name))

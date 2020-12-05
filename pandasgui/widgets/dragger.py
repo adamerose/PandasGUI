@@ -27,6 +27,7 @@ class OptionListArg(Arg):
     values: List[str]
 
 
+# This schema is made up of multiple args, this defines all the drop zones available in the Dragger
 @dataclass
 class Schema:
     name: str
