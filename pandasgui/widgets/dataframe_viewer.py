@@ -445,9 +445,9 @@ class HeaderModel(QtCore.QAbstractTableModel):
 
         if role == QtCore.Qt.DecorationRole:
             if self.pgdf.sort_is_ascending:
-                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "resources/images/sort-ascending.png"))
+                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "resources/images/sort-ascending.svg"))
             else:
-                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "resources/images/sort-descending.png"))
+                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "resources/images/sort-descending.svg"))
 
             if col == self.pgdf.column_sorted and row == self.rowCount() - 1 and self.orientation == Qt.Horizontal:
                 return icon
@@ -889,9 +889,9 @@ class HeaderNamesModel(QtCore.QAbstractTableModel):
 
         if role == QtCore.Qt.DecorationRole:
             if self.pgdf.sort_is_ascending:
-                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "resources/images/sort-ascending.png"))
+                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "resources/images/sort-ascending.svg"))
             else:
-                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "resources/images/sort-descending.png"))
+                icon = QtGui.QIcon(os.path.join(pandasgui.__path__[0], "resources/images/sort-descending.svg"))
 
             if col == self.pgdf.index_sorted and self.orientation == Qt.Vertical:
                 return icon

@@ -39,6 +39,9 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
         self.store = store
         self.page().profile().downloadRequested.connect(self.on_downloadRequested)
 
+        # Fix scrollbar sometimes disappearing after Plotly autosizes and leaving behind white space
+        self.settings().setAttribute(self.settings().ShowScrollBars, False)
+
         # https://stackoverflow.com/a/8577226/3620725
         self.temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False)
         self.set_figure(fig)
@@ -57,10 +60,7 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
         if dark:
             fig.update_layout(template="plotly_dark")
         html = to_html(fig, config={"responsive": True})
-        if dark:
-            html += "\n<style>body{margin: 0; background-color: #111111;}</style>"
-        else:
-            html += "\n<style>body{margin: 0; background-color: white;}</style>"
+        html += "\n<style>body{margin: 0;}</style>"
         self.temp_file.write(html)
         self.temp_file.truncate()
         self.temp_file.seek(0)

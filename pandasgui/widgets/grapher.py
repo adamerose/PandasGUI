@@ -309,7 +309,7 @@ schemas = [Schema(name='histogram',
                         ],
                   label='Word Cloud',
                   function=word_cloud,
-                  icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/plotly/word-cloud.png'))
+                  icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/plotly/word-cloud.svg'))
 
            ]
 

@@ -458,6 +458,10 @@ QMenu {
     background-color: transparent; }
     QMenu::indicator:selected {
       background-color: #3d9ae0; }
+  QMenu::separator {
+    height: 1px;
+    background: gray;
+    margin: 5px; }
 
 QToolButton,
 QComboBox,
@@ -504,17 +508,17 @@ QSizeGrip {
   height: 12px;
   image: url(":/resources/dark/window_grip.svg"); }
 
-QToolBar::handle:horizontal {
-  image: url(":/resources/dark/toolbar_move_horizontal.svg"); }
-
-QToolBar::handle:vertical {
-  image: url(":/resources/dark/toolbar_move_vertical.svg"); }
-
 QToolBar::separator:horizontal {
   image: url(":/resources/dark/toolbar_separator_horizontal.svg"); }
 
 QToolBar::separator:vertical {
   image: url(":/resources/dark/toolbar_separator_vertical.svg"); }
+
+QToolBar::separator:horizontal {
+  image: url(":/resources/dark/toolbar_move_horizontal.svg"); }
+
+QToolBar::separator:vertical {
+  image: url(":/resources/dark/toolbar_move_vertical.svg"); }
 
 QAbstractSpinBox::up-arrow {
   image: url(":/resources/dark/arrow_up.svg"); }
