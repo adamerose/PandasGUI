@@ -224,6 +224,11 @@ def delete_datasets():
     shutil.rmtree(LOCAL_DATASET_DIR)
 
 
+def test_logging():
+    logger.debug("debug")
+    logger.info("info")
+    logger.warning("warning")
+    logger.error("error")
 event_lookup = {"0": "QEvent::None",
                 "114": "QEvent::ActionAdded",
                 "113": "QEvent::ActionChanged",

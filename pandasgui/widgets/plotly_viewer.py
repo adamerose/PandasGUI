@@ -21,7 +21,7 @@ try:
     from PyQt5 import QtWebEngineWidgets
 except ImportError as e:
     if e.msg == "QtWebEngineWidgets must be imported before a QCoreApplication instance is created":
-        logger.info("Reinitialized existing QApplication instance to allow import of QtWebEngineWidgets.")
+        logger.warning("Reinitialized existing QApplication to allow import of QtWebEngineWidgets. This may cause problems. To avoid this, import pandasgui or PyQt5.QtWebEngineWidgets before a QApplication is created.")
 
         app = QtWidgets.QApplication.instance()
         app.quit()
