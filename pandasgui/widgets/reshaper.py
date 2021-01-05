@@ -125,7 +125,7 @@ schemas = [
     Schema(name="pivot",
            label="Pivot",
            function=pivot,
-           icon_path=os.path.join(pandasgui.__path__[0], "resources/images/pivot.svg"),
+           icon_path=os.path.join(pandasgui.__path__[0], "resources/images/draggers/pivot.svg"),
            args=[
                ColumnArg(arg_name="index"),
                ColumnArg(arg_name="columns"),
@@ -135,7 +135,7 @@ schemas = [
     Schema(name="melt",
            label="Melt",
            function=melt,
-           icon_path=os.path.join(pandasgui.__path__[0], "resources/images/stack.svg"),
+           icon_path=os.path.join(pandasgui.__path__[0], "resources/images/draggers/stack.svg"),
            args=[
                ColumnArg(arg_name="id_vars"),
                ColumnArg(arg_name="value_vars"),
@@ -154,3 +154,5 @@ if __name__ == "__main__":
     gb2.show()
 
     app.exec_()
+
+
