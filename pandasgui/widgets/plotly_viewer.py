@@ -17,20 +17,21 @@ os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-logging --log-level=3"
 # Since pandasgui might be imported after other packages already created a QApplication,
 # we need to hack around this import restriction on QtWebEngineWidgets
 # https://stackoverflow.com/a/57436077/3620725
-try:
-    from PyQt5 import QtWebEngineWidgets
-except ImportError as e:
-    if e.msg == "QtWebEngineWidgets must be imported before a QCoreApplication instance is created":
-        logger.warning("Reinitialized existing QApplication to allow import of QtWebEngineWidgets. This may cause problems. To avoid this, import pandasgui or PyQt5.QtWebEngineWidgets before a QApplication is created.")
 
-        app = QtWidgets.QApplication.instance()
+if "PyQt5.QtWebEngineWidgets" not in sys.modules:
+    app = QtWidgets.QApplication.instance()
+
+    if app is None:
+        from PyQt5 import QtWebEngineWidgets
+    else:
+        logger.warning("Reinitializing existing QApplication to allow import of QtWebEngineWidgets. "
+                       "This may cause problems. "
+                       "To avoid this, import pandasgui or PyQt5.QtWebEngineWidgets before a QApplication is created.")
         app.quit()
         sip.delete(app)
         from PyQt5 import QtWebEngineWidgets
 
-        app.__init__(sys.argv)
-    else:
-        raise e
+        app.__init__(sys.argv + ["--ignore-gpu-blacklist", "--enable-gpu-rasterization"])
 
 
 class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
@@ -41,6 +42,7 @@ class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
 
         # Fix scrollbar sometimes disappearing after Plotly autosizes and leaving behind white space
         self.settings().setAttribute(self.settings().ShowScrollBars, False)
+        self.settings().setAttribute(QtWebEngineWidgets.QWebEngineSettings.WebGLEnabled, True)
 
         # https://stackoverflow.com/a/8577226/3620725
         self.temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False)
