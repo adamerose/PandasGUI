@@ -23,10 +23,11 @@ setup(
         "PyQt5-sip",
         "PyQtWebEngine",
         "plotly",
+        "wordcloud",
         "setuptools",
         "appdirs",
         "dacite",
         "pynput",
-        "IPython"
+        "IPython",
     ],
 )
