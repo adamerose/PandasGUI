@@ -7,3 +7,4 @@ setuptools
 appdirs
 dacite
 IPython
+wordcloud
