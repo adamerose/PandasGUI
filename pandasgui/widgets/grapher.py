@@ -155,7 +155,7 @@ def clear_layout(layout):
 
 def line(**kwargs):
     key_cols = []
-    for arg in [a for a in ['x', 'color', 'facet_row', 'facet_col'] if a in kwargs.keys()]:
+    for arg in [a for a in ['x', 'color', 'line_dash', 'line_group', 'facet_row', 'facet_col'] if a in kwargs.keys()]:
         key_cols_subset = kwargs[arg]
         if type(key_cols_subset) == list:
             key_cols += key_cols_subset
@@ -226,6 +226,8 @@ schemas = [Schema(name='histogram',
                   args=[ColumnArg(arg_name='x'),
                         ColumnArg(arg_name='y'),
                         ColumnArg(arg_name='color'),
+                        ColumnArg(arg_name='symbol'),
+                        ColumnArg(arg_name='size'),
                         ColumnArg(arg_name='facet_row'),
                         ColumnArg(arg_name='facet_col')],
                   label='Scatter',
@@ -235,6 +237,8 @@ schemas = [Schema(name='histogram',
                   args=[ColumnArg(arg_name='x'),
                         ColumnArg(arg_name='y'),
                         ColumnArg(arg_name='color'),
+                        ColumnArg(arg_name='line_dash'),
+                        ColumnArg(arg_name='line_group'),
                         ColumnArg(arg_name='facet_row'),
                         ColumnArg(arg_name='facet_col')],
                   label='Line',
