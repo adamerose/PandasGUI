@@ -432,16 +432,16 @@ class HeaderModel(QtCore.QAbstractTableModel):
             if self.orientation == Qt.Horizontal:
 
                 if isinstance(self.pgdf.dataframe.columns, pd.MultiIndex):
-                    return str(self.pgdf.dataframe.columns.values[col][row])
+                    return str(self.pgdf.dataframe.columns[col][row])
                 else:
-                    return str(self.pgdf.dataframe.columns.values[col])
+                    return str(self.pgdf.dataframe.columns[col])
 
             elif self.orientation == Qt.Vertical:
 
                 if isinstance(self.pgdf.dataframe.index, pd.MultiIndex):
-                    return str(self.pgdf.dataframe.index.values[row][col])
+                    return str(self.pgdf.dataframe.index[row][col])
                 else:
-                    return str(self.pgdf.dataframe.index.values[row])
+                    return str(self.pgdf.dataframe.index[row])
 
         if role == QtCore.Qt.DecorationRole:
             if self.pgdf.sort_is_ascending:
