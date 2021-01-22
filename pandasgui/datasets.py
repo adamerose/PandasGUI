@@ -20,6 +20,7 @@ __all__ = ["all_datasets",
            "titanic",
            "gapminder",
            "stockdata",
+           "trump_tweets",
            "mi_manufacturing"]
 
 dataset_names = ["pokemon",
@@ -31,6 +32,7 @@ dataset_names = ["pokemon",
                  "titanic",
                  "gapminder",
                  "stockdata",
+           "trump_tweets",
                  "mi_manufacturing"]
 
 all_datasets = {}
