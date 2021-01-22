@@ -318,21 +318,31 @@ class Store:
     def add_dataframe(self, pgdf: Union[DataFrame, PandasGuiDataFrame],
                       name: str = "Untitled"):
 
-        # Check for duplicate columns
-        if type(pgdf) == DataFrame:
-            df = pgdf
-        else:
-            df = pgdf.dataframe
-        if any(df.columns.duplicated()):
-            logger.warning(
-                f"Renamed duplicate column names in {name}: {list(set(df.columns[df.columns.duplicated()]))}")
-            rename_duplicates(df)
-
         name = unique_name(name, self.get_dataframes().keys())
         pgdf = PandasGuiDataFrame.cast(pgdf)
         pgdf.settings = self.settings
         pgdf.name = name
         pgdf.store = self
+
+        df = pgdf.dataframe
+
+        # Remove non-string column names
+        if issubclass(type(df.columns), pd.core.indexes.multi.MultiIndex):
+            levels = df.columns.levels
+            for level in levels:
+                if any([type(val) != str for val in level]):
+                    logger.warning(f"In {name}, converted MultiIndex level values to string in: {str(level)}")
+                    df.columns = df.columns.set_levels([[str(val) for val in level] for level in levels])
+        else:
+            for i, col in enumerate(df.columns):
+                if type(col) != str:
+                    logger.warning(f"In {name}, converted column name to string: {str(col)}")
+                    df.rename(columns={col: str(col)}, inplace=True)
+
+        # Check for duplicate columns
+        if any(df.columns.duplicated()):
+            logger.warning(f"In {name}, renamed duplicate columns: {list(set(df.columns[df.columns.duplicated()]))}")
+            rename_duplicates(df)
 
         self.data.append(pgdf)
 
