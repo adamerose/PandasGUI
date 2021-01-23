@@ -144,7 +144,7 @@ class FindToolbar(QtWidgets.QToolBar):
         current_pgdf = self.parent().store.data[self.parent().stacked_widget.currentIndex()]
         current_dataView = current_pgdf.dataframe_viewer.dataView
         current_model = current_dataView.model()
-        df = current_pgdf.dataframe
+        df = current_pgdf.df
 
         # clear matches and selection from last search results
         if self.findThread:

@@ -1,3 +1,4 @@
+import datetime
 import sys
 from typing import NewType, Union, List, Callable, Iterable
 from dataclasses import dataclass
@@ -10,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
 import pandas as pd
-from pandasgui.store import Store, PandasGuiDataFrame
+from pandasgui.store import Store, PandasGuiDataFrame, HistoryItem
 
 from pandasgui.utility import flatten_df
 from pandasgui.widgets.plotly_viewer import PlotlyViewer
@@ -18,6 +19,7 @@ from pandasgui.widgets.spinner import Spinner
 from pandasgui.widgets.dragger import Dragger, ColumnArg, Schema
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -54,7 +56,7 @@ class Grapher(QtWidgets.QWidget):
         self.figure_viewer.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
                                          QtWidgets.QSizePolicy.Expanding)
 
-        df = flatten_df(self.pgdf.dataframe)
+        df = flatten_df(self.pgdf.df)
         self.dragger = Dragger(sources=df.columns, destinations=[],
                                source_types=df.dtypes.values.astype(str))
 
@@ -97,7 +99,7 @@ class Grapher(QtWidgets.QWidget):
     def on_dragger_finished(self):
         self.spinner.start()
 
-        df = flatten_df(self.pgdf.dataframe)
+        df = flatten_df(self.pgdf.df)
         kwargs = {"data_frame": df}
         for key, val in self.dragger.get_data().items():
             if type(val) == list and len(val) == 0:
@@ -110,6 +112,18 @@ class Grapher(QtWidgets.QWidget):
                 kwargs[key] = val
 
         func = self.current_schema.function
+
+        history_item = HistoryItem(
+            name=self.current_schema.name,
+            func=func,
+            args=(),
+            kwargs=kwargs,
+            time=datetime.datetime.now(),
+            code=""
+        )
+
+        self.pgdf.add_code("CODE PLACEHOLDER", history_item)
+
         self.current_worker = Worker(func, kwargs)
         self.current_worker.finished.connect(self.worker_callback)
         self.current_worker.finished.connect(self.current_worker.deleteLater)

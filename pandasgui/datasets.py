@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 from pandasgui.constants import LOCAL_DATASET_DIR
 import logging
+
 logger = logging.getLogger(__name__)
 
 __all__ = ["all_datasets",
@@ -32,7 +33,7 @@ dataset_names = ["pokemon",
                  "titanic",
                  "gapminder",
                  "stockdata",
-           "trump_tweets",
+                 "trump_tweets",
                  "mi_manufacturing"]
 
 all_datasets = {}
@@ -50,6 +51,7 @@ def to_csv(df, path):
         return df.to_csv(path, encoding='UTF-8')
     else:
         return df.to_csv(path, encoding='UTF-8', index=False)
+
 
 for ix, name in enumerate(dataset_names):
     local_data_path = os.path.join(LOCAL_DATASET_DIR, f"{name}.csv")

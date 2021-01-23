@@ -86,21 +86,9 @@ class DataFrameViewer(QtWidgets.QWidget):
         self.columnHeader.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding)
 
     def set_styles(self):
-
         for item in [self.dataView, self.columnHeader, self.indexHeader, self.indexHeaderNames, self.columnHeaderNames]:
             item.setContentsMargins(0, 0, 0, 0)
             # item.setItemDelegate(NoFocusDelegate())
-
-        # Style table data cells
-        # self.dataView.setStyleSheet(self.dataView.styleSheet() + "")
-
-        # # Style header cells
-        # for header in [self.columnHeader, self.indexHeader]:
-        #     header.setStyleSheet(header.styleSheet() + ";")
-
-        # # Style header level name labels
-        # for header_label in [self.indexHeaderNames, self.columnHeaderNames]:
-        #     header_label.setStyleSheet(header_label.styleSheet() + "")
 
     def __reduce__(self):
         # This is so dataclasses.asdict doesn't complain about this being unpicklable
@@ -236,10 +224,10 @@ class DataTableModel(QtCore.QAbstractTableModel):
         pass
 
     def columnCount(self, parent=None):
-        return self.pgdf.dataframe.columns.shape[0]
+        return self.pgdf.df.columns.shape[0]
 
     def rowCount(self, parent=None):
-        return len(self.pgdf.dataframe)
+        return len(self.pgdf.df)
 
     # Returns the data from the DataFrame
     def data(self, index, role=QtCore.Qt.DisplayRole):
@@ -250,7 +238,7 @@ class DataTableModel(QtCore.QAbstractTableModel):
         ):
             row = index.row()
             col = index.column()
-            cell = self.pgdf.dataframe.iloc[row, col]
+            cell = self.pgdf.df.iloc[row, col]
 
             # Need to check type since a cell might contain a list or Series, then .isna returns a Series not a bool
             cell_is_na = pd.isna(cell)
@@ -267,7 +255,7 @@ class DataTableModel(QtCore.QAbstractTableModel):
         elif role == QtCore.Qt.ToolTipRole:
             row = index.row()
             col = index.column()
-            cell = self.pgdf.dataframe.iloc[row, col]
+            cell = self.pgdf.df.iloc[row, col]
 
             return str(cell)
 
@@ -354,7 +342,7 @@ class DataTableView(QtWidgets.QTableView):
         rows = [ix.row() for ix in indexes]
         cols = [ix.column() for ix in indexes]
 
-        df = self.pgdf.dataframe.iloc[min(rows): max(rows) + 1, min(cols): max(cols) + 1]
+        df = self.pgdf.df.iloc[min(rows): max(rows) + 1, min(cols): max(cols) + 1]
 
         # Special case for single-cell copy since df.to_clipboard appends extra newline
         if df.shape == (1, 1):
@@ -413,15 +401,15 @@ class HeaderModel(QtCore.QAbstractTableModel):
 
     def columnCount(self, parent=None):
         if self.orientation == Qt.Horizontal:
-            return self.pgdf.dataframe.columns.shape[0]
+            return self.pgdf.df.columns.shape[0]
         else:  # Vertical
-            return self.pgdf.dataframe.index.nlevels
+            return self.pgdf.df.index.nlevels
 
     def rowCount(self, parent=None):
         if self.orientation == Qt.Horizontal:
-            return self.pgdf.dataframe.columns.nlevels
+            return self.pgdf.df.columns.nlevels
         elif self.orientation == Qt.Vertical:
-            return self.pgdf.dataframe.index.shape[0]
+            return self.pgdf.df.index.shape[0]
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
         row = index.row()
@@ -431,17 +419,17 @@ class HeaderModel(QtCore.QAbstractTableModel):
 
             if self.orientation == Qt.Horizontal:
 
-                if isinstance(self.pgdf.dataframe.columns, pd.MultiIndex):
-                    return str(self.pgdf.dataframe.columns[col][row])
+                if isinstance(self.pgdf.df.columns, pd.MultiIndex):
+                    return str(self.pgdf.df.columns[col][row])
                 else:
-                    return str(self.pgdf.dataframe.columns[col])
+                    return str(self.pgdf.df.columns[col])
 
             elif self.orientation == Qt.Vertical:
 
-                if isinstance(self.pgdf.dataframe.index, pd.MultiIndex):
-                    return str(self.pgdf.dataframe.index[row][col])
+                if isinstance(self.pgdf.df.index, pd.MultiIndex):
+                    return str(self.pgdf.df.index[row][col])
                 else:
-                    return str(self.pgdf.dataframe.index[row])
+                    return str(self.pgdf.df.index[row])
 
         if role == QtCore.Qt.DecorationRole:
             if self.pgdf.sort_is_ascending:
@@ -457,15 +445,15 @@ class HeaderModel(QtCore.QAbstractTableModel):
         if role in [QtCore.Qt.DisplayRole, QtCore.Qt.ToolTipRole]:
 
             if self.orientation == Qt.Horizontal and orientation == Qt.Vertical:
-                if isinstance(self.pgdf.dataframe.columns, pd.MultiIndex):
-                    return str(self.pgdf.dataframe.columns.names[section])
+                if isinstance(self.pgdf.df.columns, pd.MultiIndex):
+                    return str(self.pgdf.df.columns.names[section])
                 else:
-                    return str(self.pgdf.dataframe.columns.name)
+                    return str(self.pgdf.df.columns.name)
             elif self.orientation == Qt.Vertical and orientation == Qt.Horizontal:
-                if isinstance(self.pgdf.dataframe.index, pd.MultiIndex):
-                    return str(self.pgdf.dataframe.index.names[section])
+                if isinstance(self.pgdf.df.index, pd.MultiIndex):
+                    return str(self.pgdf.df.index.names[section])
                 else:
-                    return str(self.pgdf.dataframe.index.name)
+                    return str(self.pgdf.df.index.name)
             else:
                 return None  # These cells should be hidden anyways
 
@@ -558,7 +546,7 @@ class HeaderView(QtWidgets.QTableView):
                 selection = self.selectionModel().selection()
 
                 # Removes the higher levels so that only the lowest level of the header affects the data table selection
-                last_row_ix = self.pgdf.dataframe.columns.nlevels - 1
+                last_row_ix = self.pgdf.df.columns.nlevels - 1
                 last_col_ix = self.model().columnCount() - 1
                 higher_levels = QtCore.QItemSelection(
                     self.model().index(0, 0),
@@ -576,7 +564,7 @@ class HeaderView(QtWidgets.QTableView):
                 selection = self.selectionModel().selection()
 
                 last_row_ix = self.model().rowCount() - 1
-                last_col_ix = self.pgdf.dataframe.index.nlevels - 1
+                last_col_ix = self.pgdf.df.index.nlevels - 1
                 higher_levels = QtCore.QItemSelection(
                     self.model().index(0, 0),
                     self.model().index(last_row_ix, last_col_ix - 1),
@@ -595,10 +583,10 @@ class HeaderView(QtWidgets.QTableView):
     # This should happen after every selection change
     def selectAbove(self):
         if self.orientation == Qt.Horizontal:
-            if self.pgdf.dataframe.columns.nlevels == 1:
+            if self.pgdf.df.columns.nlevels == 1:
                 return
         else:
-            if self.pgdf.dataframe.index.nlevels == 1:
+            if self.pgdf.df.index.nlevels == 1:
                 return
 
         for ix in self.selectedIndexes():
@@ -640,7 +628,7 @@ class HeaderView(QtWidgets.QTableView):
     # This sets spans to group together adjacent cells with the same values
     def set_spans(self):
 
-        df = self.pgdf.dataframe
+        df = self.pgdf.df
         self.clearSpans()
         # Find spans for horizontal HeaderView
         if self.orientation == Qt.Horizontal:
@@ -861,11 +849,11 @@ class HeaderNamesModel(QtCore.QAbstractTableModel):
         if self.orientation == Qt.Horizontal:
             return 1
         elif self.orientation == Qt.Vertical:
-            return self.pgdf.dataframe.index.nlevels
+            return self.pgdf.df.index.nlevels
 
     def rowCount(self, parent=None):
         if self.orientation == Qt.Horizontal:
-            return self.pgdf.dataframe.columns.nlevels
+            return self.pgdf.df.columns.nlevels
         elif self.orientation == Qt.Vertical:
             return 1
 
@@ -876,13 +864,13 @@ class HeaderNamesModel(QtCore.QAbstractTableModel):
         if role == QtCore.Qt.DisplayRole or role == QtCore.Qt.ToolTipRole:
 
             if self.orientation == Qt.Horizontal:
-                val = self.pgdf.dataframe.columns.names[row]
+                val = self.pgdf.df.columns.names[row]
                 if val is None:
                     val = ""
                 return str(val)
 
             elif self.orientation == Qt.Vertical:
-                val = self.pgdf.dataframe.index.names[col]
+                val = self.pgdf.df.index.names[col]
                 if val is None:
                     val = "index"
                 return str(val)
@@ -954,7 +942,7 @@ class HeaderNamesView(QtWidgets.QTableView):
 
     def columnWidth(self, column: int) -> int:
         if self.orientation == Qt.Horizontal:
-            if all(name is None for name in self.pgdf.dataframe.columns.names):
+            if all(name is None for name in self.pgdf.df.columns.names):
                 return 0
             else:
                 return super().columnWidth(column)

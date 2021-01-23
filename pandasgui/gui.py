@@ -10,14 +10,16 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
 from pandasgui.store import Store, PandasGuiDataFrame
-from pandasgui.utility import fix_ipython, fix_pyqt, as_dict, delete_datasets
+from pandasgui.utility import fix_ipython, fix_pyqt, as_dict, delete_datasets, resize_widget
 from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
 from pandasgui.widgets.find_toolbar import FindToolbar
 from pandasgui.widgets.json_viewer import JsonViewer
 from pandasgui.widgets.navigator import Navigator
 from pandasgui.themes import qstylish
+from pandasgui.widgets.python_highlighter import PythonHighlighter
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -79,8 +81,7 @@ class PandasGui(QtWidgets.QMainWindow):
 
     # Create and add all widgets to GUI.
     def init_ui(self):
-        self.resize(QtCore.QSize(int(0.7 * QtWidgets.QDesktopWidget().screenGeometry().width()),
-                                 int(0.7 * QtWidgets.QDesktopWidget().screenGeometry().height())))
+        resize_widget(self, 0.7, 0.7)
 
         # Center window on screen
         screen = QtWidgets.QDesktopWidget().screenGeometry()
@@ -193,6 +194,19 @@ class PandasGui(QtWidgets.QMainWindow):
             self.setStyleSheet(qstylish.light())
             self.store.settings.theme.value = 'light'
 
+    def code_export(self):
+        code_history = self.store.selected_pgdf.code_export()
+        self.code_export_dialog = QtWidgets.QDialog(self)
+        layout = QtWidgets.QVBoxLayout()
+        textbox = QtWidgets.QPlainTextEdit()
+        highlight = PythonHighlighter(textbox.document(), dark=self.store.selected_pgdf.settings.theme.value == 'dark')
+        textbox.setPlainText(code_history)
+        textbox.setReadOnly(True)
+        textbox.setLineWrapMode(textbox.NoWrap)
+        layout.addWidget(textbox)
+        resize_widget(self.code_export_dialog, 0.5, 0.5)
+        self.code_export_dialog.setLayout(layout)
+        self.code_export_dialog.show()
 
     def dropEvent(self, e):
         if e.mimeData().hasUrls:
@@ -253,12 +267,11 @@ class PandasGui(QtWidgets.QMainWindow):
         dialog = QtWidgets.QFileDialog()
         pgdf = self.store.selected_pgdf
         path, _ = dialog.getSaveFileName(directory=pgdf.name, filter="*.csv")
-        pgdf.dataframe.to_csv(path, index=False)
+        pgdf.df.to_csv(path, index=False)
 
     def import_from_clipboard(self):
         df = pd.read_clipboard()
         self.store.add_dataframe(df)
-
 
     def closeEvent(self, e: QtGui.QCloseEvent) -> None:
         refs.remove(self)

@@ -1,3 +1,4 @@
+import textwrap
 from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Union, Iterable
 import pandas as pd
@@ -7,13 +8,13 @@ from PyQt5.QtCore import Qt
 import traceback
 from functools import wraps
 from datetime import datetime
-from pandasgui.utility import unique_name, in_interactive_console, rename_duplicates
+from pandasgui.utility import unique_name, in_interactive_console, rename_duplicates, autolog
 from pandasgui.constants import LOCAL_DATA_DIR
 import os
 import collections
 from enum import Enum
 import json
-
+import inspect
 import logging
 
 logger = logging.getLogger(__name__)
@@ -102,35 +103,63 @@ class Filter:
 @dataclass
 class HistoryItem:
     name: str
+    func: callable
     args: tuple
     kwargs: dict
     time: str
+    code: str
+
+    def __init__(self, name, func, args, kwargs, time=None, code=""):
+        if time is None:
+            time = datetime.now().strftime("%H:%M:%S")
+
+        self.name = name
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+        self.time = time
+        self.code = code
 
 
 def track_history(func):
+    """
+    This keeps track of all actions that modify the DataFrames and other important actions like plotting.
+    Any functions that modify the DataFrame
+    """
+
     @wraps(func)
-    def wrapper(pgdf, *args, **kwargs):
+    def tracked_func(pgdf, *args, **kwargs):
         history_item = HistoryItem(name=func.__name__,
+                                   func=func,
                                    args=args,
-                                   kwargs=kwargs,
-                                   time=datetime.now().strftime("%H:%M:%S"))
-        pgdf.history.append(history_item)
+                                   kwargs=kwargs)
 
-        return func(pgdf, *args, **kwargs)
+        pgdf.add_history_item(history_item)
 
-    return wrapper
+        pgdf.current_history_item = history_item
+        return_val = func(pgdf, *args, **kwargs)
+        pgdf.current_history_item = None
+
+        return return_val
+
+    return tracked_func
 
 
 class PandasGuiDataFrame:
+    """
+    All methods that modify the data should modify self.df_unfiltered, then self.df gets computed from that
+    """
+
     def __init__(self, df: DataFrame, name: str = 'Untitled'):
         super().__init__()
         df = df.copy()
 
-        self.dataframe = df
-        self.dataframe_original = df
+        self.df: DataFrame = df
+        self.df_unfiltered: DataFrame = df
         self.name = name
 
         self.history: List[HistoryItem] = []
+        self.history_imports: List[str] = ["import pandas as pd"]
 
         # References to other object instances that may be assigned later
         self.settings: Settings = Settings()
@@ -144,16 +173,83 @@ class PandasGuiDataFrame:
         self.sort_is_ascending: Union[bool, None] = None
 
         self.filters: List[Filter] = []
+        self.filtered_index_map = df.reset_index().index
+
+    ###################################
+    # Code history
+
+    def code_export(self):
+        code_history = ""
+
+        # Add line to define df
+        code_history += inspect.cleandoc(f"""
+                # 'df' refers to the DataFrame passed into 'pandasgui.show'. Omit the line below if it is already defined.
+                import pandas as pd
+                from numpy import nan
+                df = pd.DataFrame({self.df_unfiltered.to_dict()})
+                """) + '\n\n'
+
+        # Add imports to setup
+        code_history += '\n'.join(self.history_imports) + '\n\n'
+
+        for history_item in self.history:
+            code_history += history_item.code
+            code_history += "\n\n"
+
+        if any([filt.enabled for filt in self.filters]):
+            code_history += f"# Filters\n"
+        for filt in self.filters:
+            if filt.enabled:
+                code_history += f"df = df.query('{filt.expr}')\n"
+
+        return code_history
+
+    def add_history_item(self, history_item):
+
+        name = history_item.name
+        func = history_item.func
+        args = history_item.args
+        kwargs = history_item.kwargs
+
+        self.history.append(history_item)
+        # Convert args to kwargs. The [1:] is to ignore the self argument
+        arg_names = inspect.getfullargspec(func).args[1:]
+        fake_kwargs = {key: val for key, val in zip(arg_names, args)}
+        full_kwargs = {**fake_kwargs, **kwargs}
+
+        # Don't want full formatted table of the DataFrame appearing in code history args
+        for key, val in full_kwargs.items():
+            if type(val) == pd.DataFrame:
+                full_kwargs[key] = f"pd.DataFrame({val.to_dict()})"
+
+        kwargs_string = ', '.join(arg_names)
+
+        # Add lines defining the values of the args
+        history_item.code += f"# {func.__name__}({kwargs_string})\n"
+        for key, val in full_kwargs.items():
+            history_item.code += f"{key} = {val}\n"
+
+    def add_code(self, string, history_item=None):
+        if not history_item:
+            try:
+                history_item = self.current_history_item
+            except AttributeError:
+                raise ValueError("add_code must be passed a HistoryItem if called from outside a pgdf method")
+
+        history_item.code += string + "\n"
 
     ###################################
     # Editing cell data
 
     @track_history
     def edit_data(self, row, col, value):
-        # Not using iat here because it won't work with MultiIndex
-        self.dataframe_original.at[self.dataframe.index[row], self.dataframe.columns[col]] = value
-        self.apply_filters_and_sorting()
-        self.update()
+        # Map the row number in the filtered df (which the user interacts with) to the unfiltered one
+        row = self.filtered_index_map[row]
+
+        self.df_unfiltered.iat[row, col] = value
+        self.apply_filters()
+
+        self.add_code(f"df.iat[row, col] = value")
 
     @track_history
     def paste_data(self, top_row, left_col, df_to_paste):
@@ -161,94 +257,111 @@ class PandasGuiDataFrame:
         for i in range(df_to_paste.shape[0]):
             for j in range(df_to_paste.shape[1]):
                 value = df_to_paste.iloc[i, j]
-                self.dataframe_original.at[self.dataframe.index[top_row + i],
-                                           self.dataframe.columns[left_col + j]] = value
+                self.df_unfiltered.at[self.df.index[top_row + i],
+                                      self.df.columns[left_col + j]] = value
+        self.apply_filters()
 
-        self.apply_filters_and_sorting()
-        self.update()
+        self.add_code(inspect.cleandoc(f"""
+            for i in range(df_to_paste.shape[0]):
+                for j in range(df_to_paste.shape[1]):
+                    value = df_to_paste.iloc[i, j]
+                    df.at[df.index[top_row + i],
+                          df.columns[left_col + j]] = value
+            """))
 
     ###################################
     # Sorting
 
     @track_history
     def sort_column(self, ix: int):
-        col_name = self.dataframe.columns[ix]
+        col_name = self.df_unfiltered.columns[ix]
 
         # Clicked an unsorted column
         if ix != self.column_sorted:
-            self.dataframe = self.dataframe.sort_values(col_name, ascending=True, kind="mergesort")
+            self.df_unfiltered = self.df_unfiltered.sort_values(col_name, ascending=True, kind='mergesort')
             self.column_sorted = ix
             self.sort_is_ascending = True
 
+            self.add_code("df = df.sort_values(df.columns[ix], ascending=True, kind='mergesort')")
+
         # Clicked a sorted column
         elif ix == self.column_sorted and self.sort_is_ascending:
-            self.dataframe = self.dataframe.sort_values(col_name, ascending=False, kind="mergesort")
+            self.df_unfiltered = self.df_unfiltered.sort_values(col_name, ascending=False, kind='mergesort')
             self.column_sorted = ix
             self.sort_is_ascending = False
 
-        # Clicked a reverse sorted column - reset to the original unsorted order
+            self.add_code("df = df.sort_values(df.columns[ix], ascending=False, kind='mergesort')")
+
+        # Clicked a reverse sorted column - reset to sorted by index
         elif ix == self.column_sorted:
-            unsorted_index = self.dataframe_original[self.dataframe_original.index.isin(self.dataframe.index)].index
-            self.dataframe = self.dataframe.reindex(unsorted_index)
+            self.df_unfiltered = self.df_unfiltered.sort_index(ascending=True, kind='mergesort')
             self.column_sorted = None
             self.sort_is_ascending = None
 
+            self.add_code("df = df.sort_index(ascending=True, kind='mergesort')")
+
         self.index_sorted = None
-        self.update()
+        self.apply_filters()
 
     @track_history
     def sort_index(self, ix: int):
         # Clicked an unsorted index level
         if ix != self.index_sorted:
-            self.dataframe = self.dataframe.sort_index(level=ix, ascending=True, kind="mergesort")
+            self.df_unfiltered = self.df_unfiltered.sort_index(level=ix, ascending=True, kind='mergesort')
             self.index_sorted = ix
             self.sort_is_ascending = True
 
+            self.add_code("df = df.sort_index(level=ix, ascending=True, kind='mergesort')")
+
         # Clicked a sorted index level
         elif ix == self.index_sorted and self.sort_is_ascending:
-            self.dataframe = self.dataframe.sort_index(level=ix, ascending=False, kind="mergesort")
+            self.df_unfiltered = self.df_unfiltered.sort_index(level=ix, ascending=False, kind='mergesort')
             self.index_sorted = ix
             self.sort_is_ascending = False
 
-        # Clicked a reverse sorted index level - reset to the original unsorted order
+            self.add_code("df = df.sort_index(level=ix, ascending=False, kind='mergesort')")
+
+        # Clicked a reverse sorted index level - reset to sorted by full index
         elif ix == self.index_sorted:
-            unsorted_index = self.dataframe_original[self.dataframe_original.index.isin(self.dataframe.index)].index
-            self.dataframe = self.dataframe.reindex(unsorted_index)
+            self.df_unfiltered = self.df_unfiltered.sort_index(ascending=True, kind='mergesort')
 
             self.index_sorted = None
             self.sort_is_ascending = None
 
+            self.add_code("df = df.sort_index(ascending=True, kind='mergesort')")
+
         self.column_sorted = None
-        self.update()
+        self.apply_filters()
 
     ###################################
     # Filters
 
-    @track_history
+    def any_filtered(self):
+        return any(filt.enabled for filt in self.filters)
+
     def add_filter(self, expr: str, enabled=True):
         filt = Filter(expr=expr, enabled=enabled, failed=False)
         self.filters.append(filt)
-        self.apply_filters_and_sorting()
+        self.apply_filters()
 
-    @track_history
     def remove_filter(self, index: int):
         self.filters.pop(index)
-        self.apply_filters_and_sorting()
+        self.apply_filters()
 
-    @track_history
     def edit_filter(self, index: int, expr: str):
         filt = self.filters[index]
         filt.expr = expr
         filt.failed = False
-        self.apply_filters_and_sorting()
+        self.apply_filters()
 
-    @track_history
     def toggle_filter(self, index: int):
         self.filters[index].enabled = not self.filters[index].enabled
-        self.apply_filters_and_sorting()
+        self.apply_filters()
 
-    def apply_filters_and_sorting(self):
-        df = self.dataframe_original
+    def apply_filters(self):
+        df = self.df_unfiltered.copy()
+        df['_temp_range_index'] = df.reset_index().index
+
         for ix, filt in enumerate(self.filters):
             if filt.enabled and not filt.failed:
                 try:
@@ -256,21 +369,29 @@ class PandasGuiDataFrame:
                 except Exception as e:
                     self.filters[ix].failed = True
                     logger.exception(e)
-        if self.index_sorted is not None:
-            df = df.sort_index(level=self.index_sorted, ascending=self.sort_is_ascending, kind="mergesort")
-        if self.column_sorted is not None:
-            df = df.sort_values(df.columns[self.column_sorted], ascending=self.sort_is_ascending, kind="mergesort")
 
-        self.dataframe = df
+        self.filtered_index_map = df['_temp_range_index'].reset_index(drop=True)
+        df = df.drop('_temp_range_index', axis=1)
+
+        self.df = df
         self.update()
+
+    # def apply_sorting(self):
+    #     if self.index_sorted is not None:
+    #         self.df = self.df.sort_index(level=self.index_sorted, ascending=self.sort_is_ascending, kind='mergesort')
+    #     if self.column_sorted is not None:
+    #         self.df = self.df.sort_values(self.df.columns[self.column_sorted], ascending=self.sort_is_ascending,
+    #                                       kind='mergesort')
+    #     self.apply_filters()
 
     ###################################
     # Other
+
     # Refresh PyQt models when the underlying pgdf is changed in anyway that needs to be reflected in the GUI
     def update(self):
-        models = []
+        self.models = []
         if self.dataframe_viewer is not None:
-            models += [self.dataframe_viewer.dataView.model(),
+            self.models += [self.dataframe_viewer.dataView.model(),
                        self.dataframe_viewer.columnHeader.model(),
                        self.dataframe_viewer.indexHeader.model(),
                        self.dataframe_viewer.columnHeaderNames.model(),
@@ -278,16 +399,20 @@ class PandasGuiDataFrame:
                        ]
 
         if self.filter_viewer is not None:
-            models += [self.filter_viewer.list_model,
+            self.models += [self.filter_viewer.list_model,
                        ]
-
-        for model in models:
+        for model in self.models:
             model.beginResetModel()
             model.endResetModel()
 
         for view in [self.dataframe_viewer.columnHeader,
                      self.dataframe_viewer.indexHeader]:
             view.set_spans()
+
+        for view in [self.dataframe_viewer.columnHeader,
+                     self.dataframe_viewer.indexHeader,
+                     self.dataframe_viewer.dataView]:
+            view.updateGeometry()
 
     @staticmethod
     def cast(x: Union["PandasGuiDataFrame", pd.DataFrame, pd.Series, Iterable]):
@@ -324,7 +449,7 @@ class Store:
         pgdf.name = name
         pgdf.store = self
 
-        df = pgdf.dataframe
+        df = pgdf.df
 
         # Remove non-string column names
         if issubclass(type(df.columns), pd.core.indexes.multi.MultiIndex):
@@ -353,7 +478,7 @@ class Store:
         self.gui.stacked_widget.addWidget(dfe)
 
         # Add to nav
-        shape = pgdf.dataframe.shape
+        shape = pgdf.df.shape
         shape = str(shape[0]) + " X " + str(shape[1])
 
         item = QtWidgets.QTreeWidgetItem(self.navigator, [name, shape])
@@ -382,12 +507,14 @@ class Store:
 
     def get_dataframes(self, names: Union[None, str, list] = None):
         if type(names) == str:
-            names = [names]
+            for pgdf in self.data:
+                if names == pgdf.name:
+                    return pgdf.df
 
         df_dict = {}
         for pgdf in self.data:
             if names is None or pgdf.name in names:
-                df_dict[pgdf.name] = pgdf.dataframe
+                df_dict[pgdf.name] = pgdf.df
 
         return df_dict
 

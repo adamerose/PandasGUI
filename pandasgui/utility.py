@@ -229,6 +229,13 @@ def test_logging():
     logger.info("info")
     logger.warning("warning")
     logger.error("error")
+
+# Resize a widget to a percentage of the screen size
+def resize_widget(widget, x, y):
+    from PyQt5 import QtCore, QtWidgets
+    widget.resize(QtCore.QSize(int(x * QtWidgets.QDesktopWidget().screenGeometry().width()),
+                             int(y * QtWidgets.QDesktopWidget().screenGeometry().height())))
+
 event_lookup = {"0": "QEvent::None",
                 "114": "QEvent::ActionAdded",
                 "113": "QEvent::ActionChanged",

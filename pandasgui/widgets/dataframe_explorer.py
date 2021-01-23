@@ -82,13 +82,13 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
 
         stats_df = pd.DataFrame(
             {
-                "Type": pgdf.dataframe.dtypes.replace("object", "string").astype(str),
-                "Count": pgdf.dataframe.count(),
-                "N Unique": nunique(pgdf.dataframe),
-                "Mean": pgdf.dataframe.mean(numeric_only=True),
-                "StdDev": pgdf.dataframe.std(numeric_only=True),
-                "Min": pgdf.dataframe.min(numeric_only=True),
-                "Max": pgdf.dataframe.max(numeric_only=True),
+                "Type": pgdf.df.dtypes.replace("object", "string").astype(str),
+                "Count": pgdf.df.count(),
+                "N Unique": nunique(pgdf.df),
+                "Mean": pgdf.df.mean(numeric_only=True),
+                "StdDev": pgdf.df.std(numeric_only=True),
+                "Min": pgdf.df.min(numeric_only=True),
+                "Max": pgdf.df.max(numeric_only=True),
             }
         )
 

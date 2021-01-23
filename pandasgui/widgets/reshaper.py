@@ -40,7 +40,7 @@ class Reshaper(QtWidgets.QWidget):
             item = QtWidgets.QListWidgetItem(icon, text)
             self.reshape_type_picker.addItem(item)
 
-        df = flatten_df(self.pgdf.dataframe)
+        df = flatten_df(self.pgdf.df)
         self.dragger = Dragger(sources=df.columns, destinations=[],
                                source_types=df.dtypes.values.astype(str))
 
@@ -105,7 +105,7 @@ def pivot(pgdf: PandasGuiDataFrame,
           columns: Iterable = None,
           values: Iterable = None,
           aggfunc: Callable = 'mean'):
-    df = pgdf.dataframe
+    df = pgdf.df
     return df.pivot_table(index=index,
                           columns=columns,
                           values=values,
@@ -116,7 +116,7 @@ def pivot(pgdf: PandasGuiDataFrame,
 def melt(pgdf: PandasGuiDataFrame,
           id_vars: Iterable = None,
           value_vars: Iterable = None):
-    df = pgdf.dataframe
+    df = pgdf.df
     return df.melt(id_vars=id_vars,
                    value_vars=value_vars)
 
