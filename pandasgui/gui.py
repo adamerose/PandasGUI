@@ -143,6 +143,10 @@ class PandasGui(QtWidgets.QMainWindow):
                                    func=self.import_dialog),
                           MenuItem(name='Export',
                                    func=self.export_dialog),
+                          MenuItem(name='Import From Clipboard',
+                                   func=self.import_from_clipboard),
+                          MenuItem(name='Code Export',
+                                   func=self.code_export),
                           ],
                  'Debug': [MenuItem(name='Print Data Store',
                                     func=self.print_store),
@@ -250,6 +254,11 @@ class PandasGui(QtWidgets.QMainWindow):
         pgdf = self.store.selected_pgdf
         path, _ = dialog.getSaveFileName(directory=pgdf.name, filter="*.csv")
         pgdf.dataframe.to_csv(path, index=False)
+
+    def import_from_clipboard(self):
+        df = pd.read_clipboard()
+        self.store.add_dataframe(df)
+
 
     def closeEvent(self, e: QtGui.QCloseEvent) -> None:
         refs.remove(self)
