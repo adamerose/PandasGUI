@@ -4,6 +4,7 @@ import tempfile
 
 from plotly.io import to_html
 import plotly.graph_objs as go
+from plotly.validators.scatter.marker import SymbolValidator
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5.QtCore import Qt
 
@@ -33,6 +34,9 @@ if "PyQt5.QtWebEngineWidgets" not in sys.modules:
 
         app.__init__(sys.argv + ["--ignore-gpu-blacklist", "--enable-gpu-rasterization"])
 
+# Available symbol names for a given version of Plotly
+_extended_symbols = SymbolValidator().values[0::2][1::3]
+plotly_markers = [symbol for symbol in _extended_symbols if symbol[-3:] != "dot"]
 
 class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
     def __init__(self, fig=None, store=None):
