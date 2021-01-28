@@ -13,7 +13,7 @@ import pandas as pd
 from pandasgui.store import Store, PandasGuiDataFrame
 
 from pandasgui.utility import flatten_df
-from pandasgui.widgets.plotly_viewer import PlotlyViewer
+from pandasgui.widgets.plotly_viewer import PlotlyViewer, plotly_markers
 from pandasgui.widgets.spinner import Spinner
 from pandasgui.widgets.dragger import Dragger, ColumnArg, Schema
 
@@ -155,7 +155,7 @@ def clear_layout(layout):
 
 def line(**kwargs):
     key_cols = []
-    for arg in [a for a in ['x', 'color', 'line_dash', 'line_group', 'facet_row', 'facet_col'] if a in kwargs.keys()]:
+    for arg in [a for a in ['x', 'color', 'line_dash', 'line_group', 'hover_name', 'facet_row', 'facet_col'] if a in kwargs.keys()]:
         key_cols_subset = kwargs[arg]
         if type(key_cols_subset) == list:
             key_cols += key_cols_subset
@@ -168,6 +168,33 @@ def line(**kwargs):
         return px.line(**kwargs)
 
     df = kwargs['data_frame'].groupby(key_cols).mean().reset_index()
+    if 'marker_symbol' in kwargs.keys():
+        # get from custom kwargs, but invalid for px.line, so pop them
+        marker_col = kwargs.pop('marker_symbol')
+        marker_size = kwargs.pop('marker_size', 10)  # optional
+        marker_line_width = kwargs.pop('marker_line_width', 2)  # optional
+
+        marker_unique = sorted(df[marker_col].unique())
+        unique_markers = len(plotly_markers)
+
+        kwargs['hover_name'] = kwargs.get('hover_name', marker_col)
+        fig = None
+        for i in range(0, len(marker_unique)):
+            df_sub = df[df[marker_col] == marker_unique[i]]
+            kwargs['data_frame'] = df_sub
+            if fig is None:
+                fig = px.line(**kwargs).update_traces(
+                    mode='lines+markers',
+                    marker_symbol=plotly_markers[i % unique_markers],
+                    marker_size=marker_size,
+                    marker_line_width=marker_line_width)
+            else:
+                fig.add_traces(px.line(**kwargs).update_traces(
+                    mode='lines+markers',
+                    marker_symbol=plotly_markers[i % unique_markers],
+                    marker_size=marker_size,
+                    marker_line_width=marker_line_width).data)
+        return fig
     kwargs['data_frame'] = df
     return px.line(**kwargs)
 
@@ -228,6 +255,7 @@ schemas = [Schema(name='histogram',
                         ColumnArg(arg_name='color'),
                         ColumnArg(arg_name='symbol'),
                         ColumnArg(arg_name='size'),
+                        ColumnArg(arg_name='hover_name'),
                         ColumnArg(arg_name='facet_row'),
                         ColumnArg(arg_name='facet_col')],
                   label='Scatter',
@@ -239,6 +267,8 @@ schemas = [Schema(name='histogram',
                         ColumnArg(arg_name='color'),
                         ColumnArg(arg_name='line_dash'),
                         ColumnArg(arg_name='line_group'),
+                        ColumnArg(arg_name='marker_symbol'),
+                        ColumnArg(arg_name='hover_name'),
                         ColumnArg(arg_name='facet_row'),
                         ColumnArg(arg_name='facet_col')],
                   label='Line',
@@ -275,7 +305,10 @@ schemas = [Schema(name='histogram',
                   args=[ColumnArg(arg_name='x'),
                         ColumnArg(arg_name='y'),
                         ColumnArg(arg_name='z'),
-                        ColumnArg(arg_name='color')],
+                        ColumnArg(arg_name='color'),
+                        ColumnArg(arg_name='symbol'),
+                        ColumnArg(arg_name='size'),
+                        ColumnArg(arg_name='hover_name')],
                   label='Scatter 3D',
                   function=px.scatter_3d,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-scatter3d.svg')),
