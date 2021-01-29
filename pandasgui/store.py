@@ -374,6 +374,11 @@ class Store:
             for sheet_name in df_dict.keys():
                 df_name = f"{filename} - {sheet_name}"
                 self.add_dataframe(df_dict[sheet_name], df_name)
+        elif path.endswith(".parquet"):
+            filename = os.path.split(path)[1].split('.parquet')[0]
+            df = pd.read_parquet(path, engine='pyarrow')
+            self.add_dataframe(df, filename)
+
         else:
             logger.warning("Can only import csv / xlsx. Invalid file: " + path)
 
