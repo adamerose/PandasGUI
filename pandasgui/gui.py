@@ -259,7 +259,7 @@ class PandasGui(QtWidgets.QMainWindow):
 
     def import_dialog(self):
         dialog = QtWidgets.QFileDialog()
-        paths, _ = dialog.getOpenFileNames(filter="*.csv *.xlsx")
+        paths, _ = dialog.getOpenFileNames(filter="*.csv *.xlsx *.parquet")
         for path in paths:
             self.store.import_file(path)
 

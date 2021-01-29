@@ -9,3 +9,4 @@ appdirs
 dacite
 pynput
 IPython
+pyarrow
