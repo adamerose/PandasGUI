@@ -2,7 +2,7 @@ QWidget {
   background-color: #373a3f;
   color: #e5e5e5;
   alternate-background-color: #4a4e54;
-  selection-background-color: #114f7e;
+  selection-background-color: #0f456e;
   selection-color: #e5e5e5; }
   QWidget:disabled {
     color: #666666; }
@@ -11,13 +11,13 @@ QListView::item:selected:active,
 QTableView::item:selected:active,
 QTreeView::item:selected:active,
 QTreeView::branch:selected:active {
-  background-color: #004b7e; }
+  background-color: #0f456e; }
 
 QListView::item:selected:!active,
 QTableView::item:selected:!active,
 QTreeView::item:selected:!active,
 QTreeView::branch:selected:!active {
-  background-color: #1e2d41; }
+  background-color: #42464b; }
 
 QWidget {
   background-color: #373a3f; }
@@ -169,7 +169,9 @@ QAbstractSpinBox::up-button, QAbstractSpinBox::down-button {
 
 QTableView {
   border: 1px solid rgba(133, 139, 148, 0.4);
-  background-color: rgba(103, 108, 117, 0.4); }
+  background-color: rgba(133, 139, 148, 0.4); }
+  QTableView:selected {
+    background-color: red; }
   QTableView::item {
     padding: 5px;
     border: none;
@@ -208,9 +210,9 @@ QHeaderView {
   .HeaderView::item {
     background-color: qlineargradient(x1: 0.0, y1: 1.0, x2: 0.0, y2: 0.0, stop: 0.0 rgba(24, 25, 27, 100%), stop: 1.0 rgba(36, 38, 41, 100%)); }
     .HeaderView::item:selected:active {
-      background-color: qlineargradient(x1: 0.0, y1: 1.0, x2: 0.0, y2: 0.0, stop: 0.0 rgba(0, 59, 100, 100%), stop: 1.0 rgba(0, 75, 126, 100%)); }
+      background-color: qlineargradient(x1: 0.0, y1: 1.0, x2: 0.0, y2: 0.0, stop: 0.0 rgba(11, 54, 87, 100%), stop: 1.0 rgba(15, 69, 110, 100%)); }
     .HeaderView::item:selected:!active {
-      background-color: qlineargradient(x1: 0.0, y1: 1.0, x2: 0.0, y2: 0.0, stop: 0.0 rgba(21, 32, 47, 100%), stop: 1.0 rgba(30, 45, 65, 100%)); }
+      background-color: qlineargradient(x1: 0.0, y1: 1.0, x2: 0.0, y2: 0.0, stop: 0.0 rgba(54, 57, 61, 100%), stop: 1.0 rgba(66, 70, 75, 100%)); }
 
 .CornerWidget {
   border-right: 1px solid rgba(133, 139, 148, 0.4); }
@@ -224,9 +226,9 @@ QHeaderView {
   .HeaderNamesView::item {
     background-color: qlineargradient(x1: 0.0, y1: 1.0, x2: 0.0, y2: 0.0, stop: 0.0 rgba(24, 25, 27, 100%), stop: 1.0 rgba(36, 38, 41, 100%)); }
     .HeaderNamesView::item:selected:active {
-      background-color: qlineargradient(x1: 0.0, y1: 1.0, x2: 0.0, y2: 0.0, stop: 0.0 rgba(0, 59, 100, 100%), stop: 1.0 rgba(0, 75, 126, 100%)); }
+      background-color: qlineargradient(x1: 0.0, y1: 1.0, x2: 0.0, y2: 0.0, stop: 0.0 rgba(11, 54, 87, 100%), stop: 1.0 rgba(15, 69, 110, 100%)); }
     .HeaderNamesView::item:selected:!active {
-      background-color: qlineargradient(x1: 0.0, y1: 1.0, x2: 0.0, y2: 0.0, stop: 0.0 rgba(21, 32, 47, 100%), stop: 1.0 rgba(30, 45, 65, 100%)); }
+      background-color: qlineargradient(x1: 0.0, y1: 1.0, x2: 0.0, y2: 0.0, stop: 0.0 rgba(54, 57, 61, 100%), stop: 1.0 rgba(66, 70, 75, 100%)); }
 
 QScrollBar {
   background-color: transparent;
@@ -359,7 +361,7 @@ QTabWidget::pane {
 QTabBar {
   qproperty-drawBase: 0; }
   QTabBar::tab:!selected {
-    background-color: qlineargradient(x1: 0.0, y1: 1.0, x2: 0.0, y2: 0.0, stop: 0.0 rgba(0, 0, 0, 5%), stop: 0.25 rgba(55, 58, 62, 100%));
+    background-color: qlineargradient(x1: 0.0, y1: 1.0, x2: 0.0, y2: 0.0, stop: 0.0 rgba(62, 65, 70, 100%), stop: 0.25 rgba(74, 78, 84, 100%));
     border: 1px solid rgba(133, 139, 148, 0.4);
     margin-top: 2px; }
     QTabBar::tab:!selected:!last {
@@ -451,13 +453,13 @@ QMenu {
   border: 1px solid rgba(133, 139, 148, 0.4);
   background-color: #373a3f; }
   QMenu::item:selected {
-    background-color: #114f7e; }
+    background-color: #0f456e; }
   QMenu::indicator {
     border: none;
     outline: none;
     background-color: transparent; }
     QMenu::indicator:selected {
-      background-color: #114f7e; }
+      background-color: #0f456e; }
   QMenu::separator {
     height: 1px;
     background: #7f7f7f;
