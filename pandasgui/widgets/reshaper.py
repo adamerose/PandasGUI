@@ -7,14 +7,16 @@ import pandasgui
 import os
 from typing import Union, List, Iterable, Callable
 
-from pandasgui.store import Store, PandasGuiDataFrame, track_history
+from pandasgui.store import Store, PandasGuiDataFrame
 
-from pandasgui.utility import flatten_df
+from pandasgui.utility import flatten_df, kwargs_string
 from pandasgui.widgets.spinner import Spinner
 from pandasgui.widgets.dragger import Dragger, Schema, ColumnArg, OptionListArg
 
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 class Reshaper(QtWidgets.QWidget):
     def __init__(self, pgdf: PandasGuiDataFrame):
@@ -32,7 +34,7 @@ class Reshaper(QtWidgets.QWidget):
         self.reshape_type_picker.setResizeMode(self.reshape_type_picker.Adjust)
         self.reshape_type_picker.setDragDropMode(self.reshape_type_picker.NoDragDrop)
         self.reshape_type_picker.setStyleSheet("QListView::item {border: 2px solid transparent; padding: 3px;}"
-                                            "QListView::item:selected {background: none; border: 2px solid #777;}")
+                                               "QListView::item:selected {background: none; border: 2px solid #777;}")
 
         for schema in schemas:
             icon = QtGui.QIcon(schema.icon_path)
@@ -99,26 +101,18 @@ class Reshaper(QtWidgets.QWidget):
 # ========================================================================
 # Schema
 
-@track_history
-def pivot(pgdf: PandasGuiDataFrame,
-          index: Iterable = None,
-          columns: Iterable = None,
-          values: Iterable = None,
-          aggfunc: Callable = 'mean'):
-    df = pgdf.df
-    return df.pivot_table(index=index,
-                          columns=columns,
-                          values=values,
-                          aggfunc=aggfunc)
+def pivot(pgdf, **kwargs):
+    df = pgdf.df.pivot_table(**kwargs)
+    pgdf.add_history_item("Reshaper",
+                          f"df.pivot_table({kwargs_string(kwargs)})")
+    return df
 
 
-@track_history
-def melt(pgdf: PandasGuiDataFrame,
-          id_vars: Iterable = None,
-          value_vars: Iterable = None):
-    df = pgdf.df
-    return df.melt(id_vars=id_vars,
-                   value_vars=value_vars)
+def melt(pgdf, **kwargs):
+    df = pgdf.df.melt(**kwargs)
+    pgdf.add_history_item("Reshaper",
+                          f"df.melt({kwargs_string(kwargs)})")
+    return df
 
 
 schemas = [
@@ -154,5 +148,3 @@ if __name__ == "__main__":
     gb2.show()
 
     app.exec_()
-
-

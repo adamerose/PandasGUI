@@ -1,4 +1,5 @@
 import datetime
+import inspect
 import sys
 from typing import NewType, Union, List, Callable, Iterable
 from dataclasses import dataclass
@@ -13,8 +14,9 @@ from PyQt5.QtCore import Qt
 import pandas as pd
 from pandasgui.store import Store, PandasGuiDataFrame, HistoryItem
 
-from pandasgui.utility import flatten_df
 from pandasgui.widgets.plotly_viewer import PlotlyViewer, plotly_markers
+from pandasgui.utility import flatten_df, flatten_iter, kwargs_string
+from pandasgui.widgets.plotly_viewer import PlotlyViewer
 from pandasgui.widgets.spinner import Spinner
 from pandasgui.widgets.dragger import Dragger, ColumnArg, Schema
 
@@ -30,8 +32,6 @@ class Grapher(QtWidgets.QWidget):
         self.pgdf = PandasGuiDataFrame.cast(pgdf)
 
         self.setWindowTitle("Graph Builder")
-        self.workers = []
-        self.current_worker = None
 
         # Dropdown to select plot type
         self.plot_type_picker = QtWidgets.QListWidget()
@@ -99,8 +99,8 @@ class Grapher(QtWidgets.QWidget):
     def on_dragger_finished(self):
         self.spinner.start()
 
-        df = flatten_df(self.pgdf.df)
-        kwargs = {"data_frame": df}
+        # df = flatten_df(self.pgdf.df)
+        kwargs = {}
         for key, val in self.dragger.get_data().items():
             if type(val) == list and len(val) == 0:
                 continue
@@ -113,49 +113,11 @@ class Grapher(QtWidgets.QWidget):
 
         func = self.current_schema.function
 
-        history_item = HistoryItem(
-            name=self.current_schema.name,
-            func=func,
-            args=(),
-            kwargs=kwargs,
-            time=datetime.datetime.now(),
-            code=""
-        )
+        fig = func(self.pgdf, kwargs)
 
-        self.pgdf.add_code("CODE PLACEHOLDER", history_item)
+        self.pgdf.history_imports.add("import plotly.express as px")
 
-        self.current_worker = Worker(func, kwargs)
-        self.current_worker.finished.connect(self.worker_callback)
-        self.current_worker.finished.connect(self.current_worker.deleteLater)
-        self.current_worker.start()
-        self.workers.append(self.current_worker)
-
-    @QtCore.pyqtSlot(object)
-    def worker_callback(self, fig):
         self.figure_viewer.set_figure(fig)
-        self.spinner.stop()
-
-
-# https://stackoverflow.com/questions/9957195/updating-gui-elements-in-multithreaded-pyqt
-class Worker(QtCore.QThread):
-    finished = QtCore.pyqtSignal(object)
-
-    def __init__(self, func, kwargs):
-        d = {k: v for k, v in kwargs.items() if k != "data_frame"}
-        logger.debug(f"Creating Worker. {func.__name__} {d}")
-        QtCore.QThread.__init__(self)
-        self.func = func
-        self.kwargs = kwargs
-
-    def run(self):
-        try:
-            result = self.func(**self.kwargs)
-            d = {k: v for k, v in self.kwargs.items() if k != "data_frame"}
-            logger.debug(f"Finished Worker run. {self.func.__name__} {d}")
-            self.finished.emit(result)
-        except Exception as e:
-            logger.error(e)
-            self.finished.emit(None)
 
 
 def clear_layout(layout):
@@ -166,10 +128,24 @@ def clear_layout(layout):
 # ========================================================================
 # Schema
 
+def histogram(pgdf, kwargs):
+    fig = px.histogram(data_frame=pgdf.df, **kwargs)
+    pgdf.add_history_item("Grapher",
+                          f"fig = px.histogram(data_frame=df, {kwargs_string(kwargs)})")
+    return fig
 
-def line(**kwargs):
+
+def scatter(pgdf, kwargs):
+    fig = px.scatter(data_frame=pgdf.df, **kwargs)
+    pgdf.add_history_item("Grapher",
+                          f"fig = px.scatter(data_frame=df, {kwargs_string(kwargs)})")
+    return fig
+
+
+def line(pgdf, kwargs):
     key_cols = []
-    for arg in [a for a in ['x', 'color', 'line_dash', 'line_group', 'hover_name', 'facet_row', 'facet_col'] if a in kwargs.keys()]:
+    for arg in [a for a in ['x', 'color', 'line_dash', 'line_group', 'hover_name', 'facet_row', 'facet_col'] if
+                a in kwargs.keys()]:
         key_cols_subset = kwargs[arg]
         if type(key_cols_subset) == list:
             key_cols += key_cols_subset
@@ -179,7 +155,7 @@ def line(**kwargs):
             raise TypeError
 
     if key_cols == []:
-        return px.line(**kwargs)
+        return px.line(data_frame=pgdf.df, **kwargs)
 
     df = kwargs['data_frame'].groupby(key_cols).mean().reset_index()
     if 'marker_symbol' in kwargs.keys():
@@ -210,48 +186,94 @@ def line(**kwargs):
                     marker_line_width=marker_line_width).data)
         return fig
     kwargs['data_frame'] = df
-    return px.line(**kwargs)
+
+    pgdf.add_history_item("Grapher",
+                          f"# *Code history for line plot not yet implemented*")
+    return px.line(data_frame=pgdf.df, **kwargs)
 
 
-def bar(**kwargs):
-    key_cols = []
-    for arg in [a for a in ['x', 'color', 'facet_row', 'facet_col'] if a in kwargs.keys()]:
-        key_cols_subset = kwargs[arg]
-        if type(key_cols_subset) == list:
-            key_cols += key_cols_subset
-        elif type(key_cols_subset) == str:
-            key_cols += [key_cols_subset]
-        else:
-            raise TypeError
+def bar(pgdf, kwargs):
+    key_cols = flatten_iter([kwargs[arg] for arg in ['x', 'color', 'facet_row', 'facet_col'] if arg in kwargs.keys()])
+    if any(key_cols):
+        kwargs['data_frame'] = kwargs['data_frame'].groupby(key_cols).mean().reset_index()
 
-    if key_cols == []:
-        return px.bar(**kwargs)
-
-    df = kwargs['data_frame'].groupby(key_cols).mean().reset_index()
-    kwargs['data_frame'] = df
-    return px.bar(**kwargs)
+    pgdf.add_history_item("Grapher",
+                          f"# *Code history for bar plot not yet implemented*")
+    return px.bar(data_frame=pgdf.df, **kwargs)
 
 
-def scatter_matrix(**kwargs):
-    fig = px.scatter_matrix(**kwargs)
-    fig.update_traces(diagonal_visible=False)
+def box(pgdf, kwargs):
+    fig = px.box(data_frame=pgdf.df, **kwargs)
+    pgdf.add_history_item("Grapher",
+                          f"fig = px.box(data_frame=df, {kwargs_string(kwargs)})")
     return fig
 
 
-def contour(**kwargs):
-    fig = px.density_contour(**kwargs)
+def violin(pgdf, kwargs):
+    fig = px.violin(data_frame=pgdf.df, **kwargs)
+    pgdf.add_history_item("Grapher",
+                          f"fig = px.violin(data_frame=df, {kwargs_string(kwargs)})")
+    return fig
+
+
+def scatter_3d(pgdf, kwargs):
+    fig = px.scatter_3d(data_frame=pgdf.df, **kwargs)
+    pgdf.add_history_item("Grapher",
+                          f"fig = px.scatter_3d(data_frame=df, {kwargs_string(kwargs)})")
+    return fig
+
+
+def density_heatmap(pgdf, kwargs):
+    fig = px.density_heatmap(data_frame=pgdf.df, **kwargs)
+    pgdf.add_history_item("Grapher",
+                          f"fig = px.density_heatmap(data_frame=df, {kwargs_string(kwargs)})")
+    return fig
+
+
+def density_contour(pgdf, kwargs):
+    fig = px.density_contour(data_frame=pgdf.df, **kwargs)
     fig.update_traces(contours_coloring="fill", contours_showlabels=True)
+    pgdf.add_history_item("Grapher",
+                          f"fig = px.density_contour(data_frame=df, {kwargs_string(kwargs)})"
+                          "fig.update_traces(contours_coloring='fill', contours_showlabels=True)")
     return fig
 
 
-def word_cloud(data_frame, columns: Union[str, List[str]]):
+def pie(pgdf, kwargs):
+    fig = px.pie(data_frame=pgdf.df, **kwargs)
+    pgdf.add_history_item("Grapher",
+                          f"fig = px.pie(data_frame=df, {kwargs_string(kwargs)})")
+    return fig
+
+
+def scatter_matrix(pgdf, kwargs):
+    fig = px.scatter_matrix(data_frame=pgdf.df, **kwargs)
+    fig.update_traces(diagonal_visible=False)
+    pgdf.add_history_item("Grapher",
+                          f"fig = px.scatter_matrix(data_frame=df, {kwargs_string(kwargs)})"
+                          "fig.update_traces(diagonal_visible=False)")
+    return fig
+
+
+def word_cloud(pgdf, kwargs):
+    columns = kwargs['columns']
+
     if type(columns) == str:
         columns = [columns]
 
     from wordcloud import WordCloud
-    text = " ".join(pd.concat([data_frame[x].dropna().astype(str) for x in columns]))
+    text = ' '.join(pd.concat([pgdf.df[x].dropna().astype(str) for x in columns]))
     wc = WordCloud(scale=2, collocations=False).generate(text)
     fig = px.imshow(wc)
+
+    pgdf.history_imports.add("from wordcloud import WordCloud")
+    pgdf.add_history_item("Grapher",
+                          inspect.cleandoc(f"""
+                          columns = {columns}
+                          text = ' '.join(pd.concat([pgdf.df[x].dropna().astype(str) for x in columns]))
+                          wc = WordCloud(scale=2, collocations=False).generate(text)
+                          fig = px.imshow(wc)
+                          """))
     return fig
 
 
@@ -261,7 +283,7 @@ schemas = [Schema(name='histogram',
                         ColumnArg(arg_name='facet_row'),
                         ColumnArg(arg_name='facet_col')],
                   label='Histogram',
-                  function=px.histogram,
+                  function=histogram,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-histogram.svg')),
            Schema(name='scatter',
                   args=[ColumnArg(arg_name='x'),
@@ -273,7 +295,7 @@ schemas = [Schema(name='histogram',
                         ColumnArg(arg_name='facet_row'),
                         ColumnArg(arg_name='facet_col')],
                   label='Scatter',
-                  function=px.scatter,
+                  function=scatter,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-scatter.svg')),
            Schema(name='line',
                   args=[ColumnArg(arg_name='x'),
@@ -304,7 +326,7 @@ schemas = [Schema(name='histogram',
                         ColumnArg(arg_name='facet_row'),
                         ColumnArg(arg_name='facet_col')],
                   label='Box',
-                  function=px.box,
+                  function=box,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-box.svg')),
            Schema(name='violin',
                   args=[ColumnArg(arg_name='x'),
@@ -313,7 +335,7 @@ schemas = [Schema(name='histogram',
                         ColumnArg(arg_name='facet_row'),
                         ColumnArg(arg_name='facet_col')],
                   label='Violin',
-                  function=px.violin,
+                  function=violin,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-violin.svg')),
            Schema(name='scatter_3d',
                   args=[ColumnArg(arg_name='x'),
@@ -324,7 +346,7 @@ schemas = [Schema(name='histogram',
                         ColumnArg(arg_name='size'),
                         ColumnArg(arg_name='hover_name')],
                   label='Scatter 3D',
-                  function=px.scatter_3d,
+                  function=scatter_3d,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-scatter3d.svg')),
            Schema(name='density_heatmap',
                   args=[ColumnArg(arg_name='x'),
@@ -333,7 +355,7 @@ schemas = [Schema(name='histogram',
                         ColumnArg(arg_name='facet_row'),
                         ColumnArg(arg_name='facet_col')],
                   label='Heatmap',
-                  function=px.density_heatmap,
+                  function=density_heatmap,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-heatmap.svg')),
            Schema(name='density_contour',
                   args=[ColumnArg(arg_name='x'),
@@ -342,13 +364,13 @@ schemas = [Schema(name='histogram',
                         ColumnArg(arg_name='facet_row'),
                         ColumnArg(arg_name='facet_col')],
                   label='Contour',
-                  function=contour,
+                  function=density_contour,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-contour.svg')),
            Schema(name='pie',
                   args=[ColumnArg(arg_name='names'),
                         ColumnArg(arg_name='values')],
                   label='Pie',
-                  function=px.pie,
+                  function=pie,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-pie.svg')),
            Schema(name='scatter_matrix',
                   args=[ColumnArg(arg_name='dimensions'),

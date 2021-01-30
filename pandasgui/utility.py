@@ -3,6 +3,7 @@ import pandas as pd
 from PyQt5 import QtWidgets
 from typing import List, Union
 import sys
+import inspect
 
 logger = logging.getLogger(__name__)
 
@@ -230,11 +231,40 @@ def test_logging():
     logger.warning("warning")
     logger.error("error")
 
+
 # Resize a widget to a percentage of the screen size
 def resize_widget(widget, x, y):
     from PyQt5 import QtCore, QtWidgets
     widget.resize(QtCore.QSize(int(x * QtWidgets.QDesktopWidget().screenGeometry().width()),
-                             int(y * QtWidgets.QDesktopWidget().screenGeometry().height())))
+                               int(y * QtWidgets.QDesktopWidget().screenGeometry().height())))
+
+
+def get_kwargs():
+    frame = inspect.currentframe().f_back
+    keys, _, _, values = inspect.getargvalues(frame)
+    kwargs = {}
+    for key in keys:
+        if key != 'self':
+            kwargs[key] = values[key]
+    return kwargs
+
+
+# Flatten nested iterables
+def flatten_iter(itr):
+    t = tuple()
+    for e in itr:
+        try:
+            t += flatten_iter(e)
+        except:
+            t += (e,)
+    return t
+
+
+# Make a string from a kwargs dict as they would be displayed when passed to a function
+# eg. {'a': 5, 'b': 6} -> a=5, b=6
+def kwargs_string(kwargs_dict):
+    return ', '.join([f'{key}={repr(val)}' for key, val in kwargs_dict.items()])
+
 
 event_lookup = {"0": "QEvent::None",
                 "114": "QEvent::ActionAdded",
