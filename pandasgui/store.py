@@ -131,6 +131,7 @@ class PandasGuiDataFrame:
         # References to other object instances that may be assigned later
         self.settings: Settings = Settings()
         self.store: Union[Store, None] = None
+        self.gui: Union["PandasGui", None] = None
         self.dataframe_explorer: Union["DataFrameExplorer", None] = None
         self.dataframe_viewer: Union["DataFrameViewer", None] = None
         self.filter_viewer: Union["FilterViewer", None] = None
@@ -186,12 +187,16 @@ class PandasGuiDataFrame:
                               f"df.iat[{row}, {col}] = {value}")
 
     def paste_data(self, top_row, left_col, df_to_paste):
+        new_df = self.df_unfiltered.copy()
+
         # Not using iat here because it won't work with MultiIndex
         for i in range(df_to_paste.shape[0]):
             for j in range(df_to_paste.shape[1]):
                 value = df_to_paste.iloc[i, j]
-                self.df_unfiltered.at[self.df.index[top_row + i],
+                new_df.at[self.df.index[top_row + i],
                                       self.df.columns[left_col + j]] = value
+
+        self.df_unfiltered = new_df
         self.apply_filters()
 
         self.add_history_item("paste_data", inspect.cleandoc(
@@ -203,6 +208,7 @@ class PandasGuiDataFrame:
                     df.at[df.index[{top_row} + i],
                           df.columns[{left_col} + j]] = value
             """))
+
 
     ###################################
     # Sorting
@@ -315,14 +321,6 @@ class PandasGuiDataFrame:
         self.df = df
         self.update()
 
-    # def apply_sorting(self):
-    #     if self.index_sorted is not None:
-    #         self.df = self.df.sort_index(level=self.index_sorted, ascending=self.sort_is_ascending, kind='mergesort')
-    #     if self.column_sorted is not None:
-    #         self.df = self.df.sort_values(self.df.columns[self.column_sorted], ascending=self.sort_is_ascending,
-    #                                       kind='mergesort')
-    #     self.apply_filters()
-
     ###################################
     # Other
 
@@ -366,6 +364,7 @@ class PandasGuiDataFrame:
                 return PandasGuiDataFrame(pd.DataFrame(x))
             except:
                 raise TypeError(f"Could not convert {type(x)} to DataFrame")
+
 
 
 @dataclass
@@ -424,6 +423,14 @@ class Store:
         self.navigator.itemSelectionChanged.emit()
         self.navigator.setCurrentItem(item)
         self.navigator.apply_tree_settings()
+
+    def remove_dataframe(self, name):
+        for ix, pgdf in enumerate(self.data):
+            if pgdf.name == name:
+                self.data.pop(ix)
+                self.gui.navigator.remove_item(name)
+                return
+        raise NameError(f"{name} not found.")
 
     def import_file(self, path):
         if not os.path.isfile(path):

@@ -1,7 +1,10 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5.QtCore import Qt
+
 import tempfile
 import os
+
+from pandasgui.utility import traverse_tree_widget
 from pynput import mouse
 
 
@@ -59,6 +62,11 @@ class Navigator(QtWidgets.QTreeWidget):
 
         self.setColumnWidth(0, 150)
         self.setColumnWidth(1, 150)
+
+    def remove_item(self, name):
+        for item in traverse_tree_widget(self):
+            if item.text(0) == name:
+                sip.delete(item)
 
     def rowsInserted(self, parent: QtCore.QModelIndex, start: int, end: int):
         super().rowsInserted(parent, start, end)

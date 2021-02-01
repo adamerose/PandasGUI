@@ -11,6 +11,7 @@ from pandasgui.store import Store, PandasGuiDataFrame
 import pandasgui
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -184,17 +185,67 @@ class DataFrameViewer(QtWidgets.QWidget):
         self.indexHeader.updateGeometry()
 
     def keyPressEvent(self, event):
-
+        # Disabling this and moving hotkeys to main GUI
+        return
         QtWidgets.QWidget.keyPressEvent(self, event)
+        mods = event.modifiers()
 
-        if event.matches(QtGui.QKeySequence.Copy):
-            self.dataView.copy()
+        # Ctrl+C
+        if event.key() == Qt.Key_C and (mods & Qt.ControlModifier):
+            self.copy()
+        # Ctrl+Shift+C
+        if event.key() == Qt.Key_C and (mods & Qt.ShiftModifier) and (mods & Qt.ControlModifier):
+            self.copy(header=True)
         if event.matches(QtGui.QKeySequence.Paste):
-            self.dataView.paste()
-        # if event.key() == Qt.Key_P and (event.modifiers() & Qt.ControlModifier):
-        #     print("Ctrl + P")
-        # if event.key() == Qt.Key_D and (event.modifiers() & Qt.ControlModifier):
-        #     print("Ctrl + D")
+            self.paste()
+        if event.key() == Qt.Key_P and (mods & Qt.ControlModifier):
+            pass
+        if event.key() == Qt.Key_D and (mods & Qt.ControlModifier):
+            pass
+
+
+    def copy(self, header=False):
+        """
+        Copy the selected cells to clipboard in an Excel-pasteable format
+        """
+
+        # Get the bounds using the top left and bottom right selected cells
+        indexes = self.dataView.selectionModel().selection().indexes()
+        rows = [ix.row() for ix in indexes]
+        cols = [ix.column() for ix in indexes]
+
+        df = self.dataView.pgdf.df.iloc[min(rows): max(rows) + 1, min(cols): max(cols) + 1]
+
+        # Special case for single-cell copy since df.to_clipboard appends extra newline
+        if df.shape == (1, 1):
+            clipboard = QtWidgets.QApplication.instance().clipboard()
+            value = str(df.iloc[0, 0])
+            clipboard.setText(value)
+        else:
+            # If I try to use Pyperclip without starting new thread large selections give access denied error
+            threading.Thread(target=lambda df: df.to_clipboard(index=header, header=header), args=(df,)).start()
+
+    def paste(self):
+        df_to_paste = pd.read_clipboard(sep=',|\t', header=None)
+
+        # Get the bounds using the top left and bottom right selected cells
+        indexes = self.dataView.selectionModel().selection().indexes()
+        rows = [ix.row() for ix in indexes]
+        cols = [ix.column() for ix in indexes]
+
+        self.pgdf.paste_data(min(rows), min(cols), df_to_paste)
+
+        # Select the range of cells that were pasted
+        self.dataView.selectionModel().clearSelection()
+        temp = self.dataView.selectionMode()
+        self.dataView.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
+
+        for i in range(df_to_paste.shape[0]):
+            for j in range(df_to_paste.shape[1]):
+                self.dataView.selectionModel().select(self.dataView.model().index(min(rows) + i, min(cols) + j),
+                                             QtCore.QItemSelectionModel.Select)
+
+        self.dataView.setSelectionMode(temp)
 
 
 # Remove dotted border on cell focus.  https://stackoverflow.com/a/55252650/3620725
@@ -332,49 +383,6 @@ class DataTableView(QtWidgets.QTableView):
                 | QtCore.QItemSelectionModel.ClearAndSelect,
             )
 
-    def copy(self):
-        """
-        Copy the selected cells to clipboard in an Excel-pasteable format
-        """
-
-        # Get the bounds using the top left and bottom right selected cells
-        indexes = self.selectionModel().selection().indexes()
-        rows = [ix.row() for ix in indexes]
-        cols = [ix.column() for ix in indexes]
-
-        df = self.pgdf.df.iloc[min(rows): max(rows) + 1, min(cols): max(cols) + 1]
-
-        # Special case for single-cell copy since df.to_clipboard appends extra newline
-        if df.shape == (1, 1):
-            clipboard = QtWidgets.QApplication.instance().clipboard()
-            value = str(df.iloc[0, 0])
-            clipboard.setText(value)
-        else:
-            # If I try to use Pyperclip without starting new thread large selections give access denied error
-            threading.Thread(target=lambda df: df.to_clipboard(index=False, header=False), args=(df,)).start()
-
-    def paste(self):
-        df_to_paste = pd.read_clipboard(sep=',|\t', header=None)
-
-        # Get the bounds using the top left and bottom right selected cells
-        indexes = self.selectionModel().selection().indexes()
-        rows = [ix.row() for ix in indexes]
-        cols = [ix.column() for ix in indexes]
-
-        self.pgdf.paste_data(min(rows), min(cols), df_to_paste)
-
-        # Select the range of cells that were pasted
-        self.selectionModel().clearSelection()
-        temp = self.selectionMode()
-        self.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
-
-        for i in range(df_to_paste.shape[0]):
-            for j in range(df_to_paste.shape[1]):
-                self.selectionModel().select(self.model().index(min(rows) + i, min(cols) + j),
-                                             QtCore.QItemSelectionModel.Select)
-
-        self.setSelectionMode(temp)
-
     def sizeHint(self):
         # Set width and height based on number of columns in model
         # Width
@@ -466,7 +474,7 @@ class HeaderView(QtWidgets.QTableView):
     def __init__(self, parent: DataFrameViewer, orientation):
         super().__init__(parent)
         self.pgdf: PandasGuiDataFrame = parent.pgdf
-        self.setProperty('orientation', 'horizontal' if orientation==1 else 'vertical')  # Used in stylesheet
+        self.setProperty('orientation', 'horizontal' if orientation == 1 else 'vertical')  # Used in stylesheet
 
         # Setup
         self.orientation = orientation
@@ -889,7 +897,7 @@ class HeaderNamesView(QtWidgets.QTableView):
     def __init__(self, parent: DataFrameViewer, orientation):
         super().__init__(parent)
         self.pgdf: PandasGuiDataFrame = parent.pgdf
-        self.setProperty('orientation', 'horizontal' if orientation==1 else 'vertical')  # Used in stylesheet
+        self.setProperty('orientation', 'horizontal' if orientation == 1 else 'vertical')  # Used in stylesheet
 
         # Setup
         self.orientation = orientation
