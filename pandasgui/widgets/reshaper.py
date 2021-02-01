@@ -44,6 +44,7 @@ class Reshaper(QtWidgets.QWidget):
 
         df = flatten_df(self.pgdf.df)
         self.dragger = Dragger(sources=df.columns, destinations=[],
+                               source_nunique=df.nunique().apply('{: >6}'.format).values,
                                source_types=df.dtypes.values.astype(str))
 
         self.layout = QtWidgets.QGridLayout()
