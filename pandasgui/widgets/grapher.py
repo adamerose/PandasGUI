@@ -17,7 +17,6 @@ from pandasgui.store import Store, PandasGuiDataFrame, HistoryItem
 from pandasgui.widgets.plotly_viewer import PlotlyViewer, plotly_markers
 from pandasgui.utility import flatten_df, flatten_iter, kwargs_string
 from pandasgui.widgets.plotly_viewer import PlotlyViewer
-from pandasgui.widgets.spinner import Spinner
 from pandasgui.widgets.dragger import Dragger, ColumnArg, Schema
 
 import logging
@@ -61,9 +60,6 @@ class Grapher(QtWidgets.QWidget):
                                source_nunique=df.nunique().apply('{: >6}'.format).values,
                                source_types=df.dtypes.values.astype(str))
 
-        self.spinner = Spinner()
-        self.spinner.setParent(self.figure_viewer)
-
         self.layout = QtWidgets.QGridLayout()
         self.layout.addWidget(self.plot_type_picker, 0, 0)
         self.layout.addWidget(self.dragger, 1, 0)
@@ -98,8 +94,6 @@ class Grapher(QtWidgets.QWidget):
         self.dragger.set_destinations(arg_list)
 
     def on_dragger_finished(self):
-        self.spinner.start()
-
         # df = flatten_df(self.pgdf.df)
         kwargs = {}
         for key, val in self.dragger.get_data().items():
@@ -119,7 +113,6 @@ class Grapher(QtWidgets.QWidget):
         self.pgdf.history_imports.add("import plotly.express as px")
 
         self.figure_viewer.set_figure(fig)
-
 
 def clear_layout(layout):
     for i in reversed(range(layout.count())):

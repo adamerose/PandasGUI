@@ -7,6 +7,7 @@ import plotly.graph_objs as go
 from plotly.validators.scatter.marker import SymbolValidator
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5.QtCore import Qt
+import PyQt5
 
 import logging
 
@@ -38,7 +39,8 @@ if "PyQt5.QtWebEngineWidgets" not in sys.modules:
 _extended_symbols = SymbolValidator().values[0::2][1::3]
 plotly_markers = [symbol for symbol in _extended_symbols if symbol[-3:] != "dot"]
 
-class PlotlyViewer(QtWebEngineWidgets.QWebEngineView):
+
+class PlotlyViewer(PyQt5.QtWebEngineWidgets.QWebEngineView):
     def __init__(self, fig=None, store=None):
         super().__init__()
         self.store = store

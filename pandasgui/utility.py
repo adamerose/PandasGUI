@@ -162,7 +162,7 @@ def nunique(df):
 
 def traverse_tree_widget(tree: Union[QtWidgets.QTreeWidget, QtWidgets.QTreeWidgetItem]) -> List[
     QtWidgets.QTreeWidgetItem]:
-    if type(tree) == QtWidgets.QTreeWidget:
+    if issubclass(type(tree), QtWidgets.QTreeWidget):
         tree = tree.invisibleRootItem()
 
     items = []

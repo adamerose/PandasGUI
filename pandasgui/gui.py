@@ -47,6 +47,8 @@ class PandasGui(QtWidgets.QMainWindow):
         self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
         super().__init__()
 
+        self.caller_stack = inspect.currentframe().f_back
+
         self.stacked_widget = None
         self.navigator = None
         self.splitter = None
@@ -140,12 +142,28 @@ class PandasGui(QtWidgets.QMainWindow):
         items = {'Edit': [MenuItem(name='Find',
                                    func=self.find_bar.show_find_bar,
                                    shortcut='Ctrl+F'),
+                          MenuItem(name='Copy',
+                                   func=self.copy,
+                                   shortcut='Ctrl+C'),
+                          MenuItem(name='Copy With Headers',
+                                   func=self.copy_with_headers,
+                                   shortcut='Ctrl+Shift+C'),
+                          MenuItem(name='Copy With Headers',
+                                   func=self.paste,
+                                   shortcut='Ctrl+V'),
+                          MenuItem(name='Add Column',
+                                   func=self.add_column),
                           MenuItem(name='Import',
                                    func=self.import_dialog),
-                          MenuItem(name='Export',
-                                   func=self.export_dialog),
                           MenuItem(name='Import From Clipboard',
                                    func=self.import_from_clipboard),
+                          MenuItem(name='Export',
+                                   func=self.export_dialog),
+                          MenuItem(name='Delete Selected DataFrames',
+                                   func=self.delete_selected_dataframes),
+                          MenuItem(name='Refresh Data',
+                                   func=self.refresh,
+                                   shortcut='Ctrl+R'),
                           MenuItem(name='Code Export',
                                    func=self.code_export),
                           ],
@@ -157,7 +175,6 @@ class PandasGui(QtWidgets.QMainWindow):
                                     func=self.print_history),
                            MenuItem(name='Delete local data',
                                     func=delete_datasets),
-
                            ]}
 
         # Add menu items and actions to UI using the schema defined above
@@ -182,7 +199,6 @@ class PandasGui(QtWidgets.QMainWindow):
             if theme == self.store.settings.theme.value:
                 theme_action.trigger()
 
-    @QtCore.pyqtSlot()
     def set_theme(self, name: str):
         if name == "classic":
             self.setStyleSheet("")
@@ -193,6 +209,15 @@ class PandasGui(QtWidgets.QMainWindow):
         elif name == "light":
             self.setStyleSheet(qstylish.light())
             self.store.settings.theme.value = 'light'
+
+    def copy(self):
+        self.store.selected_pgdf.dataframe_viewer.copy()
+
+    def copy_with_headers(self):
+        self.store.selected_pgdf.dataframe_viewer.copy(header=True)
+
+    def paste(self):
+        self.store.selected_pgdf.dataframe_viewer.paste()
 
     def code_export(self):
         code_history = self.store.selected_pgdf.code_export()
@@ -207,6 +232,10 @@ class PandasGui(QtWidgets.QMainWindow):
         resize_widget(self.code_export_dialog, 0.5, 0.5)
         self.code_export_dialog.setLayout(layout)
         self.code_export_dialog.show()
+
+    def delete_selected_dataframes(self):
+        for name in [item.text(0) for item in self.navigator.selectedItems()]:
+            self.store.remove_dataframe(name)
 
     def dropEvent(self, e):
         if e.mimeData().hasUrls:
@@ -257,6 +286,10 @@ class PandasGui(QtWidgets.QMainWindow):
     def get_dataframes(self, names: Union[None, str, list] = None):
         return self.store.get_dataframes(names)
 
+    def add_column(self):
+        dialog = QtWidgets.QInputDialog(self)
+        text = dialog.getText(dialog, "Dialog Title", "Enter your text:")
+
     def import_dialog(self):
         dialog = QtWidgets.QFileDialog()
         paths, _ = dialog.getOpenFileNames(filter="*.csv *.xlsx *.parquet")
@@ -277,10 +310,27 @@ class PandasGui(QtWidgets.QMainWindow):
         refs.remove(self)
         super().closeEvent(e)
 
+    # Replace all GUI DataFrames with the current DataFrame of the same name from the scope show was called
+    def refresh(self):
+        callers_local_vars = self.caller_stack.f_locals.items()
+        refreshed_names = []
+        for var_name, var_val in callers_local_vars:
+            for ix, name in enumerate([pgdf.name for pgdf in self.store.data]):
+                if var_name == name:
+                    none_found_flag = False
+                    self.store.remove_dataframe(var_name)
+                    self.store.add_dataframe(var_val, name=var_name)
+                    refreshed_names.append(var_name)
+
+        if not refreshed_names:
+            print("No matching DataFrames found to refresh")
+        else:
+            print(f"Refreshed {', '.join(refreshed_names)}")
 
 def show(*args,
          settings={},
          **kwargs):
+
     # Get the variable names in the scope show() was called from
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
 
@@ -306,6 +356,7 @@ def show(*args,
     kwargs = {**kwargs, **dataframes}
 
     pandas_gui = PandasGui(settings=settings, **kwargs)
+    pandas_gui.caller_stack = inspect.currentframe().f_back
 
     return pandas_gui
 
@@ -313,4 +364,4 @@ def show(*args,
 if __name__ == "__main__":
     from pandasgui.datasets import all_datasets, pokemon, mi_manufacturing
 
-    gui = show(pokemon, mi_manufacturing)
+    gui = show(**all_datasets)
