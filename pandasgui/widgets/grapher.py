@@ -137,8 +137,11 @@ def scatter(pgdf, kwargs):
 
 
 def line(pgdf, kwargs):
+    pgdf.add_history_item("Grapher",
+                          f"# *Code history for line plot not yet implemented*")
+
     key_cols = []
-    for arg in [a for a in ['x', 'color', 'line_dash', 'line_group', 'hover_name', 'facet_row', 'facet_col'] if
+    for arg in [a for a in ['x', 'color', 'line_dash', 'line_group', 'hover_name', 'facet_row', 'facet_col', 'marker_symbol'] if
                 a in kwargs.keys()]:
         key_cols_subset = kwargs[arg]
         if type(key_cols_subset) == list:
@@ -148,11 +151,16 @@ def line(pgdf, kwargs):
         else:
             raise TypeError
 
-    if key_cols == []:
-        return px.line(data_frame=pgdf.df, **kwargs)
+    key_cols = list(set(key_cols))
 
-    df = kwargs['data_frame'].groupby(key_cols).mean().reset_index()
+    if key_cols == []:
+        df = pgdf.df
+    else:
+        df = pgdf.df.groupby(key_cols).mean().reset_index()
+
+
     if 'marker_symbol' in kwargs.keys():
+
         # get from custom kwargs, but invalid for px.line, so pop them
         marker_col = kwargs.pop('marker_symbol')
         marker_size = kwargs.pop('marker_size', 10)  # optional
@@ -162,34 +170,35 @@ def line(pgdf, kwargs):
         unique_markers = len(plotly_markers)
 
         kwargs['hover_name'] = kwargs.get('hover_name', marker_col)
+
         fig = None
+
         for i in range(0, len(marker_unique)):
             df_sub = df[df[marker_col] == marker_unique[i]]
-            kwargs['data_frame'] = df_sub
+
             if fig is None:
-                fig = px.line(**kwargs).update_traces(
+                fig = px.line(data_frame=df_sub, **kwargs).update_traces(
                     mode='lines+markers',
                     marker_symbol=plotly_markers[i % unique_markers],
                     marker_size=marker_size,
                     marker_line_width=marker_line_width)
             else:
-                fig.add_traces(px.line(**kwargs).update_traces(
+                fig.add_traces(px.line(data_frame=df_sub, **kwargs).update_traces(
                     mode='lines+markers',
                     marker_symbol=plotly_markers[i % unique_markers],
                     marker_size=marker_size,
                     marker_line_width=marker_line_width).data)
-        return fig
-    kwargs['data_frame'] = df
+    else:
+        fig = px.line(data_frame=df, **kwargs)
 
-    pgdf.add_history_item("Grapher",
-                          f"# *Code history for line plot not yet implemented*")
-    return px.line(data_frame=pgdf.df, **kwargs)
+    return fig
+
 
 
 def bar(pgdf, kwargs):
     key_cols = flatten_iter([kwargs[arg] for arg in ['x', 'color', 'facet_row', 'facet_col'] if arg in kwargs.keys()])
     if any(key_cols):
-        kwargs['data_frame'] = kwargs['data_frame'].groupby(key_cols).mean().reset_index()
+        pgdf.df = pgdf.df.groupby(key_cols).mean().reset_index()
 
     pgdf.add_history_item("Grapher",
                           f"# *Code history for bar plot not yet implemented*")
