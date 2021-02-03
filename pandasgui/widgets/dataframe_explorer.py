@@ -10,16 +10,16 @@ from pandasgui.widgets.grapher import Grapher
 from pandasgui.widgets.reshaper import Reshaper
 from pandasgui.widgets.filter_viewer import FilterViewer
 from pandasgui.widgets.dock_widget import DockWidget
-from pandasgui.store import PandasGuiDataFrame
+from pandasgui.store import PandasGuiDataFrameStore
 
 import logging
 logger = logging.getLogger(__name__)
 
 class DataFrameExplorer(QtWidgets.QMainWindow):
-    def __init__(self, pgdf: PandasGuiDataFrame):
+    def __init__(self, pgdf: PandasGuiDataFrameStore):
         super().__init__()
 
-        pgdf = PandasGuiDataFrame.cast(pgdf)
+        pgdf = PandasGuiDataFrameStore.cast(pgdf)
         pgdf.dataframe_explorer = self
         self.pgdf = pgdf
 
@@ -78,7 +78,7 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
         # This is so dataclasses.asdict doesn't complain about this being unpicklable
         return "DataFrameExplorer"
 
-    def make_statistics_tab(self, pgdf: PandasGuiDataFrame):
+    def make_statistics_tab(self, pgdf: PandasGuiDataFrameStore):
 
         stats_df = pd.DataFrame(
             {
@@ -92,7 +92,7 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
             }
         )
 
-        stats_pgdf = PandasGuiDataFrame(stats_df.reset_index())
+        stats_pgdf = PandasGuiDataFrameStore(stats_df.reset_index())
         w = DataFrameViewer(stats_pgdf)
         w.setAutoFillBackground(True)
         return w

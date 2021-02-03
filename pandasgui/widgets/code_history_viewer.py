@@ -7,7 +7,7 @@ from PyQt5.QtCore import QModelIndex
 from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtCore import QUrl
 
-from pandasgui.store import PandasGuiDataFrame
+from pandasgui.store import PandasGuiDataFrameStore
 import typing
 import pandasgui
 
@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 class CodeHistoryViewer(QtWidgets.QWidget):
-    def __init__(self, pgdf: PandasGuiDataFrame):
+    def __init__(self, pgdf: PandasGuiDataFrameStore):
         super().__init__()
-        pgdf = PandasGuiDataFrame.cast(pgdf)
+        pgdf = PandasGuiDataFrameStore.cast(pgdf)
         pgdf.filter_viewer = self
         self.pgdf = pgdf
 
@@ -67,7 +67,7 @@ class CodeHistoryViewer(QtWidgets.QWidget):
                 painter.restore()
 
     class ListModel(QtCore.QAbstractListModel):
-        def __init__(self, pgdf: PandasGuiDataFrame):
+        def __init__(self, pgdf: PandasGuiDataFrameStore):
             super().__init__()
             self.pgdf = pgdf
 
@@ -119,7 +119,7 @@ if __name__ == "__main__":
     from pandasgui.datasets import pokemon
 
     stacked_widget = QtWidgets.QStackedWidget()
-    pokemon = PandasGuiDataFrame(pokemon)
+    pokemon = PandasGuiDataFrameStore(pokemon)
     pokemon.add_filter('Generation > 3', enabled=False)
     pokemon.add_filter('Attack > 50', enabled=True)
     pokemon.add_filter('Defense < 30', enabled=True)

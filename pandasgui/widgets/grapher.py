@@ -12,7 +12,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
 import pandas as pd
-from pandasgui.store import Store, PandasGuiDataFrame, HistoryItem
+from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore, HistoryItem
 
 from pandasgui.widgets.plotly_viewer import PlotlyViewer, plotly_markers
 from pandasgui.utility import flatten_df, flatten_iter, kwargs_string
@@ -25,10 +25,10 @@ logger = logging.getLogger(__name__)
 
 
 class Grapher(QtWidgets.QWidget):
-    def __init__(self, pgdf: PandasGuiDataFrame):
+    def __init__(self, pgdf: PandasGuiDataFrameStore):
         super().__init__()
 
-        self.pgdf = PandasGuiDataFrame.cast(pgdf)
+        self.pgdf = PandasGuiDataFrameStore.cast(pgdf)
 
         self.setWindowTitle("Graph Builder")
 

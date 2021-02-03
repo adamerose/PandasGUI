@@ -7,7 +7,7 @@ import pandasgui
 import os
 from typing import Union, List, Iterable, Callable
 
-from pandasgui.store import Store, PandasGuiDataFrame
+from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore
 
 from pandasgui.utility import flatten_df, kwargs_string
 from pandasgui.widgets.spinner import Spinner
@@ -19,10 +19,10 @@ logger = logging.getLogger(__name__)
 
 
 class Reshaper(QtWidgets.QWidget):
-    def __init__(self, pgdf: PandasGuiDataFrame):
+    def __init__(self, pgdf: PandasGuiDataFrameStore):
         super().__init__()
 
-        self.pgdf = PandasGuiDataFrame.cast(pgdf)
+        self.pgdf = PandasGuiDataFrameStore.cast(pgdf)
 
         self.setWindowTitle("Reshaper")
 

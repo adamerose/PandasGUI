@@ -58,7 +58,7 @@ class Setting(DictLike):
         super().__setattr__(key, value)
 
 
-class Settings(DictLike):
+class SettingsStore(DictLike):
     def __init__(self, editable=False, style="Fusion", block=None, theme=preferences['theme']):
         if block is None:
             if in_interactive_console():
@@ -112,7 +112,7 @@ class HistoryItem:
         self.time = datetime.now().strftime("%H:%M:%S")
 
 
-class PandasGuiDataFrame:
+class PandasGuiDataFrameStore:
     """
     All methods that modify the data should modify self.df_unfiltered, then self.df gets computed from that
     """
@@ -129,8 +129,8 @@ class PandasGuiDataFrame:
         self.history_imports = {"import pandas as pd"}
 
         # References to other object instances that may be assigned later
-        self.settings: Settings = Settings()
-        self.store: Union[Store, None] = None
+        self.settings: SettingsStore = SettingsStore()
+        self.store: Union[PandasGuiStore, None] = None
         self.gui: Union["PandasGui", None] = None
         self.dataframe_explorer: Union["DataFrameExplorer", None] = None
         self.dataframe_viewer: Union["DataFrameViewer", None] = None
@@ -352,37 +352,37 @@ class PandasGuiDataFrame:
             view.updateGeometry()
 
     @staticmethod
-    def cast(x: Union["PandasGuiDataFrame", pd.DataFrame, pd.Series, Iterable]):
-        if isinstance(x, PandasGuiDataFrame):
+    def cast(x: Union["PandasGuiDataFrameStore", pd.DataFrame, pd.Series, Iterable]):
+        if isinstance(x, PandasGuiDataFrameStore):
             return x
         if isinstance(x, pd.DataFrame):
-            return PandasGuiDataFrame(x)
+            return PandasGuiDataFrameStore(x)
         elif isinstance(x, pd.Series):
-            return PandasGuiDataFrame(x.to_frame())
+            return PandasGuiDataFrameStore(x.to_frame())
         else:
             try:
-                return PandasGuiDataFrame(pd.DataFrame(x))
+                return PandasGuiDataFrameStore(pd.DataFrame(x))
             except:
                 raise TypeError(f"Could not convert {type(x)} to DataFrame")
 
 
 
 @dataclass
-class Store:
-    settings: Union["Settings", None] = None
-    data: List[PandasGuiDataFrame] = field(default_factory=list)
+class PandasGuiStore:
+    settings: Union["SettingsStore", None] = None
+    data: List[PandasGuiDataFrameStore] = field(default_factory=list)
     gui: Union["PandasGui", None] = None
     navigator: Union["Navigator", None] = None
-    selected_pgdf: Union[PandasGuiDataFrame, None] = None
+    selected_pgdf: Union[PandasGuiDataFrameStore, None] = None
 
     def __post_init__(self):
-        self.settings = Settings()
+        self.settings = SettingsStore()
 
-    def add_dataframe(self, pgdf: Union[DataFrame, PandasGuiDataFrame],
+    def add_dataframe(self, pgdf: Union[DataFrame, PandasGuiDataFrameStore],
                       name: str = "Untitled"):
 
         name = unique_name(name, self.get_dataframes().keys())
-        pgdf = PandasGuiDataFrame.cast(pgdf)
+        pgdf = PandasGuiDataFrameStore.cast(pgdf)
         pgdf.settings = self.settings
         pgdf.name = name
         pgdf.store = self

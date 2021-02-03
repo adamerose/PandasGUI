@@ -7,7 +7,7 @@ import pandas as pd
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
-from pandasgui.store import Store, PandasGuiDataFrame
+from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore
 import pandasgui
 
 import logging
@@ -16,10 +16,10 @@ logger = logging.getLogger(__name__)
 
 
 class DataFrameViewer(QtWidgets.QWidget):
-    def __init__(self, pgdf: PandasGuiDataFrame):
+    def __init__(self, pgdf: PandasGuiDataFrameStore):
         super().__init__()
 
-        pgdf = PandasGuiDataFrame.cast(pgdf)
+        pgdf = PandasGuiDataFrameStore.cast(pgdf)
         pgdf.dataframe_viewer = self
         self.pgdf = pgdf
 
@@ -268,7 +268,7 @@ class DataTableModel(QtCore.QAbstractTableModel):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.pgdf: PandasGuiDataFrame = parent.pgdf
+        self.pgdf: PandasGuiDataFrameStore = parent.pgdf
 
     def headerData(self, section, orientation, role=None):
         # Headers for DataTableView are hidden. Header data is shown in HeaderView
@@ -335,7 +335,7 @@ class DataTableView(QtWidgets.QTableView):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.pgdf: PandasGuiDataFrame = parent.pgdf
+        self.pgdf: PandasGuiDataFrameStore = parent.pgdf
 
         # Create and set model
         model = DataTableModel(parent)
@@ -405,7 +405,7 @@ class HeaderModel(QtCore.QAbstractTableModel):
     def __init__(self, parent, orientation):
         super().__init__(parent)
         self.orientation = orientation
-        self.pgdf: PandasGuiDataFrame = parent.pgdf
+        self.pgdf: PandasGuiDataFrameStore = parent.pgdf
 
     def columnCount(self, parent=None):
         if self.orientation == Qt.Horizontal:
@@ -473,7 +473,7 @@ class HeaderView(QtWidgets.QTableView):
 
     def __init__(self, parent: DataFrameViewer, orientation):
         super().__init__(parent)
-        self.pgdf: PandasGuiDataFrame = parent.pgdf
+        self.pgdf: PandasGuiDataFrameStore = parent.pgdf
         self.setProperty('orientation', 'horizontal' if orientation == 1 else 'vertical')  # Used in stylesheet
 
         # Setup
@@ -851,7 +851,7 @@ class HeaderNamesModel(QtCore.QAbstractTableModel):
     def __init__(self, parent, orientation):
         super().__init__(parent)
         self.orientation = orientation
-        self.pgdf: PandasGuiDataFrame = parent.pgdf
+        self.pgdf: PandasGuiDataFrameStore = parent.pgdf
 
     def columnCount(self, parent=None):
         if self.orientation == Qt.Horizontal:
@@ -896,7 +896,7 @@ class HeaderNamesModel(QtCore.QAbstractTableModel):
 class HeaderNamesView(QtWidgets.QTableView):
     def __init__(self, parent: DataFrameViewer, orientation):
         super().__init__(parent)
-        self.pgdf: PandasGuiDataFrame = parent.pgdf
+        self.pgdf: PandasGuiDataFrameStore = parent.pgdf
         self.setProperty('orientation', 'horizontal' if orientation == 1 else 'vertical')  # Used in stylesheet
 
         # Setup

@@ -4,10 +4,10 @@ import sys
 from typing import Union
 from dataclasses import dataclass, asdict, is_dataclass
 from enum import Enum
-from pandasgui.store import Settings, Setting
+from pandasgui.store import SettingsStore, Setting
 
 class SettingsEditor(QtWidgets.QWidget):
-    def __init__(self, settings: Settings, parent=None):
+    def __init__(self, settings: SettingsStore, parent=None):
         super().__init__()
 
         layout = QtWidgets.QVBoxLayout()
@@ -63,7 +63,7 @@ if __name__ == '__main__':
 
     from pandasgui import store
 
-    data = store.Settings()
+    data = store.SettingsStore()
     d = SettingsEditor(data)
     d.show()
 

@@ -9,7 +9,7 @@ import pkg_resources
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
-from pandasgui.store import Store, PandasGuiDataFrame
+from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore
 from pandasgui.utility import fix_ipython, fix_pyqt, as_dict, delete_datasets, resize_widget
 from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
 from pandasgui.widgets.find_toolbar import FindToolbar
@@ -41,7 +41,7 @@ class PandasGui(QtWidgets.QMainWindow):
     def __init__(self, settings: dict = {}, **kwargs):
         """
         Args:
-            settings: Dict of settings, as defined in pandasgui.store.Settings
+            settings: Dict of settings, as defined in pandasgui.store.SettingsStore
             kwargs: Dict of DataFrames where key is name & val is the DataFrame object
         """
         self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
@@ -56,7 +56,7 @@ class PandasGui(QtWidgets.QMainWindow):
 
         refs.append(self)
 
-        self.store = Store()
+        self.store = PandasGuiStore()
         self.store.gui = self
         # Add user provided settings to data store
         for key, value in settings.items():
@@ -167,9 +167,9 @@ class PandasGui(QtWidgets.QMainWindow):
                           MenuItem(name='Code Export',
                                    func=self.code_export),
                           ],
-                 'Debug': [MenuItem(name='Print Data Store',
+                 'Debug': [MenuItem(name='Print Data PandasGuiStore',
                                     func=self.print_store),
-                           MenuItem(name='View Data Store',
+                           MenuItem(name='View Data PandasGuiStore',
                                     func=self.view_store),
                            MenuItem(name='Print History (for current DataFrame)',
                                     func=self.print_history),
