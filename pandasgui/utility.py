@@ -250,15 +250,15 @@ def get_kwargs():
 
 
 # Flatten nested iterables
-def flatten_iter(itr):
-    t = tuple()
-    for e in itr:
-        try:
-            t += flatten_iter(e)
-        except:
-            t += (e,)
-    return t
+def flatten_iter(item):
+    t = []
+    if type(item) in [list, tuple, set]:
+        for sub_item in item:
+            t += flatten_iter(sub_item)
+    else:
+        t.append(item)
 
+    return t
 
 # Make a string from a kwargs dict as they would be displayed when passed to a function
 # eg. {'a': 5, 'b': 6} -> a=5, b=6
