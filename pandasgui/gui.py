@@ -148,11 +148,9 @@ class PandasGui(QtWidgets.QMainWindow):
                           MenuItem(name='Copy With Headers',
                                    func=self.copy_with_headers,
                                    shortcut='Ctrl+Shift+C'),
-                          MenuItem(name='Copy With Headers',
+                          MenuItem(name='Paste',
                                    func=self.paste,
                                    shortcut='Ctrl+V'),
-                          MenuItem(name='Add Column',
-                                   func=self.add_column),
                           MenuItem(name='Import',
                                    func=self.import_dialog),
                           MenuItem(name='Import From Clipboard',
@@ -285,10 +283,6 @@ class PandasGui(QtWidgets.QMainWindow):
     # Return all DataFrames, or a subset specified by names. Returns a dict of name:df or a single df if there's only 1
     def get_dataframes(self, names: Union[None, str, list] = None):
         return self.store.get_dataframes(names)
-
-    def add_column(self):
-        dialog = QtWidgets.QInputDialog(self)
-        text = dialog.getText(dialog, "Dialog Title", "Enter your text:")
 
     def import_dialog(self):
         dialog = QtWidgets.QFileDialog()

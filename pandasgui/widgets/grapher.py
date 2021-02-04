@@ -15,7 +15,7 @@ import pandas as pd
 from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore, HistoryItem
 
 from pandasgui.widgets.plotly_viewer import PlotlyViewer, plotly_markers
-from pandasgui.utility import flatten_df, flatten_iter, kwargs_string
+from pandasgui.utility import flatten_df, flatten_iter, kwargs_string, nunique
 from pandasgui.widgets.plotly_viewer import PlotlyViewer
 from pandasgui.widgets.dragger import Dragger, ColumnArg, Schema
 
@@ -57,7 +57,7 @@ class Grapher(QtWidgets.QWidget):
 
         df = flatten_df(self.pgdf.df)
         self.dragger = Dragger(sources=df.columns, destinations=[],
-                               source_nunique=df.nunique().apply('{: >7}'.format).values,
+                               source_nunique=nunique(df).apply('{: >7}'.format).values,
                                source_types=df.dtypes.values.astype(str))
 
         self.layout = QtWidgets.QGridLayout()

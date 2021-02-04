@@ -9,7 +9,7 @@ from typing import Union, List, Iterable, Callable
 
 from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore
 
-from pandasgui.utility import flatten_df, kwargs_string
+from pandasgui.utility import flatten_df, kwargs_string, nunique
 from pandasgui.widgets.spinner import Spinner
 from pandasgui.widgets.dragger import Dragger, Schema, ColumnArg, OptionListArg
 
@@ -44,7 +44,7 @@ class Reshaper(QtWidgets.QWidget):
 
         df = flatten_df(self.pgdf.df)
         self.dragger = Dragger(sources=df.columns, destinations=[],
-                               source_nunique=df.nunique().apply('{: >6}'.format).values,
+                               source_nunique=nunique(df).apply('{: >6}'.format).values,
                                source_types=df.dtypes.values.astype(str))
 
         self.layout = QtWidgets.QGridLayout()
