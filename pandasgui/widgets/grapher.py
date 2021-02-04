@@ -81,7 +81,8 @@ class Grapher(QtWidgets.QWidget):
         self.on_type_changed()
 
         # Show a blank axis initially
-        self.figure_viewer.set_figure(plotly.graph_objs.Figure())
+        self.fig = plotly.graph_objs.Figure()
+        self.figure_viewer.set_figure(self.fig)
 
     def on_type_changed(self):
         if len(self.plot_type_picker.selectedItems()) == 0:
@@ -108,11 +109,11 @@ class Grapher(QtWidgets.QWidget):
 
         func = self.current_schema.function
 
-        fig = func(self.pgdf, kwargs)
+        self.fig = func(self.pgdf, kwargs)
 
         self.pgdf.history_imports.add("import plotly.express as px")
 
-        self.figure_viewer.set_figure(fig)
+        self.figure_viewer.set_figure(self.fig)
 
 def clear_layout(layout):
     for i in reversed(range(layout.count())):
@@ -152,6 +153,7 @@ def line(pgdf, kwargs):
             raise TypeError
 
     key_cols = list(set(key_cols))
+    print(kwargs, key_cols)
 
     if key_cols == []:
         df = pgdf.df
@@ -192,7 +194,6 @@ def line(pgdf, kwargs):
         fig = px.line(data_frame=df, **kwargs)
 
     return fig
-
 
 
 def bar(pgdf, kwargs):
@@ -394,8 +395,6 @@ if __name__ == "__main__":
     from pandasgui.utility import fix_ipython, fix_pyqt
     from pandasgui.datasets import iris, pokemon
 
-    fix_ipython()
-    fix_pyqt()
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
 
     gb2 = Grapher(pokemon)
