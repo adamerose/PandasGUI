@@ -7,12 +7,34 @@ from PyQt5.QtCore import QModelIndex
 from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtCore import QUrl
 
+from pandasgui.constants import CATEGORICAL_THRESHOLD
 from pandasgui.store import PandasGuiDataFrameStore
 import typing
 import pandasgui
 
 import logging
 logger = logging.getLogger(__name__)
+
+
+class Completer(QtWidgets.QCompleter):
+
+    def pathFromIndex(self, index):
+        # This way it'll reevaluate
+        path = QtWidgets.QCompleter.pathFromIndex(self, index)
+
+        # if we use a double quote, whatever was before has already
+        # been autocompleted, so we split on that.
+        # space tells us we are at beginning of value
+        lst = str(self.widget().text()).split(' "')
+
+        if len(lst) > 1:
+            path = '%s%s' % (' "'.join(lst[:-1]), path)
+
+        return path
+
+    def splitPath(self, path):
+        path = str(path.split('"')[-1]).strip(" ")
+        return [path]
 
 
 class FilterViewer(QtWidgets.QWidget):
@@ -26,17 +48,33 @@ class FilterViewer(QtWidgets.QWidget):
         self.list_model = self.ListModel(pgdf)
         self.list_view.setModel(self.list_model)
 
+        # autocompletion for QLineEdit
+        columns = self.pgdf.df_unfiltered.columns
+        valid_values = [f"`{col}`" for col in columns]
+        low_cardinality = columns[self.pgdf.df_unfiltered.nunique() < CATEGORICAL_THRESHOLD]
+        for col in low_cardinality:
+            in_dataset = [f'"{val}"' for val in self.pgdf.df_unfiltered[col].unique()]
+            valid_values.extend(in_dataset)
+
+        self.completer = Completer(valid_values)
+        self.completer.setCaseSensitivity(Qt.CaseInsensitive)
+        self.completer.setFilterMode(Qt.MatchContains)
+
         self.text_input = QtWidgets.QLineEdit()
-        self.text_input.setPlaceholderText("Enter query expression")
+        self.text_input.setCompleter(self.completer)
+        self.text_input.setPlaceholderText("Enter query expression (backtick ` for available columns)")
         self.text_input_label = QtWidgets.QLabel('''<a style="color: #1e81cc;" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.query.html">What's a query expression?</a>''')
         self.text_input_label.linkActivated.connect(lambda link: QDesktopServices.openUrl(QUrl(link)))
         self.text_input.setValidator(None)
 
         self.submit_button = QtWidgets.QPushButton("Add Filter")
+        self.autocomplete_check = QtWidgets.QCheckBox("Autocomplete")
+        self.autocomplete_check.setChecked(True)
 
         # Signals
         self.text_input.returnPressed.connect(self.add_filter)
         self.submit_button.clicked.connect(self.add_filter)
+        self.autocomplete_check.clicked.connect(self.autocomplete)
 
         # Layout
         self.new_filter_layout = QtWidgets.QHBoxLayout()
@@ -45,11 +83,18 @@ class FilterViewer(QtWidgets.QWidget):
         self.layout = QtWidgets.QVBoxLayout()
         self.layout.addLayout(self.new_filter_layout)
         self.layout.addWidget(self.text_input_label)
+        self.layout.addWidget(self.autocomplete_check)
         self.layout.addWidget(self.list_view)
         self.setLayout(self.layout)
 
     def minimumSizeHint(self) -> QtCore.QSize:
         return QtCore.QSize(280, 100)
+
+    def autocomplete(self):
+        if self.autocomplete_check.isChecked():
+            self.text_input.setCompleter(self.completer)
+        else:
+            self.text_input.setCompleter(None)
 
     def add_filter(self):
         expr = self.text_input.text()
