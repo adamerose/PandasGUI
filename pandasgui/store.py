@@ -390,22 +390,30 @@ class PandasGuiStore:
         df = pgdf.df
 
         # Remove non-string column names
+        converted_names = []
         if issubclass(type(df.columns), pd.core.indexes.multi.MultiIndex):
             levels = df.columns.levels
             for level in levels:
                 if any([type(val) != str for val in level]):
+
                     logger.warning(f"In {name}, converted MultiIndex level values to string in: {str(level)}")
                     df.columns = df.columns.set_levels([[str(val) for val in level] for level in levels])
+                    converted_names.append(str(level))
+            if converted_names:
+                logger.warning(f"In {name}, converted MultiIndex level names to string: {', '.join(converted_names)}")
         else:
             for i, col in enumerate(df.columns):
                 if type(col) != str:
-                    logger.warning(f"In {name}, converted column name to string: {str(col)}")
                     df.rename(columns={col: str(col)}, inplace=True)
+                    converted_names.append(str(col))
+            if converted_names:
+                logger.warning(f"In {name}, converted column names to string: {', '.join(converted_names)}")
 
         # Check for duplicate columns
         if any(df.columns.duplicated()):
             logger.warning(f"In {name}, renamed duplicate columns: {list(set(df.columns[df.columns.duplicated()]))}")
             rename_duplicates(df)
+
 
         self.data.append(pgdf)
 
