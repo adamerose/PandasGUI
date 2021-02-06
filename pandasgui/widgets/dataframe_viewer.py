@@ -186,7 +186,9 @@ class DataFrameViewer(QtWidgets.QWidget):
 
     def keyPressEvent(self, event):
         # Disabling this and moving hotkeys to main GUI
-        return
+        if self.pgdf.gui is not None:
+            return
+
         QtWidgets.QWidget.keyPressEvent(self, event)
         mods = event.modifiers()
 
@@ -208,13 +210,33 @@ class DataFrameViewer(QtWidgets.QWidget):
         """
         Copy the selected cells to clipboard in an Excel-pasteable format
         """
-
         # Get the bounds using the top left and bottom right selected cells
-        indexes = self.dataView.selectionModel().selection().indexes()
-        rows = [ix.row() for ix in indexes]
-        cols = [ix.column() for ix in indexes]
 
-        df = self.dataView.pgdf.df.iloc[min(rows): max(rows) + 1, min(cols): max(cols) + 1]
+        # Copy from data, columns, or index depending which has focus
+        if header or self.dataView.hasFocus():
+            indexes = self.dataView.selectionModel().selection().indexes()
+            rows = [ix.row() for ix in indexes]
+            cols = [ix.column() for ix in indexes]
+
+            temp_df = self.pgdf.df
+            df = temp_df.iloc[min(rows): max(rows) + 1, min(cols): max(cols) + 1]
+
+        elif self.indexHeader.hasFocus():
+            indexes = self.indexHeader.selectionModel().selection().indexes()
+            rows = [ix.row() for ix in indexes]
+            cols = [ix.column() for ix in indexes]
+
+            temp_df = self.pgdf.df.index.to_frame()
+            df = temp_df.iloc[min(rows): max(rows) + 1, min(cols): max(cols) + 1]
+
+        elif self.columnHeader.hasFocus():
+            indexes = self.columnHeader.selectionModel().selection().indexes()
+            rows = [ix.row() for ix in indexes]
+            cols = [ix.column() for ix in indexes]
+
+            # Column header should be horizontal so we transpose
+            temp_df = self.pgdf.df.columns.to_frame().transpose()
+            df = temp_df.iloc[min(rows): max(rows) + 1, min(cols): max(cols) + 1]
 
         # Special case for single-cell copy since df.to_clipboard appends extra newline
         if df.shape == (1, 1):
@@ -518,7 +540,7 @@ class HeaderView(QtWidgets.QTableView):
         # Set initial size
         self.resize(self.sizeHint())
 
-    def mousePressEvent(self, event):
+    def mouseDoubleClickEvent(self, event):
         point = event.pos()
         ix = self.indexAt(point)
         if event.button() == QtCore.Qt.LeftButton:
@@ -590,6 +612,10 @@ class HeaderView(QtWidgets.QTableView):
     # Take the current set of selected cells and make it so that any spanning cell above a selected cell is selected too
     # This should happen after every selection change
     def selectAbove(self):
+
+        # Disabling this to allow selecting specific cells in headers
+        return
+
         if self.orientation == Qt.Horizontal:
             if self.pgdf.df.columns.nlevels == 1:
                 return
@@ -979,9 +1005,9 @@ class TrackingSpacer(QtWidgets.QFrame):
 # Examples
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-    from pandasgui.datasets import pokemon, mi_manufacturing
+    from pandasgui.datasets import pokemon, mi_manufacturing, multiindex
 
-    view = DataFrameViewer(pokemon)
+    view = DataFrameViewer(multiindex)
 
     view.show()
     app.exec_()

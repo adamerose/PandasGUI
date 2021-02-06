@@ -209,13 +209,20 @@ class PandasGui(QtWidgets.QMainWindow):
             self.store.settings.theme.value = 'light'
 
     def copy(self):
-        self.store.selected_pgdf.dataframe_viewer.copy()
+        if self.store.selected_pgdf.dataframe_explorer.active_tab == "DataFrame":
+            self.store.selected_pgdf.dataframe_explorer.dataframe_viewer.copy()
+        elif self.store.selected_pgdf.dataframe_explorer.active_tab == "Statistics":
+            self.store.selected_pgdf.dataframe_explorer.statistics_viewer.copy()
 
     def copy_with_headers(self):
-        self.store.selected_pgdf.dataframe_viewer.copy(header=True)
+        if self.store.selected_pgdf.dataframe_explorer.active_tab == "DataFrame":
+            self.store.selected_pgdf.dataframe_viewer.copy(header=True)
+        elif self.store.selected_pgdf.dataframe_explorer.active_tab == "Statistics":
+            self.store.selected_pgdf.dataframe_explorer.statistics_viewer.copy(header=True)
 
     def paste(self):
-        self.store.selected_pgdf.dataframe_viewer.paste()
+        if self.store.selected_pgdf.dataframe_explorer.active_tab == "DataFrame":
+            self.store.selected_pgdf.dataframe_explorer.dataframe_viewer.paste()
 
     def code_export(self):
         code_history = self.store.selected_pgdf.code_export()

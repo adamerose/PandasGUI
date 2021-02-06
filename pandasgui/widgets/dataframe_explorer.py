@@ -29,27 +29,35 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
         self.setTabPosition(Qt.AllDockWidgetAreas, QtWidgets.QTabWidget.North)
 
         # DataFrame tab
-        self.dataframe_tab = DataFrameViewer(pgdf)
-        self.dataframe_dock = self.add_view(self.dataframe_tab, "DataFrame")
+        self.dataframe_viewer = DataFrameViewer(pgdf)
+        self.dataframe_dock = self.add_view(self.dataframe_viewer, "DataFrame")
 
         # Filters tab
-        self.filters_tab = FilterViewer(pgdf)
-        self.filters_dock = self.add_view(self.filters_tab, "Filters")
+        self.filter_viewer = FilterViewer(pgdf)
+        self.filters_dock = self.add_view(self.filter_viewer, "Filters")
 
         # Statistics tab
-        self.statistics_tab = self.make_statistics_tab(pgdf)
-        self.statistics_dock = self.add_view(self.statistics_tab, "Statistics")
+        self.statistics_viewer = self.make_statistics_tab(pgdf)
+        self.statistics_dock = self.add_view(self.statistics_viewer, "Statistics")
 
         # Grapher tab
-        self.grapher_tab = Grapher(pgdf)
-        self.grapher_dock = self.add_view(self.grapher_tab, "Grapher")
+        self.grapher = Grapher(pgdf)
+        self.grapher_dock = self.add_view(self.grapher, "Grapher")
 
         # Reshaper tab
-        self.reshaper_tab = Reshaper(pgdf)
-        self.reshaper_dock = self.add_view(self.reshaper_tab, "Reshaper")
+        self.reshaper = Reshaper(pgdf)
+        self.reshaper_dock = self.add_view(self.reshaper, "Reshaper")
+
+        def set_active_tab(name):
+            self.active_tab = name
+        self.dataframe_dock.activated.connect(lambda: set_active_tab("DataFrame"))
+        self.filters_dock.activated.connect(lambda: set_active_tab("Filters"))
+        self.statistics_dock.activated.connect(lambda: set_active_tab("Statistics"))
+        self.grapher_dock.activated.connect(lambda: set_active_tab("Grapher"))
+        self.reshaper_dock.activated.connect(lambda: set_active_tab("Reshaper"))
 
         # Layout
-        self.dataframe_tab.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.dataframe_viewer.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         # self.addDockWidget(Qt.RightDockWidgetArea, self.filters_dock)
 
     def add_view(self, widget: QtWidgets.QWidget, title: str):

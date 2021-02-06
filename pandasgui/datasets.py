@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 __all__ = ["all_datasets",
            "simple",
+           "multiindex",
 
            "pokemon",
            "car_crashes",
@@ -64,9 +65,7 @@ for ix, name in enumerate(dataset_names):
         to_csv(all_datasets[name], local_data_path)
         logger.info(f"Saved {url} to {LOCAL_DATASET_DIR}")
 
-# Add the datasets to globals so they can be imported like `from pandasgui.datasets import iris`
-for name in all_datasets.keys():
-    globals()[name] = all_datasets[name]
+
 
 simple = pd.DataFrame({'name': ['John', 'John', 'Mary', 'Mary', 'Pete', 'Pete', 'Mike', 'Mike'],
                        'gender': ['m', 'm', 'f', 'f', 'm', 'm', 'm', 'm'],
@@ -74,6 +73,7 @@ simple = pd.DataFrame({'name': ['John', 'John', 'Mary', 'Mary', 'Pete', 'Pete', 
                        'time': [473, 439, 424, 419, 433, 374, 434, 345],
                        'points': [13, 16, 13, 18, 9, 20, 5, 18]}
                       )
+all_datasets['simple'] = simple
 
 multiindex = pd.DataFrame(np.random.randn(8, 4),
                           index=pd.MultiIndex.from_product([('bar', 'baz', 'foo', 'qux'),
@@ -82,3 +82,8 @@ multiindex = pd.DataFrame(np.random.randn(8, 4),
                           columns=pd.MultiIndex.from_tuples([('A', 'cat'), ('B', 'dog'),
                                                              ('B', 'cat'), ('A', 'dog')],
                                                             names=['exp', 'animal']))
+all_datasets['multiindex'] = multiindex
+
+# Add the datasets to globals so they can be imported like `from pandasgui.datasets import iris`
+for name in all_datasets.keys():
+    globals()[name] = all_datasets[name]
