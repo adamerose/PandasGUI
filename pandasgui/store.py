@@ -194,7 +194,7 @@ class PandasGuiDataFrameStore:
             for j in range(df_to_paste.shape[1]):
                 value = df_to_paste.iloc[i, j]
                 new_df.at[self.df.index[top_row + i],
-                                      self.df.columns[left_col + j]] = value
+                          self.df.columns[left_col + j]] = value
 
         self.df_unfiltered = new_df
         self.apply_filters()
@@ -208,7 +208,6 @@ class PandasGuiDataFrameStore:
                     df.at[df.index[{top_row} + i],
                           df.columns[{left_col} + j]] = value
             """))
-
 
     ###################################
     # Sorting
@@ -326,6 +325,8 @@ class PandasGuiDataFrameStore:
 
     # Refresh PyQt models when the underlying pgdf is changed in anyway that needs to be reflected in the GUI
     def update(self):
+
+        # Update models
         self.models = []
         if self.dataframe_viewer is not None:
             self.models += [self.dataframe_viewer.dataView.model(),
@@ -342,14 +343,17 @@ class PandasGuiDataFrameStore:
             model.beginResetModel()
             model.endResetModel()
 
-        for view in [self.dataframe_viewer.columnHeader,
-                     self.dataframe_viewer.indexHeader]:
-            view.set_spans()
+        if self.dataframe_viewer is not None:
+            # Update multi-index spans
+            for view in [self.dataframe_viewer.columnHeader,
+                         self.dataframe_viewer.indexHeader]:
+                view.set_spans()
 
-        for view in [self.dataframe_viewer.columnHeader,
-                     self.dataframe_viewer.indexHeader,
-                     self.dataframe_viewer.dataView]:
-            view.updateGeometry()
+            # Update sizing
+            for view in [self.dataframe_viewer.columnHeader,
+                         self.dataframe_viewer.indexHeader,
+                         self.dataframe_viewer.dataView]:
+                view.updateGeometry()
 
     @staticmethod
     def cast(x: Union["PandasGuiDataFrameStore", pd.DataFrame, pd.Series, Iterable]):
@@ -364,7 +368,6 @@ class PandasGuiDataFrameStore:
                 return PandasGuiDataFrameStore(pd.DataFrame(x))
             except:
                 raise TypeError(f"Could not convert {type(x)} to DataFrame")
-
 
 
 @dataclass
@@ -395,7 +398,6 @@ class PandasGuiStore:
             levels = df.columns.levels
             for level in levels:
                 if any([type(val) != str for val in level]):
-
                     logger.warning(f"In {name}, converted MultiIndex level values to string in: {str(level)}")
                     df.columns = df.columns.set_levels([[str(val) for val in level] for level in levels])
                     converted_names.append(str(level))
@@ -413,7 +415,6 @@ class PandasGuiStore:
         if any(df.columns.duplicated()):
             logger.warning(f"In {name}, renamed duplicate columns: {list(set(df.columns[df.columns.duplicated()]))}")
             rename_duplicates(df)
-
 
         self.data.append(pgdf)
 
