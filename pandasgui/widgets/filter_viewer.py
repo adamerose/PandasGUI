@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
@@ -22,19 +23,32 @@ class Completer(QtWidgets.QCompleter):
         # This way it'll reevaluate
         path = QtWidgets.QCompleter.pathFromIndex(self, index)
 
-        # if we use a double quote, whatever was before has already
+        # if we use a space + double quote or backtick, whatever was before has already
         # been autocompleted, so we split on that.
         # space tells us we are at beginning of value
-        lst = str(self.widget().text()).split(' "')
+        text = self.widget().text()
+
+        lst = re.split('([ ,][`"])', str(text))
 
         if len(lst) > 1:
-            path = '%s%s' % (' "'.join(lst[:-1]), path)
+            end_at = -1
+            if lst[-2] in (' `', ' "'):  # dropping the delimiter from list since it is already in path
+                end_at = -2
+            path = '%s %s' % (''.join(lst[:end_at]), path)
 
         return path
 
     def splitPath(self, path):
-        path = str(path.split('"')[-1]).strip(" ")
-        return [path]
+        s_lst = re.split('([ ,][`"])', path)
+        s_path = str(s_lst[-1])
+
+        # on values, we split on [space]" or [space]` but need to prepend that in the return
+        try:
+            if s_lst[-2] in (' `', ' "') and s_path == "":
+                s_path = s_lst[-2][-1]
+        except IndexError:
+            pass
+        return [s_path]
 
 
 class FilterViewer(QtWidgets.QWidget):
