@@ -65,9 +65,17 @@ class FilterViewer(QtWidgets.QWidget):
         # autocompletion for QLineEdit
         columns = self.pgdf.df_unfiltered.columns
         valid_values = [f"`{col}`" for col in columns]
+        categoricals = columns[self.pgdf.df_unfiltered.dtypes == "category"]
         low_cardinality = columns[self.pgdf.df_unfiltered.nunique() < CATEGORICAL_THRESHOLD]
-        for col in low_cardinality:
-            in_dataset = [f'"{val}"' for val in self.pgdf.df_unfiltered[col].unique()]
+
+        # make unique the column names
+        all_categoricals = list(set(categoricals) | set(low_cardinality))
+
+        for col in all_categoricals:
+            if col in categoricals:
+                in_dataset = [f'"{val}"' for val in self.pgdf.df_unfiltered[col].cat.categories]
+            else:
+                in_dataset = [f'"{val}"' for val in self.pgdf.df_unfiltered[col].unique()]
             valid_values.extend(in_dataset)
 
         self.completer = Completer(valid_values)
