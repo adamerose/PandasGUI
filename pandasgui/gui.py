@@ -272,7 +272,7 @@ class PandasGui(QtWidgets.QMainWindow):
         pprint.pprint(d)
 
     def print_history(self):
-        pgdf = self.store.data[self.stacked_widget.currentIndex()]
+        pgdf = self.store.selected_pgdf
         if len(pgdf.history) == 0:
             print(f"No actions recorded yet for {pgdf.name}")
         else:

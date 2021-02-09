@@ -104,7 +104,7 @@ def test_code_history():
     from pandasgui.datasets import pokemon
     pokemon = pokemon.head(10)[['Name','Attack','Defense','Generation','HP','Legendary']]
     gui = show(pokemon)
-    pgdf = gui.store.data[0]
+    pgdf = gui.store.data['pokemon']
 
     pgdf.edit_data(6, 3, 999)
     pgdf.sort_column(5)

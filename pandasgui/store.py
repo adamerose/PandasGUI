@@ -373,7 +373,7 @@ class PandasGuiDataFrameStore:
 @dataclass
 class PandasGuiStore:
     settings: Union["SettingsStore", None] = None
-    data: List[PandasGuiDataFrameStore] = field(default_factory=list)
+    data: Dict[str, PandasGuiDataFrameStore] = field(default_factory=dict)
     gui: Union["PandasGui", None] = None
     navigator: Union["Navigator", None] = None
     selected_pgdf: Union[PandasGuiDataFrameStore, None] = None
@@ -416,7 +416,7 @@ class PandasGuiStore:
             logger.warning(f"In {name}, renamed duplicate columns: {list(set(df.columns[df.columns.duplicated()]))}")
             rename_duplicates(df)
 
-        self.data.append(pgdf)
+        self.data[name] = pgdf
 
         if pgdf.dataframe_explorer is None:
             from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
@@ -434,12 +434,8 @@ class PandasGuiStore:
         self.navigator.apply_tree_settings()
 
     def remove_dataframe(self, name):
-        for ix, pgdf in enumerate(self.data):
-            if pgdf.name == name:
-                self.data.pop(ix)
-                self.gui.navigator.remove_item(name)
-                return
-        raise NameError(f"{name} not found.")
+        self.data.pop(name)
+        self.gui.navigator.remove_item(name)
 
     def import_file(self, path):
         if not os.path.isfile(path):
@@ -463,16 +459,14 @@ class PandasGuiStore:
             logger.warning("Can only import csv / xlsx. Invalid file: " + path)
 
     def get_pgdf(self, name):
-        return next((x for x in self.data if x.name == name), None)
+        return self.data[name]
 
     def get_dataframes(self, names: Union[None, str, list] = None):
         if type(names) == str:
-            for pgdf in self.data:
-                if names == pgdf.name:
-                    return pgdf.df
+            return self.data[names]
 
         df_dict = {}
-        for pgdf in self.data:
+        for pgdf in self.data.values():
             if names is None or pgdf.name in names:
                 df_dict[pgdf.name] = pgdf.df
 

@@ -141,7 +141,7 @@ class FindToolbar(QtWidgets.QToolBar):
             text: text to search for.
         """
         # get current dataframe data
-        current_pgdf = self.parent().store.data[self.parent().stacked_widget.currentIndex()]
+        current_pgdf = self.parent().store.selected_pgdf
         current_dataView = current_pgdf.dataframe_viewer.dataView
         current_model = current_dataView.model()
         df = current_pgdf.df
@@ -171,7 +171,7 @@ class FindToolbar(QtWidgets.QToolBar):
             cells_matched: list of tuples - (row, col). Type QtCore.pyqtSignal(list).
         """
 
-        current_pgdf = self.parent().store.data[self.parent().stacked_widget.currentIndex()]
+        current_pgdf = self.parent().store.selected_pgdf
         current_dataView = current_pgdf.dataframe_viewer.dataView
         current_model = current_dataView.model()
 
@@ -276,7 +276,7 @@ class FindToolbar(QtWidgets.QToolBar):
 
     def highlight_match(self):
         # clear last seletion
-        current_pgdf = self.parent().store.data[self.parent().stacked_widget.currentIndex()]
+        current_pgdf = self.parent().store.selected_pgdf
         current_dataView = current_pgdf.dataframe_viewer.dataView
         current_dataView.selectionModel().select(
             self.search_matches[self.search_selection],
