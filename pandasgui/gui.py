@@ -371,7 +371,6 @@ def show(*args,
             pandas_gui.store.eval_magic(line)
             return line
 
-        return pandas_gui
     except Exception as e:
         # Let this silently fail if no IPython console exists
         if e.args[0] == 'Decorator can only run in context where `get_ipython` exists':
@@ -379,6 +378,7 @@ def show(*args,
         else:
             raise e
 
+    return pandas_gui
 
 if __name__ == "__main__":
     from pandasgui.datasets import all_datasets, pokemon, mi_manufacturing

@@ -102,7 +102,7 @@ def test_code_history():
     import numpy as np
     from pandasgui import show
     from pandasgui.datasets import pokemon
-    pokemon = pokemon.head(10)[['Name','Attack','Defense','Generation','HP','Legendary']]
+    pokemon = pokemon.head(10)[['Name', 'Attack', 'Defense', 'Generation', 'HP', 'Legendary']]
     gui = show(pokemon)
     pgdf = gui.store.data['pokemon']
 
@@ -113,10 +113,21 @@ def test_code_history():
     pgdf.add_filter('HP > 50')
     pgdf.sort_column(4)
 
-    exec(pgdf.code_export())
-    assert(df.fillna('NULL').equals(gui.get_dataframes('pokemon').fillna('NULL')))
+    code = pgdf.code_export()
+    # https://stackoverflow.com/a/52217741/3620725
+    df = pokemon
+    namespace = {'df': df}
+    exec(code, namespace)
+    df = namespace['df']
 
-#
+    assert (df.fillna('NULL').equals(gui.get_dataframes('pokemon').fillna('NULL')))
+
+
+test_webengine_import()
+test_inputs()
+test_code_history()
+
+
 # iterables = [["bar", "baz", "baz"], ["one", "two"]]
 # ix = pd.MultiIndex.from_product(iterables, names=["first", "second"])
 # df = pd.DataFrame(np.random.randn(6, 6), index=ix[:6], columns=ix[:6])
