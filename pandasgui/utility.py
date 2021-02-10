@@ -3,6 +3,7 @@ import pandas as pd
 from PyQt5 import QtWidgets
 from typing import List, Union
 import sys
+import inspect
 
 logger = logging.getLogger(__name__)
 
@@ -72,22 +73,6 @@ def as_dict(obj, recurse_list=None):
                 element = as_dict(val, recurse_list=recurse_list)
             result[key] = element
         return result
-
-
-def get_logger(logger_name=None):
-    import logging
-    import sys
-
-    logger = logging.getLogger(logger_name)
-    logger.setLevel(logging.INFO)
-
-    formatter = logging.Formatter("PandasGUI %(levelname)s — %(name)s — %(message)s")
-
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(formatter)
-    logger.addHandler(console_handler)
-
-    return logger
 
 
 # https://stackoverflow.com/a/47275100/3620725
@@ -177,7 +162,7 @@ def nunique(df):
 
 def traverse_tree_widget(tree: Union[QtWidgets.QTreeWidget, QtWidgets.QTreeWidgetItem]) -> List[
     QtWidgets.QTreeWidgetItem]:
-    if type(tree) == QtWidgets.QTreeWidget:
+    if issubclass(type(tree), QtWidgets.QTreeWidget):
         tree = tree.invisibleRootItem()
 
     items = []
@@ -201,11 +186,178 @@ def unique_name(name, existing_names):
         return name
 
 
+# Take a df and rename duplicate columns by appending number suffixes
+def rename_duplicates(df):
+    import copy
+    new_columns = df.columns.values
+    suffix = {key: 2 for key in set(new_columns)}
+    dup = pd.Series(new_columns).duplicated()
+
+    if type(df.columns) == pd.core.indexes.multi.MultiIndex:
+        # Need to be mutable, make it list instead of tuples
+        for i in range(len(new_columns)):
+            new_columns[i] = list(new_columns[i])
+        for ix, item in enumerate(new_columns):
+            item_orig = copy.copy(item)
+            if dup[ix]:
+                for level in range(len(new_columns[ix])):
+                    new_columns[ix][level] = new_columns[ix][level] + f"_{suffix[tuple(item_orig)]}"
+                suffix[tuple(item_orig)] += 1
+
+        # Convert back from list to tuples now that we're done mutating values
+        for i in range(len(new_columns)):
+            new_columns[i] = tuple(new_columns[i])
+
+        df.columns = pd.MultiIndex.from_tuples(new_columns)
+    # Not a MultiIndex
+    else:
+        for ix, item in enumerate(new_columns):
+            if dup[ix]:
+                new_columns[ix] = item + f"_{suffix[item]}"
+                suffix[item] += 1
+        df.columns = new_columns
+
+
 def delete_datasets():
-    from pandasgui.datasets import LOCAL_DATA_DIR
+    from pandasgui.datasets import LOCAL_DATASET_DIR
     import shutil
-    logger.info(f"Deleting sample dataset directory ({LOCAL_DATA_DIR})")
-    shutil.rmtree(LOCAL_DATA_DIR)
+    logger.info(f"Deleting sample dataset directory ({LOCAL_DATASET_DIR})")
+    shutil.rmtree(LOCAL_DATASET_DIR)
+
+
+# Automatically try to parse dates for all columns
+def parse_dates(df: Union[pd.DataFrame, pd.Series]):
+    if type(df) == pd.DataFrame:
+        return df.apply(
+            lambda col: pd.to_datetime(col, errors='ignore') if col.dtypes == object else col,
+            axis=0)
+    elif type(df) == pd.Series:
+        return pd.to_datetime(df, errors='ignore')
+
+
+def clean_dataframe(df, name="DataFrame"):
+    # Remove non-string column names
+    converted_names = []
+    if issubclass(type(df.columns), pd.core.indexes.multi.MultiIndex):
+        levels = df.columns.levels
+        for level in levels:
+            if any([type(val) != str for val in level]):
+                logger.warning(f"In {name}, converted MultiIndex level values to string in: {str(level)}")
+                df.columns = df.columns.set_levels([[str(val) for val in level] for level in levels])
+                converted_names.append(str(level))
+        if converted_names:
+            logger.warning(f"In {name}, converted MultiIndex level names to string: {', '.join(converted_names)}")
+    else:
+        for i, col in enumerate(df.columns):
+            if type(col) != str:
+                df.rename(columns={col: str(col)}, inplace=True)
+                converted_names.append(str(col))
+        if converted_names:
+            logger.warning(f"In {name}, converted column names to string: {', '.join(converted_names)}")
+
+    # Check for duplicate columns
+    if any(df.columns.duplicated()):
+        logger.warning(f"In {name}, renamed duplicate columns: {list(set(df.columns[df.columns.duplicated()]))}")
+        rename_duplicates(df)
+
+    # Convert columns to datetime where possible
+    converted_names = []
+    dtypes_old = df.dtypes
+    df = parse_dates(df)
+    dtypes_new = df.dtypes
+    for col_name in [df.columns[ix] for ix in range(len(dtypes_new)) if dtypes_old[ix] != dtypes_new[ix]]:
+        converted_names.append(str(col_name))
+    if converted_names:
+        logger.warning(f"In {name}, converted columns to datetime: {', '.join(converted_names)}")
+
+    return df
+
+
+def test_logging():
+    logger.debug("debug")
+    logger.info("info")
+    logger.warning("warning")
+    logger.error("error")
+
+
+# Resize a widget to a percentage of the screen size
+def resize_widget(widget, x, y):
+    from PyQt5 import QtCore, QtWidgets
+    widget.resize(QtCore.QSize(int(x * QtWidgets.QDesktopWidget().screenGeometry().width()),
+                               int(y * QtWidgets.QDesktopWidget().screenGeometry().height())))
+
+
+def get_kwargs():
+    frame = inspect.currentframe().f_back
+    keys, _, _, values = inspect.getargvalues(frame)
+    kwargs = {}
+    for key in keys:
+        if key != 'self':
+            kwargs[key] = values[key]
+    return kwargs
+
+
+# Flatten nested iterables
+def flatten_iter(item):
+    t = []
+    if type(item) in [list, tuple, set]:
+        for sub_item in item:
+            t += flatten_iter(sub_item)
+    else:
+        t.append(item)
+
+    return t
+
+
+# Make a string from a kwargs dict as they would be displayed when passed to a function
+# eg. {'a': 5, 'b': 6} -> a=5, b=6
+def kwargs_string(kwargs_dict):
+    return ', '.join([f'{key}={repr(val)}' for key, val in kwargs_dict.items()])
+
+
+# In North America, Week 1 of any given year is the week which contains January 1st. Weeks span Sunday to Saturday.
+def get_week(timestamp):
+    from datetime import datetime
+
+    this_jan1 = datetime(timestamp.year, 1, 1)
+    next_jan1 = datetime(timestamp.year + 1, 1, 1)
+    day_of_year = int(timestamp.strftime('%j'))
+    days_until_jan1 = (next_jan1 - timestamp).days
+
+    # Sunday = 0
+    def day_of_week(ts):
+        return int(ts.strftime('%w'))
+
+    # Check if timestamp is in the same week as next year's January
+    if days_until_jan1 <= day_of_week(next_jan1):
+        return 1
+    else:
+        # Week Number = ((Days since start of week 1) / 7) + 1
+        return (day_of_year + day_of_week(this_jan1) - 1) // 7 + 1
+
+
+def get_week_str(ts):
+    year = ts.year
+    week = get_week(ts)
+
+    if ts.month == 12 and week == 1:
+        year += 1
+
+    return "{}W{:02}".format(year, week)
+
+
+# Rename a variable in a Python expression
+def refactor_variable(expr, old_name, new_name):
+    import ast
+    import astor
+
+    tree = ast.parse(expr)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name):
+            if node.id == old_name:
+                node.id = new_name
+
+    return astor.code_gen.to_source(tree)
 
 
 event_lookup = {"0": "QEvent::None",

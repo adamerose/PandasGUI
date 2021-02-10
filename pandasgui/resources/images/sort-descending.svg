@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?><svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg"
+    xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 116.79 122.88"
+    style="enable-background:new 0 0 116.79 122.88" xml:space="preserve">
+    <style type="text/css">
+        .st0 {
+            fill-rule: evenodd;
+            clip-rule: evenodd;
+        }
+    </style>
+    <g>
+        <path class="st0" fill="#777777"
+            d="M13.87,33.19v89.69h24.66V33.19h13.87L26.2,0L0,33.19H13.87L13.87,33.19z M58.2,107.3c43.8,0,14.79,0,58.59,0 l0.01,15.58c-43.8,0-14.79,0-58.59,0V107.3L58.2,107.3z M58.2,29.1c27.15,0-11.24,0,15.91,0l0,15.58c-27.15,0,11.24,0-15.92,0 L58.2,29.1L58.2,29.1z M84.63,55.17c-23.25,0-3.18,0-26.43,0v15.58h26.43V55.17L84.63,55.17z M58.2,81.23c18.4,0,21.53,0,39.93,0 l0,15.59H58.2L58.2,81.23L58.2,81.23L58.2,81.23z" />
+    </g>
+</svg>

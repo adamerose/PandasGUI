@@ -7,28 +7,22 @@ assignees: ''
 
 ---
 
-**Before making a bug report, please check that you are able to run the code snippet below with no errors. It should display a window with a button. If this doesn't work, your problem with with PyQt5 and not PandasGUI specifically (and in that case I recommend you try reinstalling `PyQt5`, `PyQtWebEngine`, and `PyQt5-sip`)**
-
-**Also make sure you're still able to reproduce the bug with the latest release (run `pip install --upgrade pandasgui`).**
-
-```
-from PyQt5 import QtCore, QtGui, QtWidgets, QtWebEngineWidgets, sip
-app = QtWidgets.QApplication([])
-test = QtWidgets.QPushButton("test")
-test.show()
-app.exec_()
-```
------------------------
+PLEASE FILL OUT THE TEMPLATE
 
 **Describe the bug**  
 A clear and concise description of what the bug is and how to reproduce it. If applicable, add screenshots.
 
-**Package versions. To get all relevant versions, run this command in bash and paste the output**  
+**Environment**
+OS: (eg. Windows 10)
+Python: (eg. 3.8.4)
+IDE: (eg. PyCharm)
+
+**Package versions**  
+TO GET ALL RELEVANT PACKAGE VERSIONS, RUN THIS COMMAND IN BASH AND PASTE THE OUTPUT
+pip freeze | grep -i "pyqt\|pandasgui\|plotly\|ipython\|jupyter\|notebook"
+
+EXAMPLE OUTPUT
 ```
-pip freeze | grep -i "pyqt\|pandasgui\|plotly\|ipython"
-```
-```
-# Example output
 ipython==7.16.1
 ipython-genutils==0.2.0
 pandasgui==0.2.7

@@ -54,6 +54,6 @@ show(**all_datasets)
 
 **Issues, feedback and pull requests are welcome.**
 
-This project is still in version 0.x.y and subject to breaking changes. Latest changes will be on the `develop` branch, and will be occasionally merged to `master` as a release with a tag indicating the version number, and published to PyPi.
+This project is still in version 0.x.y and subject to breaking changes. The latest changes will be on the `develop` branch, and will be occasionally merged to `master` as a release with a tag indicating the version number and published to PyPi.
 
-Remember to leave a ⭐ if you like this!
+If you like this project remember to leave a ⭐! And if you want to give more support you can <a href="https://www.buymeacoffee.com/adrotog" target="_blank">Buy Me A Coffee</a>.

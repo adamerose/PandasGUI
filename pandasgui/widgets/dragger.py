@@ -27,6 +27,7 @@ class OptionListArg(Arg):
     values: List[str]
 
 
+# This schema is made up of multiple args, this defines all the drop zones available in the Dragger
 @dataclass
 class Schema:
     name: str
@@ -41,7 +42,7 @@ class Dragger(QtWidgets.QWidget):
     finished = QtCore.pyqtSignal()
 
     def __init__(self, sources: List[str],
-                 destinations: List[str], source_types: List[str]):
+                 destinations: List[str], source_nunique: List[str], source_types: List[str]):
         super().__init__()
         self.remembered_values = {}
         self.source_tree_unfiltered = []
@@ -49,6 +50,7 @@ class Dragger(QtWidgets.QWidget):
         # Ensure no duplicates
         assert (len(sources) == len(set(sources)))
         assert (len(destinations) == len(set(destinations)))
+        assert (len(sources) == len(source_nunique))
         assert (len(sources) == len(source_types))
 
         # Custom kwargs dialog
@@ -60,8 +62,8 @@ class Dragger(QtWidgets.QWidget):
 
         # Sources list
         self.source_tree = self.SourceTree(self)
-        self.source_tree.setHeaderLabels(['Name', 'Type'])
-        self.set_sources(sources, source_types)
+        self.source_tree.setHeaderLabels(['Name', '#Unique', 'Type'])
+        self.set_sources(sources, source_nunique, source_types)
         self.source_tree.setSortingEnabled(True)
 
         # Depends on Search Box and Source list
@@ -69,8 +71,9 @@ class Dragger(QtWidgets.QWidget):
 
         # Destinations tree
         self.dest_tree = self.DestinationTree(self)
-        self.dest_tree.setHeaderLabels(['Name', ''])
+        self.dest_tree.setHeaderLabels(['Name', '', ''])
         self.dest_tree.setColumnHidden(1, True)
+        self.dest_tree.setColumnHidden(2, True)
         self.dest_tree.setItemsExpandable(False)
         self.dest_tree.setRootIsDecorated(False)
 
@@ -118,22 +121,6 @@ class Dragger(QtWidgets.QWidget):
         self.setLayout(self.main_layout)
 
         image_dir = os.path.join(pandasgui.__path__[0], 'images')
-        # Styling (https://doc.qt.io/qt-5/stylesheet-examples.html#customizing-qtreeview)
-        stylesheet = """
-                                     QTreeView::branch:has-siblings:adjoins-item {
-                                         border-image: url(%s) 0;
-                                     }
-
-                                     QTreeView::branch:!has-children:!has-siblings:adjoins-item {
-                                         border-image: url(%s) 0;
-                                     }
-
-                                     QTreeView { background-color: white; padding: 0px 5px; }
-                                     """ % (
-            os.path.join(image_dir, "stylesheet-branch-more.png").replace("\\", "/"),
-            os.path.join(image_dir, "stylesheet-branch-end.png").replace("\\", "/"),
-        )
-        self.dest_tree.setStyleSheet(stylesheet)
 
     def handle_double_click(self, item, column):
 
@@ -236,11 +223,11 @@ class Dragger(QtWidgets.QWidget):
 
         return data
 
-    def set_sources(self, sources: List[str], source_types: List[str]):
+    def set_sources(self, sources: List[str], source_nunique: List[str], source_types: List[str]):
 
         for i in range(len(sources)):
             item = QtWidgets.QTreeWidgetItem(self.source_tree,
-                                             [str(sources[i]), str(source_types[i])])
+                                             [str(sources[i]), str(source_nunique[i]), str(source_types[i])])
 
         self.filter()
 
@@ -379,6 +366,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     test = Dragger(sources=pokemon.columns, destinations=["x", "y", "color"],
+                   source_nunique=pokemon.nunique().apply('{: >6}'.format).values,
                    source_types=pokemon.dtypes.values.astype(str))
     test.finished.connect(lambda: print(test.get_data()))
     test.show()

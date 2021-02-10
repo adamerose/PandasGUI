@@ -3,7 +3,10 @@ from PyQt5.QtCore import Qt
 
 
 class DockWidget(QtWidgets.QDockWidget):
-    def __init__(self, title: str, pgdf_name: str):
+    # This signal is used to track which dock is considered active or focussed
+    activated = QtCore.pyqtSignal()
+
+    def __init__(self, title: str, pgdf_name: str = 'Untitled'):
         super().__init__(title)
         self.title = title
         self.pgdf_name = pgdf_name
@@ -13,6 +16,19 @@ class DockWidget(QtWidgets.QDockWidget):
         self.setFeatures(self.DockWidgetFloatable |
                          self.DockWidgetMovable |
                          self.DockWidgetClosable)
+
+        self.visibilityChanged.connect(lambda visible: visible and self.activated.emit())
+
+    def eventFilter(self, obj, event):
+        if event.type() == QtCore.QEvent.MouseButtonPress:
+            self.activated.emit()
+        return super().eventFilter(obj, event)
+
+    def setWidget(self, widget) -> None:
+        temp = super().setWidget(widget)
+        for w in self.findChildren(QtWidgets.QWidget) + [self]:
+            w.installEventFilter(self)
+        return temp
 
     def on_dockLocationChanged(self):
         main: QtWidgets.QMainWindow = self.parent()

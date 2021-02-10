@@ -1,7 +1,10 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5.QtCore import Qt
+
 import tempfile
 import os
+
+from pandasgui.utility import traverse_tree_widget
 from pynput import mouse
 
 
@@ -60,6 +63,11 @@ class Navigator(QtWidgets.QTreeWidget):
         self.setColumnWidth(0, 150)
         self.setColumnWidth(1, 150)
 
+    def remove_item(self, name):
+        for item in traverse_tree_widget(self):
+            if item.text(0) == name:
+                sip.delete(item)
+
     def rowsInserted(self, parent: QtCore.QModelIndex, start: int, end: int):
         super().rowsInserted(parent, start, end)
         self.expandAll()
@@ -107,7 +115,7 @@ class Navigator(QtWidgets.QTreeWidget):
         for name in names:
             path = os.path.join(tempfile.gettempdir(), 'DragTest', name + ".csv")
             os.makedirs(os.path.dirname(path), exist_ok=True)
-            df = self.store.get_pgdf(name).dataframe
+            df = self.store.get_pgdf(name).df
 
             def write_to_file(path=path, df=df, widget=self):
                 if widget.underMouse():

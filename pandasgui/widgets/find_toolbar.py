@@ -7,7 +7,7 @@ from PyQt5.QtCore import Qt
 
 
 class FindToolbar(QtWidgets.QToolBar):
-    def __init__(self, parent):
+    def __init__(self, parent=None):
         """
         Creates modified toolbar with only a find textbox and match modification.
 
@@ -24,7 +24,7 @@ class FindToolbar(QtWidgets.QToolBar):
         # Current QModelIndex
         self.search_selection = None
         self.match_flags = {"regex": False, "case": False, "whole word": False}
-        self.image_folder = "../images"
+        self.image_folder = "../resources/images"
 
         # main toolbar widget
         find_toolbar_widget = QtWidgets.QWidget()
@@ -42,7 +42,7 @@ class FindToolbar(QtWidgets.QToolBar):
         # add match modification
 
         # add match case button
-        match_case_icon_raw_path = self.image_folder + "/case-match.png"
+        match_case_icon_raw_path = self.image_folder + "/case-sensitive.svg"
         match_case_icon_path = pkg_resources.resource_filename(
             __name__, match_case_icon_raw_path
         )
@@ -56,7 +56,7 @@ class FindToolbar(QtWidgets.QToolBar):
         self.find_textbox.add_button(self.match_case_button)
 
         # add match regex button
-        regex_icon_raw_path = self.image_folder + "/curly-brackets.png"
+        regex_icon_raw_path = self.image_folder + "/regex.svg"
         regex_icon_path = pkg_resources.resource_filename(__name__, regex_icon_raw_path)
         regex_icon = QtGui.QIcon(regex_icon_path)
         self.match_regex_button = QtWidgets.QToolButton(self.find_textbox)
@@ -68,7 +68,7 @@ class FindToolbar(QtWidgets.QToolBar):
         self.find_textbox.add_button(self.match_regex_button)
 
         # add match exactly button
-        match_exactly_icon_raw_path = self.image_folder + "/match-exactly.png"
+        match_exactly_icon_raw_path = self.image_folder + "/match-exactly.svg"
         match_exactly_icon_path = pkg_resources.resource_filename(
             __name__, match_exactly_icon_raw_path
         )
@@ -91,7 +91,7 @@ class FindToolbar(QtWidgets.QToolBar):
 
         # go to next match
         previous_match_button = QtWidgets.QPushButton()
-        up_arrow_icon_raw_path = self.image_folder + "/up-arrow.png"
+        up_arrow_icon_raw_path = self.image_folder + "/arrow-up.svg"
         up_arrow_icon_path = pkg_resources.resource_filename(
             __name__, up_arrow_icon_raw_path
         )
@@ -104,7 +104,7 @@ class FindToolbar(QtWidgets.QToolBar):
 
         # go to previous match
         next_match_button = QtWidgets.QPushButton()
-        down_arrow_icon_raw_path = self.image_folder + "/down-arrow.png"
+        down_arrow_icon_raw_path = self.image_folder + "/arrow-down.svg"
         down_arrow_icon_path = pkg_resources.resource_filename(
             __name__, down_arrow_icon_raw_path
         )
@@ -117,7 +117,7 @@ class FindToolbar(QtWidgets.QToolBar):
 
         # close find toolbar
         close_find_button = QtWidgets.QPushButton()
-        cancel_icon_raw_path = self.image_folder + "/cancel.png"
+        cancel_icon_raw_path = self.image_folder + "/close.svg"
         cancel_icon_path = pkg_resources.resource_filename(
             __name__, cancel_icon_raw_path
         )
@@ -141,10 +141,10 @@ class FindToolbar(QtWidgets.QToolBar):
             text: text to search for.
         """
         # get current dataframe data
-        current_pgdf = self.parent().store.data[self.parent().stacked_widget.currentIndex()]
+        current_pgdf = self.parent().store.selected_pgdf
         current_dataView = current_pgdf.dataframe_viewer.dataView
         current_model = current_dataView.model()
-        df = current_pgdf.dataframe
+        df = current_pgdf.df
 
         # clear matches and selection from last search results
         if self.findThread:
@@ -171,7 +171,7 @@ class FindToolbar(QtWidgets.QToolBar):
             cells_matched: list of tuples - (row, col). Type QtCore.pyqtSignal(list).
         """
 
-        current_pgdf = self.parent().store.data[self.parent().stacked_widget.currentIndex()]
+        current_pgdf = self.parent().store.selected_pgdf
         current_dataView = current_pgdf.dataframe_viewer.dataView
         current_model = current_dataView.model()
 
@@ -276,7 +276,7 @@ class FindToolbar(QtWidgets.QToolBar):
 
     def highlight_match(self):
         # clear last seletion
-        current_pgdf = self.parent().store.data[self.parent().stacked_widget.currentIndex()]
+        current_pgdf = self.parent().store.selected_pgdf
         current_dataView = current_pgdf.dataframe_viewer.dataView
         current_dataView.selectionModel().select(
             self.search_matches[self.search_selection],
@@ -329,8 +329,6 @@ class ButtonLineEdit(QtWidgets.QLineEdit):
         # makes sure text doesn't type behind the buttons
         totalWidth = sum([b.sizeHint().width() for b in self.buttons])
         frameWidth = self.style().pixelMetric(QtWidgets.QStyle.PM_DefaultFrameWidth)
-        right_padding = int(totalWidth + frameWidth + 1)
-        self.setStyleSheet(f"QLineEdit {{padding-right: {right_padding}px; }}")
 
         # makes sure the typing area doesn't get too small if toolbar is shrunk.
         maxHeight = max([b.sizeHint().height() for b in self.buttons])

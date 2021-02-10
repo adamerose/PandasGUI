@@ -9,14 +9,20 @@ import pkg_resources
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
-from pandasgui.store import Store, PandasGuiDataFrame
-from pandasgui.utility import fix_ipython, fix_pyqt, get_logger, as_dict, delete_datasets
+from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore
+from pandasgui.utility import fix_ipython, fix_pyqt, as_dict, delete_datasets, resize_widget
 from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
 from pandasgui.widgets.find_toolbar import FindToolbar
 from pandasgui.widgets.json_viewer import JsonViewer
 from pandasgui.widgets.navigator import Navigator
+from pandasgui.themes import qstylish
+from pandasgui.widgets.python_highlighter import PythonHighlighter
+from IPython.core.magic import (register_line_magic, register_cell_magic,
+                                register_line_cell_magic)
 
-logger = get_logger(__name__)
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def except_hook(cls, exception, traceback):
@@ -37,23 +43,32 @@ class PandasGui(QtWidgets.QMainWindow):
     def __init__(self, settings: dict = {}, **kwargs):
         """
         Args:
-            settings: Dict of settings, as defined in pandasgui.store.Settings
+            settings: Dict of settings, as defined in pandasgui.store.SettingsStore
             kwargs: Dict of DataFrames where key is name & val is the DataFrame object
         """
+        self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+        super().__init__()
+
+        self.caller_stack = inspect.currentframe().f_back
+
+        self.stacked_widget = None
+        self.navigator = None
+        self.splitter = None
+        self.find_bar = None
+
         refs.append(self)
 
-        self.store = Store()
+        self.store = PandasGuiStore()
         self.store.gui = self
         # Add user provided settings to data store
         for key, value in settings.items():
-            setattr(self.store.settings, key, value)
+            setting = self.store.settings[key]
+            setting.value = value
 
-        self.app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
-        if self.store.settings.style in QtWidgets.QStyleFactory.keys():
-            self.app.setStyle(self.store.settings.style)
+        # This will silently fail if the style isn't available on the OS, which is okay
+        self.app.setStyle(QtWidgets.QStyleFactory.create(self.store.settings.style.value))
 
-        super().__init__()
-        self.init_app()
+        # Create all widgets
         self.init_ui()
 
         # Adds DataFrames listed in kwargs to data store.
@@ -63,37 +78,29 @@ class PandasGui(QtWidgets.QMainWindow):
         # Default to first item
         self.navigator.setCurrentItem(self.navigator.topLevelItem(0))
 
+        self.show()
         # Start event loop if blocking enabled
-        if self.store.settings.block:
+        if self.store.settings.block.value:
             self.app.exec_()
 
-    # Configure app settings
-    def init_app(self):
-
-        self.resize(QtCore.QSize(int(0.7 * QtWidgets.QDesktopWidget().screenGeometry().width()),
-                                 int(0.7 * QtWidgets.QDesktopWidget().screenGeometry().height())))
+    # Create and add all widgets to GUI.
+    def init_ui(self):
+        resize_widget(self, 0.7, 0.7)
 
         # Center window on screen
         screen = QtWidgets.QDesktopWidget().screenGeometry()
         size = self.geometry()
-        self.move(
-            int((screen.width() - size.width()) / 2),
-            int((screen.height() - size.height()) / 2),
-        )
+        self.move(int((screen.width() - size.width()) / 2),
+                  int((screen.height() - size.height()) / 2), )
 
         # Set window title and icon
         self.setWindowTitle("PandasGUI")
-        pdgui_icon = "images/icon.png"
-        pdgui_icon_path = pkg_resources.resource_filename(__name__, pdgui_icon)
+        pdgui_icon_path = pkg_resources.resource_filename(__name__, "resources/images/icon.png")
         self.app.setWindowIcon(QtGui.QIcon(pdgui_icon_path))
 
         # Accept drops, for importing files. See methods below: dropEvent, dragEnterEvent, dragMoveEvent
         self.setAcceptDrops(True)
 
-        self.show()
-
-    # Create and add all widgets to GUI.
-    def init_ui(self):
         # This holds the DataFrameExplorer for each DataFrame
         self.stacked_widget = QtWidgets.QStackedWidget()
 
@@ -137,20 +144,37 @@ class PandasGui(QtWidgets.QMainWindow):
         items = {'Edit': [MenuItem(name='Find',
                                    func=self.find_bar.show_find_bar,
                                    shortcut='Ctrl+F'),
+                          MenuItem(name='Copy',
+                                   func=self.copy,
+                                   shortcut='Ctrl+C'),
+                          MenuItem(name='Copy With Headers',
+                                   func=self.copy_with_headers,
+                                   shortcut='Ctrl+Shift+C'),
+                          MenuItem(name='Paste',
+                                   func=self.paste,
+                                   shortcut='Ctrl+V'),
                           MenuItem(name='Import',
                                    func=self.import_dialog),
+                          MenuItem(name='Import From Clipboard',
+                                   func=self.import_from_clipboard),
                           MenuItem(name='Export',
                                    func=self.export_dialog),
+                          MenuItem(name='Delete Selected DataFrames',
+                                   func=self.delete_selected_dataframes),
+                          MenuItem(name='Refresh Data',
+                                   func=self.refresh,
+                                   shortcut='Ctrl+R'),
+                          MenuItem(name='Code Export',
+                                   func=self.code_export),
                           ],
-                 'Debug': [MenuItem(name='Print Data Store',
+                 'Debug': [MenuItem(name='Print Data PandasGuiStore',
                                     func=self.print_store),
-                           MenuItem(name='View Data Store',
+                           MenuItem(name='View Data PandasGuiStore',
                                     func=self.view_store),
                            MenuItem(name='Print History (for current DataFrame)',
                                     func=self.print_history),
                            MenuItem(name='Delete local data',
                                     func=delete_datasets),
-
                            ]}
 
         # Add menu items and actions to UI using the schema defined above
@@ -163,16 +187,62 @@ class PandasGui(QtWidgets.QMainWindow):
                 menu.addAction(action)
 
         # Add an extra option list to the menu for each GUI style that exist for the user's system
-        styleMenu = menubar.addMenu("&Set Style")
-        styleGroup = QtWidgets.QActionGroup(styleMenu)
-        for style in QtWidgets.QStyleFactory.keys():
-            styleAction = QtWidgets.QAction(f"&{style}", self, checkable=True)
-            styleAction.triggered.connect(lambda _, s=style: self.app.setStyle(s))
-            styleGroup.addAction(styleAction)
-            styleMenu.addAction(styleAction)
+        theme_menu = menubar.addMenu("&Set Theme")
+        theme_group = QtWidgets.QActionGroup(theme_menu)
+        for theme in ["light", "dark", "classic"]:
+            theme_action = QtWidgets.QAction(f"&{theme}", self, checkable=True)
+            theme_action.triggered.connect(lambda checked, theme=theme: self.set_theme(theme))
+            theme_group.addAction(theme_action)
+            theme_menu.addAction(theme_action)
 
-            if self.app.style().objectName().lower() == style.lower():
-                styleAction.trigger()
+            # Set the default theme
+            if theme == self.store.settings.theme.value:
+                theme_action.trigger()
+
+    def set_theme(self, name: str):
+        if name == "classic":
+            self.setStyleSheet("")
+            self.store.settings.theme.value = 'classic'
+        elif name == "dark":
+            self.setStyleSheet(qstylish.dark())
+            self.store.settings.theme.value = 'dark'
+        elif name == "light":
+            self.setStyleSheet(qstylish.light())
+            self.store.settings.theme.value = 'light'
+
+    def copy(self):
+        if self.store.selected_pgdf.dataframe_explorer.active_tab == "DataFrame":
+            self.store.selected_pgdf.dataframe_explorer.dataframe_viewer.copy()
+        elif self.store.selected_pgdf.dataframe_explorer.active_tab == "Statistics":
+            self.store.selected_pgdf.dataframe_explorer.statistics_viewer.copy()
+
+    def copy_with_headers(self):
+        if self.store.selected_pgdf.dataframe_explorer.active_tab == "DataFrame":
+            self.store.selected_pgdf.dataframe_viewer.copy(header=True)
+        elif self.store.selected_pgdf.dataframe_explorer.active_tab == "Statistics":
+            self.store.selected_pgdf.dataframe_explorer.statistics_viewer.copy(header=True)
+
+    def paste(self):
+        if self.store.selected_pgdf.dataframe_explorer.active_tab == "DataFrame":
+            self.store.selected_pgdf.dataframe_explorer.dataframe_viewer.paste()
+
+    def code_export(self):
+        code_history = self.store.selected_pgdf.code_export()
+        self.code_export_dialog = QtWidgets.QDialog(self)
+        layout = QtWidgets.QVBoxLayout()
+        textbox = QtWidgets.QPlainTextEdit()
+        highlight = PythonHighlighter(textbox.document(), dark=self.store.selected_pgdf.settings.theme.value == 'dark')
+        textbox.setPlainText(code_history)
+        textbox.setReadOnly(True)
+        textbox.setLineWrapMode(textbox.NoWrap)
+        layout.addWidget(textbox)
+        resize_widget(self.code_export_dialog, 0.5, 0.5)
+        self.code_export_dialog.setLayout(layout)
+        self.code_export_dialog.show()
+
+    def delete_selected_dataframes(self):
+        for name in [item.text(0) for item in self.navigator.selectedItems()]:
+            self.store.remove_dataframe(name)
 
     def dropEvent(self, e):
         if e.mimeData().hasUrls:
@@ -183,7 +253,7 @@ class PandasGui(QtWidgets.QMainWindow):
                 fpath_list.append(str(url.toLocalFile()))
 
             for fpath in fpath_list:
-                self.store.import_dataframe(fpath)
+                self.store.import_file(fpath)
         else:
             e.ignore()
 
@@ -204,7 +274,7 @@ class PandasGui(QtWidgets.QMainWindow):
         pprint.pprint(d)
 
     def print_history(self):
-        pgdf = self.store.data[self.stacked_widget.currentIndex()]
+        pgdf = self.store.selected_pgdf
         if len(pgdf.history) == 0:
             print(f"No actions recorded yet for {pgdf.name}")
         else:
@@ -223,17 +293,45 @@ class PandasGui(QtWidgets.QMainWindow):
     def get_dataframes(self, names: Union[None, str, list] = None):
         return self.store.get_dataframes(names)
 
+    def __getitem__(self, key):
+        return self.get_dataframes(key)
+
     def import_dialog(self):
         dialog = QtWidgets.QFileDialog()
-        paths, _ = dialog.getOpenFileNames(filter="*.csv *.xlsx")
+        paths, _ = dialog.getOpenFileNames(filter="*.csv *.xlsx *.parquet")
         for path in paths:
-            self.store.import_dataframe(path)
+            self.store.import_file(path)
 
     def export_dialog(self):
         dialog = QtWidgets.QFileDialog()
         pgdf = self.store.selected_pgdf
         path, _ = dialog.getSaveFileName(directory=pgdf.name, filter="*.csv")
-        pgdf.dataframe.to_csv(path, index=False)
+        pgdf.df.to_csv(path, index=False)
+
+    def import_from_clipboard(self):
+        df = pd.read_clipboard()
+        self.store.add_dataframe(df)
+
+    def closeEvent(self, e: QtGui.QCloseEvent) -> None:
+        refs.remove(self)
+        super().closeEvent(e)
+
+    # Replace all GUI DataFrames with the current DataFrame of the same name from the scope show was called
+    def refresh(self):
+        callers_local_vars = self.caller_stack.f_locals.items()
+        refreshed_names = []
+        for var_name, var_val in callers_local_vars:
+            for ix, name in enumerate([pgdf.name for pgdf in self.store.data]):
+                if var_name == name:
+                    none_found_flag = False
+                    self.store.remove_dataframe(var_name)
+                    self.store.add_dataframe(var_val, name=var_name)
+                    refreshed_names.append(var_name)
+
+        if not refreshed_names:
+            print("No matching DataFrames found to refresh")
+        else:
+            print(f"Refreshed {', '.join(refreshed_names)}")
 
 
 def show(*args,
@@ -264,10 +362,25 @@ def show(*args,
     kwargs = {**kwargs, **dataframes}
 
     pandas_gui = PandasGui(settings=settings, **kwargs)
+    pandas_gui.caller_stack = inspect.currentframe().f_back
+
+    # Register IPython magic
+    try:
+        @register_line_magic
+        def pg(line):
+            pandas_gui.store.eval_magic(line)
+            return line
+
+    except Exception as e:
+        # Let this silently fail if no IPython console exists
+        if e.args[0] == 'Decorator can only run in context where `get_ipython` exists':
+            pass
+        else:
+            raise e
+
     return pandas_gui
 
-
 if __name__ == "__main__":
-    from pandasgui.datasets import all_datasets
+    from pandasgui.datasets import all_datasets, pokemon, mi_manufacturing
 
-    gui = show(**all_datasets, settings={'block': True})
+    gui = show(**all_datasets)
