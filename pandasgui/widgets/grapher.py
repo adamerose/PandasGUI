@@ -15,7 +15,7 @@ import pandas as pd
 from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore, HistoryItem
 
 from pandasgui.widgets.plotly_viewer import PlotlyViewer, plotly_markers
-from pandasgui.utility import flatten_df, flatten_iter, kwargs_string, nunique
+from pandasgui.utility import flatten_df, flatten_iter, kwargs_string, nunique, unique
 from pandasgui.widgets.plotly_viewer import PlotlyViewer
 from pandasgui.widgets.dragger import Dragger, ColumnArg, Schema
 
@@ -168,7 +168,7 @@ def line(pgdf, kwargs):
         marker_size = kwargs.pop('marker_size', 10)  # optional
         marker_line_width = kwargs.pop('marker_line_width', 2)  # optional
 
-        marker_unique = sorted(df[marker_col].unique())
+        marker_unique = sorted(unique(df[marker_col]))
         unique_markers = len(plotly_markers)
 
         kwargs['hover_name'] = kwargs.get('hover_name', marker_col)

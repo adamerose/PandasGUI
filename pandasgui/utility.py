@@ -147,7 +147,7 @@ def flatten_multiindex(mi, sep=" - ", format=None):
     return flat_index
 
 
-# Alternative to df.nunique that works when it contains unhashable items
+# Alternative to dataframe.nunique that works when it contains unhashable items
 def nunique(df):
     results = {}
     for col in df.columns:
@@ -158,6 +158,14 @@ def nunique(df):
             results[col] = s.astype(str).nunique()
 
     return pd.Series(results)
+
+
+# Alternative to series.unique that works when it contains unhashable items
+def unique(s):
+    try:
+        return s.unique()
+    except TypeError as e:
+        return s.astype(str).unique()
 
 
 def traverse_tree_widget(tree: Union[QtWidgets.QTreeWidget, QtWidgets.QTreeWidgetItem]) -> List[

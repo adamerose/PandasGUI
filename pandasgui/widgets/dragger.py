@@ -5,6 +5,9 @@ from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5.QtCore import Qt
 from typing import List, Callable
 import os
+
+from pandasgui.utility import nunique
+
 import pandasgui
 import ast
 from typing import Union, List, Iterable
@@ -366,7 +369,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     test = Dragger(sources=pokemon.columns, destinations=["x", "y", "color"],
-                   source_nunique=pokemon.nunique().apply('{: >6}'.format).values,
+                   source_nunique=nunique(pokemon).apply('{: >6}'.format).values,
                    source_types=pokemon.dtypes.values.astype(str))
     test.finished.connect(lambda: print(test.get_data()))
     test.show()
