@@ -8,7 +8,8 @@ from PyQt5.QtCore import Qt
 import traceback
 from functools import wraps
 from datetime import datetime
-from pandasgui.utility import unique_name, in_interactive_console, rename_duplicates, refactor_variable
+from pandasgui.utility import unique_name, in_interactive_console, rename_duplicates, refactor_variable, parse_dates, \
+    clean_dataframe
 from pandasgui.constants import LOCAL_DATA_DIR
 import os
 import collections
@@ -65,7 +66,7 @@ class SettingsStore(DictLike):
                 # Don't block if in an interactive console (so you can view GUI and still continue running commands)
                 block = False
             else:
-                # If in a script, we need to block or the script will continue and finish without allowing GUI interaction
+                # If in a script, block or else the script will continue and finish without allowing GUI interaction
                 block = True
 
         self.block = Setting(label="block",
@@ -89,7 +90,7 @@ class SettingsStore(DictLike):
         self.theme = Setting(label="theme",
                              value=theme,
                              description="UI theme",
-                             dtype=str,
+                             dtype=Enum("ThemesEnum", ['light', 'dark', 'classic']),
                              persist=True)
 
 
@@ -411,34 +412,10 @@ class PandasGuiStore:
         pgdf.name = name
         pgdf.store = self
 
-        df = pgdf.df
+        pgdf.df = clean_dataframe(pgdf.df, name)
 
-        # Remove non-string column names
-        converted_names = []
-        if issubclass(type(df.columns), pd.core.indexes.multi.MultiIndex):
-            levels = df.columns.levels
-            for level in levels:
-                if any([type(val) != str for val in level]):
-                    logger.warning(f"In {name}, converted MultiIndex level values to string in: {str(level)}")
-                    df.columns = df.columns.set_levels([[str(val) for val in level] for level in levels])
-                    converted_names.append(str(level))
-            if converted_names:
-                logger.warning(f"In {name}, converted MultiIndex level names to string: {', '.join(converted_names)}")
-        else:
-            for i, col in enumerate(df.columns):
-                if type(col) != str:
-                    df.rename(columns={col: str(col)}, inplace=True)
-                    converted_names.append(str(col))
-            if converted_names:
-                logger.warning(f"In {name}, converted column names to string: {', '.join(converted_names)}")
-
-        # Check for duplicate columns
-        if any(df.columns.duplicated()):
-            logger.warning(f"In {name}, renamed duplicate columns: {list(set(df.columns[df.columns.duplicated()]))}")
-            rename_duplicates(df)
-
+        # Add it to store and create widgets
         self.data[name] = pgdf
-
         if pgdf.dataframe_explorer is None:
             from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
             pgdf.dataframe_explorer = DataFrameExplorer(pgdf)
@@ -477,7 +454,7 @@ class PandasGuiStore:
             self.add_dataframe(df, filename)
 
         else:
-            logger.warning("Can only import csv / xlsx. Invalid file: " + path)
+            logger.warning("Can only import csv / xlsx / parquet. Invalid file: " + path)
 
     def get_pgdf(self, name):
         return self.data[name]
