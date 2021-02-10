@@ -29,5 +29,7 @@ setup(
         "dacite",
         "pynput",
         "IPython",
+        "pyarrow",
+        "astor",
     ],
 )

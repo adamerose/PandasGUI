@@ -266,6 +266,20 @@ def kwargs_string(kwargs_dict):
     return ', '.join([f'{key}={repr(val)}' for key, val in kwargs_dict.items()])
 
 
+# Rename a variable in a Python expression
+def refactor_variable(expr, old_name, new_name):
+    import ast
+    import astor
+
+    tree = ast.parse(expr)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name):
+            if node.id == old_name:
+                node.id = new_name
+
+    return astor.code_gen.to_source(tree)
+
+
 event_lookup = {"0": "QEvent::None",
                 "114": "QEvent::ActionAdded",
                 "113": "QEvent::ActionChanged",

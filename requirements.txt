@@ -10,3 +10,4 @@ dacite
 pynput
 IPython
 pyarrow
+astor

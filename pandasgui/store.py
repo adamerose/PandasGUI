@@ -8,7 +8,7 @@ from PyQt5.QtCore import Qt
 import traceback
 from functools import wraps
 from datetime import datetime
-from pandasgui.utility import unique_name, in_interactive_console, rename_duplicates, get_kwargs
+from pandasgui.utility import unique_name, in_interactive_console, rename_duplicates, refactor_variable
 from pandasgui.constants import LOCAL_DATA_DIR
 import os
 import collections
@@ -381,6 +381,27 @@ class PandasGuiStore:
     def __post_init__(self):
         self.settings = SettingsStore()
 
+    ###################################
+    # IPython magic
+
+    def eval_magic(self, line):
+
+        names_to_update = []
+        command = line
+        for name in self.data.keys():
+            names_to_update.append(name)
+            command = refactor_variable(command, name, f"self.data['{name}'].df_unfiltered")
+
+        # print(command)
+        exec(command)
+
+        for name in names_to_update:
+            self.data[name].apply_filters()
+        # self.data[0].df_unfiltered = self.data[0].df_unfiltered[self.data[0].df_unfiltered.HP > 50]
+        return line
+
+    ###################################
+
     def add_dataframe(self, pgdf: Union[DataFrame, PandasGuiDataFrameStore],
                       name: str = "Untitled"):
 
@@ -463,7 +484,7 @@ class PandasGuiStore:
 
     def get_dataframes(self, names: Union[None, str, list] = None):
         if type(names) == str:
-            return self.data[names]
+            return self.data[names].df
 
         df_dict = {}
         for pgdf in self.data.values():

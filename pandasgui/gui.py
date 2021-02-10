@@ -17,6 +17,8 @@ from pandasgui.widgets.json_viewer import JsonViewer
 from pandasgui.widgets.navigator import Navigator
 from pandasgui.themes import qstylish
 from pandasgui.widgets.python_highlighter import PythonHighlighter
+from IPython.core.magic import (register_line_magic, register_cell_magic,
+                                register_line_cell_magic)
 
 import logging
 
@@ -291,6 +293,9 @@ class PandasGui(QtWidgets.QMainWindow):
     def get_dataframes(self, names: Union[None, str, list] = None):
         return self.store.get_dataframes(names)
 
+    def __getitem__(self, key):
+        return self.get_dataframes(key)
+
     def import_dialog(self):
         dialog = QtWidgets.QFileDialog()
         paths, _ = dialog.getOpenFileNames(filter="*.csv *.xlsx *.parquet")
@@ -328,10 +333,10 @@ class PandasGui(QtWidgets.QMainWindow):
         else:
             print(f"Refreshed {', '.join(refreshed_names)}")
 
+
 def show(*args,
          settings={},
          **kwargs):
-
     # Get the variable names in the scope show() was called from
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
 
@@ -359,7 +364,20 @@ def show(*args,
     pandas_gui = PandasGui(settings=settings, **kwargs)
     pandas_gui.caller_stack = inspect.currentframe().f_back
 
-    return pandas_gui
+    # Register IPython magic
+    try:
+        @register_line_magic
+        def pg(line):
+            pandas_gui.store.eval_magic(line)
+            return line
+
+        return pandas_gui
+    except Exception as e:
+        # Let this silently fail if no IPython console exists
+        if e.args[0] == 'Decorator can only run in context where `get_ipython` exists':
+            pass
+        else:
+            raise e
 
 
 if __name__ == "__main__":
