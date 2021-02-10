@@ -187,7 +187,7 @@ class DataFrameViewer(QtWidgets.QWidget):
     def keyPressEvent(self, event):
         # Disabling this and moving hotkeys to main GUI
         if self.pgdf.gui is not None:
-            return
+            super(DataFrameViewer, self).keyPressEvent(event)
 
         QtWidgets.QWidget.keyPressEvent(self, event)
         mods = event.modifiers()
@@ -204,7 +204,6 @@ class DataFrameViewer(QtWidgets.QWidget):
             pass
         if event.key() == Qt.Key_D and (mods & Qt.ControlModifier):
             pass
-
 
     def copy(self, header=False):
         """
@@ -237,6 +236,8 @@ class DataFrameViewer(QtWidgets.QWidget):
             # Column header should be horizontal so we transpose
             temp_df = self.pgdf.df.columns.to_frame().transpose()
             df = temp_df.iloc[min(rows): max(rows) + 1, min(cols): max(cols) + 1]
+        else:
+            return
 
         # Special case for single-cell copy since df.to_clipboard appends extra newline
         if df.shape == (1, 1):
@@ -265,7 +266,7 @@ class DataFrameViewer(QtWidgets.QWidget):
         for i in range(df_to_paste.shape[0]):
             for j in range(df_to_paste.shape[1]):
                 self.dataView.selectionModel().select(self.dataView.model().index(min(rows) + i, min(cols) + j),
-                                             QtCore.QItemSelectionModel.Select)
+                                                      QtCore.QItemSelectionModel.Select)
 
         self.dataView.setSelectionMode(temp)
 
@@ -549,14 +550,20 @@ class HeaderView(QtWidgets.QTableView):
                 self.pgdf.sort_column(ix.column())
             else:
                 self.on_selectionChanged()
-        elif event.button() == QtCore.Qt.RightButton:
-            pass
+        else:
+            super().mouseDoubleClickEvent(event)
+
+    def mousePressEvent(self, event):
+        point = event.pos()
+        ix = self.indexAt(point)
+        if event.button() == QtCore.Qt.RightButton:
             menu = QtWidgets.QMenu(self)
             action = QtWidgets.QAction("Sort")
             action.triggered.connect(lambda: self.pgdf.sort_column(ix.column()))
             menu.addAction(action)
             menu.exec_(self.mapToGlobal(point))
-        super().mousePressEvent(event)
+        else:
+            super().mousePressEvent(event)
 
     # Header
     def on_selectionChanged(self):
@@ -929,8 +936,6 @@ class HeaderNamesView(QtWidgets.QTableView):
         self.orientation = orientation
         self.setModel(HeaderNamesModel(parent, orientation))
 
-        self.clicked.connect(self.on_clicked)
-
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
@@ -947,10 +952,14 @@ class HeaderNamesView(QtWidgets.QTableView):
         self.setFont(font)
         self.init_size()
 
-    def on_clicked(self, ix: QtCore.QModelIndex):
-        # When the index header name is clicked, sort the index by that level
-        if self.orientation == Qt.Vertical:
-            self.pgdf.sort_index(ix.column())
+    def mouseDoubleClickEvent(self, event):
+        point = event.pos()
+        ix = self.indexAt(point)
+        if event.button() == QtCore.Qt.LeftButton:
+            if self.orientation == Qt.Vertical:
+                self.pgdf.sort_index(ix.column())
+        else:
+            super().mouseDoubleClickEvent(event)
 
     def init_size(self):
         # Match vertical header name widths to vertical header
