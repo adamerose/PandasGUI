@@ -147,7 +147,7 @@ def flatten_multiindex(mi, sep=" - ", format=None):
     return flat_index
 
 
-# Alternative to df.nunique that works when it contains unhashable items
+# Alternative to dataframe.nunique that works when it contains unhashable items
 def nunique(df):
     results = {}
     for col in df.columns:
@@ -158,6 +158,14 @@ def nunique(df):
             results[col] = s.astype(str).nunique()
 
     return pd.Series(results)
+
+
+# Alternative to series.unique that works when it contains unhashable items
+def unique(s):
+    try:
+        return s.unique()
+    except TypeError as e:
+        return s.astype(str).unique()
 
 
 def traverse_tree_widget(tree: Union[QtWidgets.QTreeWidget, QtWidgets.QTreeWidgetItem]) -> List[
@@ -227,12 +235,17 @@ def delete_datasets():
 
 # Automatically try to parse dates for all columns
 def parse_dates(df: Union[pd.DataFrame, pd.Series]):
+    def parse_dates_series(s: pd.Series):
+        try:
+            return pd.to_datetime(s)
+        except:
+            return s
+
     if type(df) == pd.DataFrame:
-        return df.apply(
-            lambda col: pd.to_datetime(col, errors='ignore') if col.dtypes == object else col,
-            axis=0)
+        for col in df.columns:
+            return df.apply(lambda col: parse_dates_series(col) if col.dtypes == object else col)
     elif type(df) == pd.Series:
-        return pd.to_datetime(df, errors='ignore')
+        return parse_dates_series(df)
 
 
 def clean_dataframe(df, name="DataFrame"):

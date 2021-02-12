@@ -94,7 +94,9 @@ def test_inputs():
 
     df2 = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6],
                         2: [1, 2, 3], 'c': [4, 5, 6], }).rename(columns={'c': 2})
-    show(df, df2)
+
+    from pandasgui.datasets import all_datasets
+    show(df, df2, **all_datasets)
 
 
 def test_code_history():
@@ -126,7 +128,6 @@ def test_code_history():
 test_webengine_import()
 test_inputs()
 test_code_history()
-
 
 # iterables = [["bar", "baz", "baz"], ["one", "two"]]
 # ix = pd.MultiIndex.from_product(iterables, names=["first", "second"])

@@ -11,28 +11,28 @@ from pynput import mouse
 class MouseState(mouse.Listener):
     def __init__(self):
         self.pressed = False
-
         self.listener = mouse.Listener(on_click=self.on_click)
-        self.listener.start()
 
     def on_click(self, x, y, button, pressed):
         self.pressed = pressed
-
-
-mouse_state = MouseState()
 
 
 class DelayedMimeData(QtCore.QMimeData):
     def __init__(self):
         super().__init__()
         self.callbacks = []
+        self.mouse_state = MouseState()
+        self.mouse_state.listener.start()
+
+    def __del__(self):
+        self.mouse_state.listener.stop()
 
     def add_callback(self, callback):
         self.callbacks.append(callback)
 
     def retrieveData(self, mime_type: str, preferred_type: QtCore.QVariant.Type):
 
-        if not mouse_state.pressed:
+        if not self.mouse_state.pressed:
             for callback in self.callbacks.copy():
                 result = callback()
                 if result:
@@ -62,6 +62,7 @@ class Navigator(QtWidgets.QTreeWidget):
 
         self.setColumnWidth(0, 150)
         self.setColumnWidth(1, 150)
+
 
     def remove_item(self, name):
         for item in traverse_tree_widget(self):

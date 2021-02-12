@@ -7,6 +7,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtCore import QModelIndex
 from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtCore import QUrl
+from pandasgui.utility import nunique, unique
 
 from pandasgui.constants import CATEGORICAL_THRESHOLD
 from pandasgui.store import PandasGuiDataFrameStore
@@ -66,7 +67,7 @@ class FilterViewer(QtWidgets.QWidget):
         columns = self.pgdf.df_unfiltered.columns
         valid_values = [f"`{col}`" for col in columns]
         categoricals = columns[self.pgdf.df_unfiltered.dtypes == "category"]
-        low_cardinality = columns[self.pgdf.df_unfiltered.nunique() < CATEGORICAL_THRESHOLD]
+        low_cardinality = columns[nunique(self.pgdf.df_unfiltered) < CATEGORICAL_THRESHOLD]
 
         # make unique the column names
         all_categoricals = list(set(categoricals) | set(low_cardinality))
@@ -75,7 +76,7 @@ class FilterViewer(QtWidgets.QWidget):
             if col in categoricals:
                 in_dataset = [f'"{val}"' for val in self.pgdf.df_unfiltered[col].cat.categories]
             else:
-                in_dataset = [f'"{val}"' for val in self.pgdf.df_unfiltered[col].unique()]
+                in_dataset = [f'"{val}"' for val in unique(self.pgdf.df_unfiltered[col])]
             valid_values.extend(in_dataset)
 
         self.completer = Completer(valid_values)

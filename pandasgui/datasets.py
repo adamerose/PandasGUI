@@ -65,8 +65,6 @@ for ix, name in enumerate(dataset_names):
         to_csv(all_datasets[name], local_data_path)
         logger.info(f"Saved {url} to {LOCAL_DATASET_DIR}")
 
-
-
 simple = pd.DataFrame({'name': ['John', 'John', 'Mary', 'Mary', 'Pete', 'Pete', 'Mike', 'Mike'],
                        'gender': ['m', 'm', 'f', 'f', 'm', 'm', 'm', 'm'],
                        'trial': ['A', 'B', 'A', 'B', 'A', 'B', 'A', 'B'],
@@ -83,6 +81,15 @@ multiindex = pd.DataFrame(np.random.randn(8, 4),
                                                              ('B', 'cat'), ('A', 'dog')],
                                                             names=['exp', 'animal']))
 all_datasets['multiindex'] = multiindex
+
+unhashable = pd.DataFrame({'lists': [[1, 2, 3], [4, 5, 6], [7, 8, 9]],
+                           'dicts': [{'a': 1}, {'b': 2}, {'c': 3}],
+                           'dicts_of_lists': [{'a': [1, 2, 3]}, {'b': [4, 5, 6]}, {'c': [7, 8, 9]}],
+                           'sets': [{1, 2, 3}, {4, 5, 6}, {7, 8, 9}],
+                           'tuples': [(1, 2, 3), (4, 5, 6), (7, 8, 9)]
+                           }
+                          )
+all_datasets['unhashable'] = unhashable
 
 # Add the datasets to globals so they can be imported like `from pandasgui.datasets import iris`
 for name in all_datasets.keys():
