@@ -74,6 +74,7 @@ class Grapher(QtWidgets.QWidget):
         # Signals
         self.plot_type_picker.itemSelectionChanged.connect(self.on_type_changed)
         self.dragger.finished.connect(self.on_dragger_finished)
+        self.dragger.saving.connect(self.on_dragger_saving)
 
         # Initial selection
         self.plot_type_picker.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
@@ -93,6 +94,19 @@ class Grapher(QtWidgets.QWidget):
         arg_list = [arg.arg_name for arg in self.current_schema.args]
 
         self.dragger.set_destinations(arg_list)
+
+    def on_dragger_saving(self):
+        options = QtWidgets.QFileDialog.Options()
+        # using native widgets so it matches the PNG download button
+
+        filename, _ = QtWidgets.QFileDialog().getSaveFileName(self, "Save plot to", "", "HTML Files (*.html)",
+                                                              options=options)
+        if filename:
+            if filename[-5:] != ".html":
+                filename += ".html"
+            self.fig.write_html(filename)
+            self.pgdf.add_history_item("Grapher",
+                                       f"fig.write_html('{filename})'")
 
     def on_dragger_finished(self):
         # df = flatten_df(self.pgdf.df)
