@@ -19,6 +19,7 @@ setup(
     setup_requires=['setuptools-git'],
     install_requires=[
         "pandas",
+        "numpy",
         "PyQt5",
         "PyQt5-sip",
         "PyQtWebEngine",
@@ -26,7 +27,6 @@ setup(
         "wordcloud",
         "setuptools",
         "appdirs",
-        "dacite",
         "pynput",
         "IPython",
         "pyarrow",
