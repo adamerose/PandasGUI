@@ -98,6 +98,9 @@ class PandasGui(QtWidgets.QMainWindow):
         pdgui_icon_path = pkg_resources.resource_filename(__name__, "resources/images/icon.png")
         self.app.setWindowIcon(QtGui.QIcon(pdgui_icon_path))
 
+        # Hide the question mark on dialogs
+        self.app.setAttribute(Qt.AA_DisableWindowContextHelpButton)
+
         # Accept drops, for importing files. See methods below: dropEvent, dragEnterEvent, dragMoveEvent
         self.setAcceptDrops(True)
 
@@ -167,19 +170,30 @@ class PandasGui(QtWidgets.QMainWindow):
                           MenuItem(name='Code Export',
                                    func=self.code_export),
                           ],
-                 'Debug': [MenuItem(name='Print Data PandasGuiStore',
+                 'Settings': [MenuItem(name='Add To Context Menu',
+                                       func=self.add_to_context_menu),
+                              MenuItem(name='Remove From Context Menu',
+                                       func=self.remove_from_context_menu),
+
+                              ],
+                 'Debug': [MenuItem(name='About',
+                                    func=self.about),
+                           MenuItem(name='Print Data PandasGuiStore',
                                     func=self.print_store),
                            MenuItem(name='View Data PandasGuiStore',
                                     func=self.view_store),
                            MenuItem(name='Print History (for current DataFrame)',
                                     func=self.print_history),
-                           MenuItem(name='Delete local data',
-                                    func=delete_datasets),
-                           ]}
+                           MenuItem(name='Browse Sample Datasets',
+                                    func=self.show_sample_datasets),
+                           ]
+                 }
 
+        menus = {}
         # Add menu items and actions to UI using the schema defined above
         for menu_name in items.keys():
             menu = menubar.addMenu(menu_name)
+            menus[menu_name] = menu
             for x in items[menu_name]:
                 action = QtWidgets.QAction(x.name, self)
                 action.setShortcut(x.shortcut)
@@ -187,7 +201,7 @@ class PandasGui(QtWidgets.QMainWindow):
                 menu.addAction(action)
 
         # Add an extra option list to the menu for each GUI style that exist for the user's system
-        theme_menu = menubar.addMenu("&Set Theme")
+        theme_menu = menus['Settings'].addMenu("&Set Theme")
         theme_group = QtWidgets.QActionGroup(theme_menu)
         for theme in ["light", "dark", "classic"]:
             theme_action = QtWidgets.QAction(f"&{theme}", self, checkable=True)
@@ -243,6 +257,9 @@ class PandasGui(QtWidgets.QMainWindow):
     def delete_selected_dataframes(self):
         for name in [item.text(0) for item in self.navigator.selectedItems()]:
             self.store.remove_dataframe(name)
+
+    def reorder_columns(self):
+        self.store.selected_pgdf
 
     def dropEvent(self, e):
         if e.mimeData().hasUrls:
@@ -312,6 +329,44 @@ class PandasGui(QtWidgets.QMainWindow):
         df = pd.read_clipboard()
         self.store.add_dataframe(df)
 
+    # https://stackoverflow.com/a/29769228/3620725
+    def add_to_context_menu(self):
+        import winreg
+
+        key = winreg.HKEY_CURRENT_USER
+        value = rf'{sys.executable} -m pandasgui.run_with_args "%V"'
+        icon_value = r"C:\_MyFiles\Programming\pandasgui\pandasgui\resources\images\icon.ico"
+
+        handle = winreg.CreateKeyEx(key, "Software\Classes\*\shell\Open with PandasGUI\command", 0,
+                                    winreg.KEY_SET_VALUE)
+        winreg.SetValueEx(handle, "", 0, winreg.REG_SZ, value)
+        handle = winreg.CreateKeyEx(key, "Software\Classes\*\shell\Open with PandasGUI", 0, winreg.KEY_SET_VALUE)
+        winreg.SetValueEx(handle, "icon", 0, winreg.REG_SZ, icon_value)
+
+    def remove_from_context_menu(self):
+        import winreg
+        key = winreg.HKEY_CURRENT_USER
+        winreg.DeleteKey(key, "Software\Classes\*\shell\Open with PandasGUI\command")
+        winreg.DeleteKey(key, "Software\Classes\*\shell\Open with PandasGUI")
+
+    def about(self):
+        import pandasgui
+        dialog = QtWidgets.QDialog(self)
+        layout = QtWidgets.QVBoxLayout()
+        dialog.setLayout(layout)
+        layout.addWidget(QtWidgets.QLabel(f"Version: {pandasgui.__version__}"))
+        layout.addWidget(QtWidgets.QLabel(
+            f'''GitHub: <a style="color: #1e81cc;" href="https://github.com/adamerose/PandasGUI">https://github.com/adamerose/PandasGUI</a>'''))
+        # dialog.resize(500, 500)
+        dialog.setWindowTitle("About")
+        dialog.show()
+
+    def show_sample_datasets(self):
+        from pandasgui.datasets import LOCAL_DATASET_DIR
+        import os
+        os.startfile(LOCAL_DATASET_DIR, 'explore')
+
+
     def closeEvent(self, e: QtGui.QCloseEvent) -> None:
         refs.remove(self)
         super().closeEvent(e)
@@ -321,7 +376,7 @@ class PandasGui(QtWidgets.QMainWindow):
         callers_local_vars = self.caller_stack.f_locals.items()
         refreshed_names = []
         for var_name, var_val in callers_local_vars:
-            for ix, name in enumerate([pgdf.name for pgdf in self.store.data]):
+            for ix, name in enumerate([pgdf.name for pgdf in self.store.data.values()]):
                 if var_name == name:
                     none_found_flag = False
                     self.store.remove_dataframe(var_name)
@@ -379,6 +434,7 @@ def show(*args,
             raise e
 
     return pandas_gui
+
 
 if __name__ == "__main__":
     from pandasgui.datasets import all_datasets, pokemon, mi_manufacturing
