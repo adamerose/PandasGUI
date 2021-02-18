@@ -242,8 +242,7 @@ def parse_dates(df: Union[pd.DataFrame, pd.Series]):
             return s
 
     if type(df) == pd.DataFrame:
-        for col in df.columns:
-            return df.apply(lambda col: parse_dates_series(col) if col.dtypes == object else col)
+        return df.apply(lambda col: parse_dates_series(col) if col.dtype == object else col)
     elif type(df) == pd.Series:
         return parse_dates_series(df)
 
@@ -371,6 +370,7 @@ def refactor_variable(expr, old_name, new_name):
                 node.id = new_name
 
     return astor.code_gen.to_source(tree)
+
 
 
 event_lookup = {"0": "QEvent::None",
