@@ -43,6 +43,7 @@ class Schema:
 class Dragger(QtWidgets.QWidget):
     itemDropped = QtCore.pyqtSignal()
     finished = QtCore.pyqtSignal()
+    saving = QtCore.pyqtSignal()
 
     def __init__(self, sources: List[str],
                  destinations: List[str], source_nunique: List[str], source_types: List[str]):
@@ -97,6 +98,7 @@ class Dragger(QtWidgets.QWidget):
         # Buttons
         self.kwargs_button = QtWidgets.QPushButton("Custom Kwargs")
         self.reset_button = QtWidgets.QPushButton("Reset")
+        self.save_html_button = QtWidgets.QPushButton("Save HTML")
         self.finish_button = QtWidgets.QPushButton("Finish")
 
         # Signals
@@ -104,6 +106,7 @@ class Dragger(QtWidgets.QWidget):
         self.dest_tree.itemDoubleClicked.connect(self.handle_double_click)
         self.kwargs_button.clicked.connect(self.custom_kwargs)
         self.reset_button.clicked.connect(self.reset)
+        self.save_html_button.clicked.connect(self.save_html)
         self.finish_button.clicked.connect(self.finish)
 
         # Layout
@@ -114,6 +117,7 @@ class Dragger(QtWidgets.QWidget):
         self.button_layout = QtWidgets.QHBoxLayout()
         self.button_layout.addWidget(self.kwargs_button)
         self.button_layout.addWidget(self.reset_button)
+        self.button_layout.addWidget(self.save_html_button)
         self.button_layout.addWidget(self.finish_button)
 
         self.main_layout = QtWidgets.QGridLayout()
@@ -170,6 +174,9 @@ class Dragger(QtWidgets.QWidget):
 
     def finish(self):
         self.finished.emit()
+
+    def save_html(self):
+        self.saving.emit()
 
     def apply_tree_settings(self):
         # Destination tree
