@@ -43,6 +43,10 @@ all_datasets = {}
 def read_csv(path):
     if "mi_manufacturing" in path:
         return pd.read_csv(path, index_col=[0, 1, 2], header=[0, 1, 2])
+    if "stockdata" in path:
+        return pd.read_csv(path, parse_dates=['Date'])
+    if "trump_tweets" in path:
+        return pd.read_csv(path, parse_dates=['date'])
     else:
         return pd.read_csv(path)
 
