@@ -8,7 +8,7 @@ import pandas as pd
 import pkg_resources
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
-import plotly
+import plotly.basedatatypes
 
 from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore
 from pandasgui.utility import fix_ipython, fix_pyqt, as_dict, delete_datasets, resize_widget
@@ -419,7 +419,7 @@ def show(*args,
     kwargs = {**kwargs, **items}
 
     plotly_kwargs = {key: value for (key, value) in kwargs.items() if
-                     issubclass(type(value), plotly.graph_objs._figure.Figure)}
+                     issubclass(type(value), plotly.basedatatypes.BaseFigure)}
     if plotly_kwargs:
         for name, fig in plotly_kwargs.items():
             pv = PlotlyViewer(fig)
