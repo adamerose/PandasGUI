@@ -8,6 +8,7 @@ import pandas as pd
 import pkg_resources
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
+import plotly
 
 from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore
 from pandasgui.utility import fix_ipython, fix_pyqt, as_dict, delete_datasets, resize_widget
@@ -15,6 +16,7 @@ from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
 from pandasgui.widgets.find_toolbar import FindToolbar
 from pandasgui.widgets.json_viewer import JsonViewer
 from pandasgui.widgets.navigator import Navigator
+from pandasgui.widgets.plotly_viewer import PlotlyViewer
 from pandasgui.themes import qstylish
 from pandasgui.widgets.python_highlighter import PythonHighlighter
 from IPython.core.magic import (register_line_magic, register_cell_magic,
@@ -37,6 +39,7 @@ fix_ipython()
 
 # Keep a list of PandasGUI widgets so they don't get garbage collected
 refs = []
+plotly_refs = []
 
 
 class PandasGui(QtWidgets.QMainWindow):
@@ -366,7 +369,6 @@ class PandasGui(QtWidgets.QMainWindow):
         import os
         os.startfile(LOCAL_DATASET_DIR, 'explore')
 
-
     def closeEvent(self, e: QtGui.QCloseEvent) -> None:
         refs.remove(self)
         super().closeEvent(e)
@@ -396,44 +398,55 @@ def show(*args,
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
 
     # Make a dictionary of the DataFrames from the position args and get their variable names using inspect
-    dataframes = {}
+    items = {}
     untitled_number = 1
-    for i, df_object in enumerate(args):
-        df_name = None
+    for ix, item in enumerate(args):
+        name = None
 
         for var_name, var_val in callers_local_vars:
-            if var_val is df_object:
-                df_name = var_name
+            if var_val is item:
+                name = var_name
 
-        if df_name is None:
-            df_name = f"untitled_{untitled_number}"
+        if name is None:
+            name = f"untitled_{untitled_number}"
             untitled_number += 1
-        dataframes[df_name] = df_object
+        items[name] = item
 
-    # Add the dictionary of positional args to the kwargs
-    if any([key in kwargs.keys() for key in dataframes.keys()]):
+    dupes = [key for key in items.keys() if key in kwargs.keys()]
+    if any(dupes):
         logger.warning("Duplicate DataFrame names were provided, duplicates were ignored.")
 
-    kwargs = {**kwargs, **dataframes}
+    kwargs = {**kwargs, **items}
 
-    pandas_gui = PandasGui(settings=settings, **kwargs)
-    pandas_gui.caller_stack = inspect.currentframe().f_back
+    plotly_kwargs = {key: value for (key, value) in kwargs.items() if
+                     issubclass(type(value), plotly.graph_objs._figure.Figure)}
+    if plotly_kwargs:
+        for name, fig in plotly_kwargs.items():
+            pv = PlotlyViewer(fig)
+            pv.show()
+            plotly_refs.append(pv)
+            pv.setWindowTitle(name)
 
-    # Register IPython magic
-    try:
-        @register_line_magic
-        def pg(line):
-            pandas_gui.store.eval_magic(line)
-            return line
+    dataframe_kwargs = {key: value for (key, value) in kwargs.items() if issubclass(type(value), pd.DataFrame)}
+    if dataframe_kwargs:
+        pandas_gui = PandasGui(settings=settings, **dataframe_kwargs)
+        pandas_gui.caller_stack = inspect.currentframe().f_back
 
-    except Exception as e:
-        # Let this silently fail if no IPython console exists
-        if e.args[0] == 'Decorator can only run in context where `get_ipython` exists':
-            pass
-        else:
-            raise e
+        # Register IPython magic
+        try:
+            @register_line_magic
+            def pg(line):
+                pandas_gui.store.eval_magic(line)
+                return line
 
-    return pandas_gui
+        except Exception as e:
+            # Let this silently fail if no IPython console exists
+            if e.args[0] == 'Decorator can only run in context where `get_ipython` exists':
+                pass
+            else:
+                raise e
+
+        return pandas_gui
 
 
 if __name__ == "__main__":
