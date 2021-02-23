@@ -119,6 +119,11 @@ class Grapher(QtWidgets.QWidget):
             else:
                 kwargs[key] = val
 
+        render_mode = self.pgdf.settings.render_mode.value
+        if kwargs.get("render_mode", "") == "":
+            if self.current_schema.name in ("line", "line_polar", "scatter", "scatter_polar"):
+                kwargs["render_mode"] = render_mode
+
         # delayed evaluation of string to use kwargs
         title_format = self.pgdf.settings.title_format.value
         if title_format:
