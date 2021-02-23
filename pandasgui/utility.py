@@ -414,7 +414,7 @@ def eval_title(pgdf, current_schema, kwargs):
         histfunc = kwargs.get("histfunc", "sum" if y else "count")
         if x is None and y:
             y=f"{y} {histfunc}"
-    elif chart == "box":
+    elif chart in ("box", "violin"):
         histfunc = "distribution"
         over_by = " by "
         if x is None and y:
