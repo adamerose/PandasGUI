@@ -10,7 +10,7 @@ from functools import wraps
 from datetime import datetime
 from pandasgui.utility import unique_name, in_interactive_console, rename_duplicates, refactor_variable, parse_dates, \
     clean_dataframe
-from pandasgui.constants import LOCAL_DATA_DIR
+from pandasgui.constants import LOCAL_DATA_DIR, DEFAULT_TITLE_FORMAT
 import os
 import collections
 from enum import Enum
@@ -60,7 +60,7 @@ class Setting(DictLike):
 
 
 class SettingsStore(DictLike):
-    def __init__(self, editable=False, style="Fusion", block=None, theme=preferences['theme']):
+    def __init__(self, editable=False, style="Fusion", block=None, theme=preferences['theme'], title_format=DEFAULT_TITLE_FORMAT):
         if block is None:
             if in_interactive_console():
                 # Don't block if in an interactive console (so you can view GUI and still continue running commands)
@@ -92,6 +92,12 @@ class SettingsStore(DictLike):
                              description="UI theme",
                              dtype=Enum("ThemesEnum", ['light', 'dark', 'classic']),
                              persist=True)
+
+        self.title_format = Setting(label="title_format",
+                                    value=title_format,
+                                    description="format string for automatically generated chart title",
+                                    dtype=str,
+                                    persist=False)
 
 
 @dataclass
