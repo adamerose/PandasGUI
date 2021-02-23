@@ -390,7 +390,7 @@ def eval_title(pgdf, current_schema, kwargs):
           title_columns: columns list minus units
           title_trendline: trendline description
           vs: when doing a title with x vs y, use {x}{vs}{y}
-          over_by: when doing a title y over x, use {y}{ober_by}{x}. Preferred. for distributions, will use "by"
+          over_by: when doing a title y over x, use {y}{over_by}{x}. Preferred. for distributions, will use "by"
           name: dataframe name
           total: total number of observations
           subset: observations with active filters applied
