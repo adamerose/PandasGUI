@@ -1,4 +1,3 @@
-import datetime
 import inspect
 import sys
 from typing import NewType, Union, List, Callable, Iterable
@@ -15,8 +14,7 @@ import pandas as pd
 from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore, HistoryItem
 
 from pandasgui.widgets.plotly_viewer import PlotlyViewer, plotly_markers
-from pandasgui.utility import flatten_df, flatten_iter, kwargs_string, nunique, unique
-from pandasgui.widgets.plotly_viewer import PlotlyViewer
+from pandasgui.utility import flatten_df, flatten_iter, kwargs_string, nunique, unique, eval_title
 from pandasgui.widgets.dragger import Dragger, ColumnArg, Schema
 
 import logging
@@ -121,6 +119,25 @@ class Grapher(QtWidgets.QWidget):
             else:
                 kwargs[key] = val
 
+        render_mode = self.pgdf.settings.render_mode.value
+        if kwargs.get("render_mode", "") == "":
+            if self.current_schema.name in ("line", "line_polar", "scatter", "scatter_polar"):
+                kwargs["render_mode"] = render_mode
+
+        # delayed evaluation of string to use kwargs
+        title_format = self.pgdf.settings.title_format.value
+        if title_format:
+            # user might have provided a title
+            title = kwargs.get("title", "")
+            if "{title}" in title:
+                # user is just adding to the default title
+                kwargs["title"] = title.replace("{title}", title_format)
+                kwargs["title"] = eval_title(self.pgdf, self.current_schema, kwargs)
+            elif title == "":
+                # nothing provided
+                kwargs["title"] = title_format
+                kwargs["title"] = eval_title(self.pgdf, self.current_schema, kwargs)
+
         func = self.current_schema.function
 
         self.fig = func(self.pgdf, kwargs)
@@ -167,13 +184,11 @@ def line(pgdf, kwargs):
             raise TypeError
 
     key_cols = list(set(key_cols))
-    print(kwargs, key_cols)
 
     if key_cols == []:
         df = pgdf.df
     else:
         df = pgdf.df.groupby(key_cols).mean().reset_index()
-
 
     if 'marker_symbol' in kwargs.keys():
 
@@ -282,7 +297,8 @@ def word_cloud(pgdf, kwargs):
     from wordcloud import WordCloud
     text = ' '.join(pd.concat([pgdf.df[x].dropna().astype(str) for x in columns]))
     wc = WordCloud(scale=2, collocations=False).generate(text)
-    fig = px.imshow(wc)
+    title = kwargs.get("title", "")
+    fig = px.imshow(wc, title=title)
 
     pgdf.history_imports.add("from wordcloud import WordCloud")
     pgdf.add_history_item("Grapher",
@@ -297,6 +313,7 @@ def word_cloud(pgdf, kwargs):
 
 schemas = [Schema(name='histogram',
                   args=[ColumnArg(arg_name='x'),
+                        ColumnArg(arg_name='y'),
                         ColumnArg(arg_name='color'),
                         ColumnArg(arg_name='facet_row'),
                         ColumnArg(arg_name='facet_col')],
@@ -332,6 +349,7 @@ schemas = [Schema(name='histogram',
                   args=[ColumnArg(arg_name='x'),
                         ColumnArg(arg_name='y'),
                         ColumnArg(arg_name='color'),
+                        ColumnArg(arg_name='hover_name'),
                         ColumnArg(arg_name='facet_row'),
                         ColumnArg(arg_name='facet_col')],
                   label='Bar',
@@ -386,13 +404,16 @@ schemas = [Schema(name='histogram',
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-contour.svg')),
            Schema(name='pie',
                   args=[ColumnArg(arg_name='names'),
-                        ColumnArg(arg_name='values')],
+                        ColumnArg(arg_name='values'),
+                        ColumnArg(arg_name='color'),],
                   label='Pie',
                   function=pie,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-pie.svg')),
            Schema(name='scatter_matrix',
                   args=[ColumnArg(arg_name='dimensions'),
-                        ColumnArg(arg_name='color')],
+                        ColumnArg(arg_name='color'),
+                        ColumnArg(arg_name='symbol'),
+                        ColumnArg(arg_name='size'),],
                   label='Splom',
                   function=scatter_matrix,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-splom.svg')),

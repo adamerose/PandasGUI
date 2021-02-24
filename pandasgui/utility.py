@@ -1,3 +1,5 @@
+from collections import defaultdict
+import datetime
 import logging
 import pandas as pd
 from PyQt5 import QtWidgets
@@ -319,6 +321,183 @@ def flatten_iter(item):
         t.append(item)
 
     return t
+
+
+def active_filters_repr(filters):
+    "string representation of active filter expressions"
+    return ','.join([filter.expr for filter in filters if filter.enabled and filter.failed == False])
+
+
+def remove_units(label):
+    "we do not want to repeat units in the title. It is assumed they are in parenthesis"
+    if type(label) == list and len(label) == 0:
+        return label
+    elif type(label) == list and len(label) == 1:
+        return remove_units(label[0])
+    elif type(label) == list and len(label) > 1:
+        return [remove_units(val) for val in label]
+    try:
+        return label[:label.rindex("(")] if label[-1] == ")" else label
+    except (AttributeError, IndexError, TypeError, ValueError):
+        return label
+
+
+def axis_title_labels(kwargs):
+    "handling of x, y, z and dimentsions, columns / orientation and log scales for all charts"
+    orientation = kwargs.get("orientation")
+    log_x = kwargs.get("log_x", False)
+    log_y = kwargs.get("log_y", False)
+    log_z = kwargs.get("log_z", False)
+
+    title_log_x = "log " if log_x else ""
+    title_log_y = "log " if log_y else ""
+    title_log_z = "log " if log_z else ""
+
+    x = remove_units(kwargs.get("x"))
+    y = remove_units(kwargs.get("y", ""))
+    z = remove_units(kwargs.get("z", ""))
+    dimensions = remove_units(kwargs.get("dimensions", ""))
+    columns = remove_units(kwargs.get("columns", ""))
+
+    if orientation == "h":
+        x, y = y, x
+        title_log_x, title_log_y = title_log_y, title_log_x
+    if x is None:
+        opt_x = x  # wordcloud, pie etc have no x
+    elif type(x) == list:
+        opt_x = [title_log_x + val for val in x]
+    else:
+        opt_x = title_log_x + x
+    if type(y) == list:
+        opt_y = [title_log_y + val for val in y]
+    else:
+        opt_y = title_log_y + y
+    return opt_x, opt_y, title_log_z + z, dimensions, columns
+
+
+def eval_title(pgdf, current_schema, kwargs):
+    """template variable replacement.
+
+    Besides all dragger selections (x, y, z, color etc), and all custom kwargs, extra template variables are:
+
+          date: current datetime
+          filters: active filter expressions, comma delimited
+          title_x: x minus units and with log scale if selected
+          title_y: y minus units and with log scale if selected
+          title_z: z minus units and with log scale if selected
+          title_dimensions: dimensions list minus units
+          title_columns: columns list minus units
+          title_trendline: trendline description
+          vs: when doing a title with x vs y, use {x}{vs}{y}
+          over_by: when doing a title y over x, use {y}{over_by}{x}. Preferred. for distributions, will use "by"
+          name: dataframe name
+          total: total number of observations
+          subset: observations with active filters applied
+          selection: ready to use string representing {subset} observations of {total}
+          groupings: groupings tied to Legend and not on legend: marker_symbol, line_group, size etc
+    """
+    today = datetime.datetime.now()
+    name = pgdf.name
+    chart = current_schema.name
+    x, y, z, dimensions, columns = axis_title_labels(kwargs)
+
+    # Histograms default to count for aggregation
+    histfunc = ""
+    over_by = " over "
+    vs = " vs "
+    title_trendline = kwargs.get("trendline", "")
+    if title_trendline != "":
+        title_trendline = f"trend lines are <i>{title_trendline}</i>"
+
+    if chart == "histogram":
+        histfunc = kwargs.get("histfunc", "sum" if y else "count")
+        if x is None and y:
+            y=f"{y} {histfunc}"
+    elif chart in ("box", "violin"):
+        histfunc = "distribution"
+        over_by = " by "
+        if x is None and y:
+            y=f"{y} {histfunc}"
+    elif chart == "bar":
+        over_by = " by "
+    elif chart == "density_heatmap":
+        histfunc = kwargs.get("histfunc", "sum")
+        if y and z:
+            y, z = f"binned {histfunc} of {z} for ", y
+        elif y:
+            y = f"binned count of {y}"
+        histfunc = ""
+    elif chart == "density_contour":
+        histfunc = kwargs.get("histfunc", "count")
+        estimation = "estimated density "
+        if y and z:
+            y, z = f"estimated {histfunc} density of {z} for ", y
+        elif y:
+            y = f"estimated count density of {y}"
+        histfunc = ""
+    elif chart =="scatter_3d":
+        if y and z:
+            # need to separate them
+            z = ", " + z
+    elif chart in ("word_cloud", "scatter_matrix", "pie"):
+        x = ""  # else string will evaluate to None
+
+    # filters
+    filters = active_filters_repr(pgdf.filters)
+    if filters != "":
+        filters = "Filters: " + filters
+    total = pgdf.df_unfiltered.shape[0]
+
+    subset = pgdf.df.shape[0]
+    selection = ""
+    groupings = ""
+    sep = ""
+
+    # over / by
+    over_by = f" {histfunc}{over_by}" if x else ""
+    vs = f"{vs} {histfunc}" if y else ""
+
+    # Groupings in Legend
+    if kwargs.get("color") or kwargs.get("symbol"):
+        groupings += "Legend"
+        sep = ", "
+
+    # this one shows on the legend, but is not labeled
+    if kwargs.get("marker_symbol"):
+        groupings += f"{sep}marker={kwargs['marker_symbol']}"
+
+    # next two don't show in the plotly legend, so we need to explicitly add them
+    if "line_group" in kwargs.keys():
+        groupings += f"{sep}line_group={kwargs['line_group']}"
+    if "size" in kwargs.keys():
+        groupings += f"{sep}size={kwargs['size']}"
+    if groupings != "":
+        groupings = "Grouped by " + groupings
+        if filters != "":
+            groupings += " - "
+
+    if subset != total:
+        selection = f"({subset} obs. of {total}) "
+    else:
+        selection = f"({total} obs.)" if chart == "line" else "(all observations)"
+
+    return kwargs["title"].format_map(defaultdict(str,
+                                                  date=today,
+                                                  filters=filters,
+                                                  title_x=x,
+                                                  title_y=y,
+                                                  title_z=z,
+                                                  title_dimensions=dimensions,
+                                                  title_columns=columns,
+                                                  title_trendline=title_trendline,
+                                                  vs=vs,
+                                                  over_by=over_by,
+                                                  name=name,
+                                                  total=total,
+                                                  subset=subset,
+                                                  selection=selection,
+                                                  groupings=groupings,
+                                                  **kwargs))
 
 
 # Make a string from a kwargs dict as they would be displayed when passed to a function
