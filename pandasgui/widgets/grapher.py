@@ -226,13 +226,17 @@ def line(pgdf, kwargs):
 
 
 def bar(pgdf, kwargs):
+
+    df = pgdf.df
     key_cols = flatten_iter([kwargs[arg] for arg in ['x', 'color', 'facet_row', 'facet_col'] if arg in kwargs.keys()])
     if any(key_cols):
-        pgdf.df = pgdf.df.groupby(key_cols).mean().reset_index()
+        df = pgdf.df.groupby(key_cols).mean().reset_index()
 
     pgdf.add_history_item("Grapher",
-                          f"# *Code history for bar plot not yet implemented*")
-    return px.bar(data_frame=pgdf.df, **kwargs)
+                          f"# *Code history for bar plot not yet fully implemented*"
+                          f"fig = px.box(data_frame=df, {kwargs_string(kwargs)})")
+    fig = px.bar(data_frame=df, **kwargs)
+    return fig
 
 
 def box(pgdf, kwargs):
