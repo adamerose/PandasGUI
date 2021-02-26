@@ -43,7 +43,7 @@ class Reshaper(QtWidgets.QWidget):
             self.reshape_type_picker.addItem(item)
 
         df = flatten_df(self.pgdf.df)
-        self.dragger = Dragger(sources=df.columns, destinations=[],
+        self.dragger = Dragger(sources=df.columns, schema=Schema(),
                                source_nunique=nunique(df).apply('{: >6}'.format).values,
                                source_types=df.dtypes.values.astype(str))
 
@@ -74,7 +74,7 @@ class Reshaper(QtWidgets.QWidget):
         self.current_schema = next(filter(lambda schema: schema.label == self.selected_plot_label, schemas))
         arg_list = [arg.arg_name for arg in self.current_schema.args]
 
-        self.dragger.set_destinations(arg_list)
+        self.dragger.set_schema(self.current_schema)
 
     def on_dragger_finished(self):
         self.selected_plot_label = self.reshape_type_picker.selectedItems()[0].text()
