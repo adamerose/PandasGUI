@@ -464,4 +464,4 @@ def show(*args,
 if __name__ == "__main__":
     from pandasgui.datasets import all_datasets, pokemon, mi_manufacturing
 
-    gui = show(settings={'apply_mean': False}, **all_datasets)
+    gui = show(**all_datasets)
