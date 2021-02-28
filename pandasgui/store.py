@@ -61,7 +61,7 @@ class Setting(DictLike):
 
 class SettingsStore(DictLike):
     def __init__(self, editable=False, style="Fusion", block=None, theme=preferences['theme'],
-                 title_format=DEFAULT_TITLE_FORMAT, render_mode=RENDER_MODE):
+                 title_format=DEFAULT_TITLE_FORMAT, render_mode=RENDER_MODE, apply_mean=True, apply_sort=True):
         if block is None:
             if in_interactive_console():
                 # Don't block if in an interactive console (so you can view GUI and still continue running commands)
@@ -105,6 +105,18 @@ class SettingsStore(DictLike):
                                     description="render mode for plotly express charts",
                                     dtype=Enum("RenderEnum", ['auto', 'webgl', 'svg']),
                                     persist=False)
+
+        self.apply_mean = Setting(label="apply_mean",
+                                   value=apply_mean,
+                                   description="enable",
+                                   dtype=bool,
+                                   persist=False)
+
+        self.apply_sort = Setting(label="apply_sort",
+                                  value=apply_sort,
+                                  description="enable",
+                                  dtype=bool,
+                                  persist=False)
 
 
 @dataclass
