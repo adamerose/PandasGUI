@@ -13,6 +13,8 @@ import plotly.basedatatypes
 from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore
 from pandasgui.utility import fix_ipython, fix_pyqt, as_dict, delete_datasets, resize_widget
 from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
+from pandasgui.widgets.grapher import schemas
+from pandasgui.widgets.dragger import BooleanArg
 from pandasgui.widgets.find_toolbar import FindToolbar
 from pandasgui.widgets.json_viewer import JsonViewer
 from pandasgui.widgets.navigator import Navigator
@@ -67,6 +69,16 @@ class PandasGui(QtWidgets.QMainWindow):
         for key, value in settings.items():
             setting = self.store.settings[key]
             setting.value = value
+
+        # update default schema
+        for i, chart in enumerate(schemas):
+            if chart.name in ('bar','line'):
+                args = schemas[i].args
+                for j, arg in enumerate(args):
+                    if arg.arg_name == 'apply_sort':
+                        args[j] = BooleanArg(arg_name='apply_sort', default_value=self.store.settings.apply_sort.value)
+                    elif arg.arg_name == 'apply_mean':
+                        args[j] = BooleanArg(arg_name='apply_mean', default_value=self.store.settings.apply_mean.value)
 
         # This will silently fail if the style isn't available on the OS, which is okay
         self.app.setStyle(QtWidgets.QStyleFactory.create(self.store.settings.style.value))
