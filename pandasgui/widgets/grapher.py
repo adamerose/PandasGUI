@@ -191,7 +191,14 @@ def line(pgdf, kwargs):
     text = kwargs.get("text")
     marker_symbol = "marker_symbol" in kwargs.keys()
     mode = 'lines'
-    layout_kwargs = {}
+    trace_kwargs = {}
+    # optional
+    for trace_attribute in ['textfont', 'textfont_size', 'textfont_color', 'textfont_family', 'textposition',
+                             'texttemplate', 'showlegend']:
+        try:
+            trace_kwargs[trace_attribute] = kwargs.pop(trace_attribute)
+        except KeyError:
+            pass
     if marker_symbol or text:
         if marker_symbol:
             mode += "+markers"
@@ -200,13 +207,6 @@ def line(pgdf, kwargs):
             # don't add +text if we want to see text in hover instead of on the plot
             if texthover is None:
                 mode += "+text"
-            # optional
-            for layout_attribute in ['textfont', 'textfont_size', 'textfont_color', 'textfont_family', 'textposition', 'texttemplate',
-                                     'showlegend', 'legend_x', 'legend_xanchor', 'legend_y', 'legend_yanchor', 'legend_orientation']:
-                try:
-                    layout_kwargs[layout_attribute] = kwargs.pop(layout_attribute)
-                except KeyError:
-                    pass
 
         if marker_symbol:
             # get from custom kwargs, but invalid for px.line, so pop them
@@ -229,19 +229,21 @@ def line(pgdf, kwargs):
                         marker_symbol=plotly_markers[i % unique_markers],
                         marker_size=marker_size,
                         marker_line_width=marker_line_width,
-                        **layout_kwargs)
+                        **trace_kwargs)
                 else:
                     fig.add_traces(px.line(data_frame=df_sub, **kwargs).update_traces(
                         mode=mode,
                         marker_symbol=plotly_markers[i % unique_markers],
                         marker_size=marker_size,
                         marker_line_width=marker_line_width,
-                        **layout_kwargs).data)
+                        **trace_kwargs).data)
         else:
             # observations have text to label them, but no markers
-            fig = px.line(data_frame=df, **kwargs).update_traces(mode=mode, **layout_kwargs)
+            fig = px.line(data_frame=df, **kwargs).update_traces(mode=mode, **trace_kwargs)
     else:
         fig = px.line(data_frame=df, **kwargs)
+        if len(trace_kwargs) > 0:
+            fig = fig.update_traces(**trace_kwargs)
 
     if apply_sort and df[kwargs['x']].dtype.name == 'object':
         fig.update_xaxes(type='category', categoryorder='category ascending')
@@ -268,11 +270,20 @@ def bar(pgdf, kwargs):
             kwargs["title"] = title.replace("{groupby_obs}", str(df.shape[0]))
     if apply_sort and key_cols != []:
         df = df.sort_values(key_cols)
+    trace_kwargs = {}
+    for trace_attribute in ['textfont', 'textfont_size', 'textfont_color', 'textfont_family', 'textposition',
+                             'texttemplate', 'showlegend']:
+        try:
+            trace_kwargs[trace_attribute] = kwargs.pop(trace_attribute)
+        except KeyError:
+            pass
 
     pgdf.add_history_item("Grapher",
                           f"# *Code history for bar plot not yet fully implemented*\n"
                           f"fig = px.bar(data_frame=df, {kwargs_string(kwargs)})")
     fig = px.bar(data_frame=df, **kwargs)
+    if len(trace_kwargs) > 0:
+        fig = fig.update_traces(**trace_kwargs)
 
     if apply_sort and df[kwargs['x']].dtype.name == 'object':
         fig.update_xaxes(type='category', categoryorder='category ascending')
