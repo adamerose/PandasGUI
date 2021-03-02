@@ -405,6 +405,10 @@ def eval_title(pgdf, current_schema, kwargs):
     histfunc = ""
     over_by = " over "
     vs = " vs "
+    color = kwargs.get("color")
+    symbol = kwargs.get("symbol")
+    apply_mean = kwargs.get("apply_mean", None)
+    apply_sort = kwargs.get("apply_sort", None)
     title_trendline = kwargs.get("trendline", "")
     if title_trendline != "":
         title_trendline = f"trend lines are <i>{title_trendline}</i>"
@@ -420,6 +424,19 @@ def eval_title(pgdf, current_schema, kwargs):
             y=f"{y} {histfunc}"
     elif chart == "bar":
         over_by = " by "
+        if y == "":
+            y = "count"
+            if color is None and apply_mean:
+                over_by = " of "
+        else:
+            if apply_mean:
+                func = "average"
+            else:
+                func = "sum"
+            y = f"{func} of {y}"
+        if apply_sort:
+            if x:
+                x = f"sorted {x}"
     elif chart == "density_heatmap":
         histfunc = kwargs.get("histfunc", "sum")
         if y and z:
@@ -441,6 +458,14 @@ def eval_title(pgdf, current_schema, kwargs):
             z = ", " + z
     elif chart in ("word_cloud", "scatter_matrix", "pie"):
         x = ""  # else string will evaluate to None
+    elif chart == "line":
+        if kwargs.get("apply_mean", None):
+            over_by = " by "
+            if y:
+                y = f"average of {y}"
+        if kwargs.get("apply_sort", None):
+            if x:
+                x = f"sorted {x}"
 
     # filters
     filters = active_filters_repr(pgdf.filters)
@@ -452,14 +477,22 @@ def eval_title(pgdf, current_schema, kwargs):
     selection = ""
     groupings = ""
     sep = ""
+    showlegend = kwargs.get("showlegend", True)
 
     # over / by
     over_by = f" {histfunc}{over_by}" if x else ""
     vs = f"{vs} {histfunc}" if y else ""
 
     # Groupings in Legend
-    if kwargs.get("color") or kwargs.get("symbol"):
-        groupings += "Legend"
+    if color or symbol:
+        if showlegend:
+            groupings += "Legend"
+        else:
+            if color:
+                groupings += f"{sep}color={color}"
+                sep = ", "
+            if symbol:
+                groupings += f"{sep}symbol={symbol}"
         sep = ", "
 
     # this one shows on the legend, but is not labeled
@@ -471,6 +504,8 @@ def eval_title(pgdf, current_schema, kwargs):
         groupings += f"{sep}line_group={kwargs['line_group']}"
     if "size" in kwargs.keys():
         groupings += f"{sep}size={kwargs['size']}"
+    if "text" in kwargs.keys():
+        groupings += f"{sep}text={kwargs['text']}"
     if groupings != "":
         groupings = "Grouped by " + groupings
         if filters != "":
@@ -478,6 +513,8 @@ def eval_title(pgdf, current_schema, kwargs):
 
     if subset != total:
         selection = f"({subset} obs. of {total}) "
+    elif kwargs.get("apply_mean", None):
+        selection = "({groupby_obs} " + f"derived obs. from {total})"
     else:
         selection = f"({total} obs.)" if chart == "line" else "(all observations)"
 
