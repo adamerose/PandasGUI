@@ -182,37 +182,64 @@ def line(pgdf, kwargs):
     df = pgdf.df
     if apply_mean and key_cols != []:
         df = df.groupby(key_cols).mean().reset_index()
+        title = kwargs.get("title", "")
+        if "{groupby_obs}" in title:
+            # this wasn't available when we rendered the title
+            kwargs["title"] = title.replace("{groupby_obs}", str(df.shape[0]))
     if apply_sort and key_cols != []:
         df = df.sort_values(key_cols)
+    text = kwargs.get("text")
+    marker_symbol = "marker_symbol" in kwargs.keys()
+    mode = 'lines'
+    layout_kwargs = {}
+    if marker_symbol or text:
+        if marker_symbol:
+            mode += "+markers"
+        if text:
+            texthover = kwargs.pop('texthover', None)
+            # don't add +text if we want to see text in hover instead of on the plot
+            if texthover is None:
+                mode += "+text"
+            # optional
+            for layout_attribute in ['textfont', 'textfont_size', 'textfont_color', 'textfont_family', 'textposition', 'texttemplate',
+                                     'showlegend', 'legend_x', 'legend_xanchor', 'legend_y', 'legend_yanchor', 'legend_orientation']:
+                try:
+                    layout_kwargs[layout_attribute] = kwargs.pop(layout_attribute)
+                except KeyError:
+                    pass
 
-    if 'marker_symbol' in kwargs.keys():
-        # get from custom kwargs, but invalid for px.line, so pop them
-        marker_col = kwargs.pop('marker_symbol')
-        marker_size = kwargs.pop('marker_size', 10)  # optional
-        marker_line_width = kwargs.pop('marker_line_width', 2)  # optional
+        if marker_symbol:
+            # get from custom kwargs, but invalid for px.line, so pop them
+            marker_col = kwargs.pop('marker_symbol')
+            marker_size = kwargs.pop('marker_size', 10)  # optional
+            marker_line_width = kwargs.pop('marker_line_width', 2)  # optional
 
-        marker_unique = sorted(unique(df[marker_col]))
-        unique_markers = len(plotly_markers)
+            marker_unique = sorted(unique(df[marker_col]))
+            unique_markers = len(plotly_markers)
 
-        kwargs['hover_name'] = kwargs.get('hover_name', marker_col)
+            kwargs['hover_name'] = kwargs.get('hover_name', marker_col)
+            fig = None
 
-        fig = None
+            for i in range(0, len(marker_unique)):
+                df_sub = df[df[marker_col] == marker_unique[i]]
 
-        for i in range(0, len(marker_unique)):
-            df_sub = df[df[marker_col] == marker_unique[i]]
-
-            if fig is None:
-                fig = px.line(data_frame=df_sub, **kwargs).update_traces(
-                    mode='lines+markers',
-                    marker_symbol=plotly_markers[i % unique_markers],
-                    marker_size=marker_size,
-                    marker_line_width=marker_line_width)
-            else:
-                fig.add_traces(px.line(data_frame=df_sub, **kwargs).update_traces(
-                    mode='lines+markers',
-                    marker_symbol=plotly_markers[i % unique_markers],
-                    marker_size=marker_size,
-                    marker_line_width=marker_line_width).data)
+                if fig is None:
+                    fig = px.line(data_frame=df_sub, **kwargs).update_traces(
+                        mode=mode,
+                        marker_symbol=plotly_markers[i % unique_markers],
+                        marker_size=marker_size,
+                        marker_line_width=marker_line_width,
+                        **layout_kwargs)
+                else:
+                    fig.add_traces(px.line(data_frame=df_sub, **kwargs).update_traces(
+                        mode=mode,
+                        marker_symbol=plotly_markers[i % unique_markers],
+                        marker_size=marker_size,
+                        marker_line_width=marker_line_width,
+                        **layout_kwargs).data)
+        else:
+            # observations have text to label them, but no markers
+            fig = px.line(data_frame=df, **kwargs).update_traces(mode=mode, **layout_kwargs)
     else:
         fig = px.line(data_frame=df, **kwargs)
 
@@ -235,6 +262,10 @@ def bar(pgdf, kwargs):
     df = pgdf.df
     if apply_mean and key_cols != []:
         df = df.groupby(key_cols).mean().reset_index()
+        title = kwargs.get("title", "")
+        if "{groupby_obs}" in title:
+            # this wasn't available when we rendered the title
+            kwargs["title"] = title.replace("{groupby_obs}", str(df.shape[0]))
     if apply_sort and key_cols != []:
         df = df.sort_values(key_cols)
 
@@ -340,6 +371,7 @@ schemas = [Schema(name='histogram',
                         ColumnArg(arg_name='color'),
                         ColumnArg(arg_name='symbol'),
                         ColumnArg(arg_name='size'),
+                        ColumnArg(arg_name='text'),
                         ColumnArg(arg_name='hover_name'),
                         ColumnArg(arg_name='facet_row'),
                         ColumnArg(arg_name='facet_col')],
@@ -353,6 +385,7 @@ schemas = [Schema(name='histogram',
                         ColumnArg(arg_name='line_dash'),
                         ColumnArg(arg_name='line_group'),
                         ColumnArg(arg_name='marker_symbol'),
+                        ColumnArg(arg_name='text'),
                         ColumnArg(arg_name='hover_name'),
                         ColumnArg(arg_name='facet_row'),
                         ColumnArg(arg_name='facet_col'),
@@ -365,6 +398,7 @@ schemas = [Schema(name='histogram',
                   args=[ColumnArg(arg_name='x'),
                         ColumnArg(arg_name='y'),
                         ColumnArg(arg_name='color'),
+                        ColumnArg(arg_name='text'),
                         ColumnArg(arg_name='hover_name'),
                         ColumnArg(arg_name='facet_row'),
                         ColumnArg(arg_name='facet_col'),
