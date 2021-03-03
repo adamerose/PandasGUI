@@ -180,7 +180,7 @@ class PandasGui(QtWidgets.QMainWindow):
                           MenuItem(name='Delete Selected DataFrames',
                                    func=self.delete_selected_dataframes),
                           MenuItem(name='Refresh Data',
-                                   func=self.refresh,
+                                   func=self.reload_data,
                                    shortcut='Ctrl+R'),
                           MenuItem(name='Code Export',
                                    func=self.code_export),
@@ -386,7 +386,7 @@ class PandasGui(QtWidgets.QMainWindow):
         super().closeEvent(e)
 
     # Replace all GUI DataFrames with the current DataFrame of the same name from the scope show was called
-    def refresh(self):
+    def reload_data(self):
         callers_local_vars = self.caller_stack.f_locals.items()
         refreshed_names = []
         for var_name, var_val in callers_local_vars:
@@ -398,7 +398,7 @@ class PandasGui(QtWidgets.QMainWindow):
                     refreshed_names.append(var_name)
 
         if not refreshed_names:
-            print("No matching DataFrames found to refresh")
+            print("No matching DataFrames found to reload")
         else:
             print(f"Refreshed {', '.join(refreshed_names)}")
 

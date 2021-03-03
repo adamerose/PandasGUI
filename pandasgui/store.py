@@ -386,7 +386,7 @@ class PandasGuiDataFrameStore:
         if isinstance(x, PandasGuiDataFrameStore):
             return x
         if isinstance(x, pd.DataFrame):
-            return PandasGuiDataFrameStore(x)
+            return PandasGuiDataFrameStore(x.copy())
         elif isinstance(x, pd.Series):
             return PandasGuiDataFrameStore(x.to_frame())
         else:
