@@ -10,7 +10,7 @@ from functools import wraps
 from datetime import datetime
 from pandasgui.utility import unique_name, in_interactive_console, rename_duplicates, refactor_variable, parse_dates, \
     clean_dataframe
-from pandasgui.constants import LOCAL_DATA_DIR
+from pandasgui.constants import LOCAL_DATA_DIR, DEFAULT_TITLE_FORMAT, RENDER_MODE
 import os
 import collections
 from enum import Enum
@@ -26,8 +26,19 @@ if not os.path.exists(preferences_path):
     with open(preferences_path, 'w') as f:
         json.dump({'theme': "light"}, f)
 
-with open(preferences_path) as f:
-    preferences = json.load(f)
+
+def read_saved_settings():
+    if not os.path.exists(preferences_path):
+        return {}
+    else:
+        with open(preferences_path, 'r') as f:
+            saved_settings = json.load(f)
+        return saved_settings
+
+
+def write_saved_settings(settings):
+    with open(preferences_path, 'w') as f:
+        json.dump(settings, f)
 
 
 class DictLike:
@@ -49,9 +60,9 @@ class Setting(DictLike):
     def __setattr__(self, key, value):
         try:
             if self.persist:
-                preferences[self.label] = value
-                with open(preferences_path, 'w') as f:
-                    json.dump(preferences, f)
+                settings = read_saved_settings()
+                settings[self.label] = value
+                write_saved_settings(settings)
         except AttributeError:
             # Get attribute error because of __setattr__ happening in __init__ before self.persist is set
             pass
@@ -59,39 +70,93 @@ class Setting(DictLike):
         super().__setattr__(key, value)
 
 
+DEFAULT_SETTINGS = {'editable': False,
+                    'style': "Fusion",
+                    'block': True,
+                    'theme': 'Dark',
+                    'title_format': DEFAULT_TITLE_FORMAT,
+                    'render_mode': RENDER_MODE,
+                    'apply_mean': True,
+                    'apply_sort': True}
+
+
+@dataclass
 class SettingsStore(DictLike):
-    def __init__(self, editable=False, style="Fusion", block=None, theme=preferences['theme']):
-        if block is None:
-            if in_interactive_console():
-                # Don't block if in an interactive console (so you can view GUI and still continue running commands)
-                block = False
-            else:
-                # If in a script, block or else the script will continue and finish without allowing GUI interaction
-                block = True
+    block: Setting
+    editable: Setting
+    style: Setting
+    theme: Setting
+    title_format: Setting
+    render_mode: Setting
+    apply_mean: Setting
+    apply_sort: Setting
+
+    def __init__(self, **settings):
+
+        saved_settings = read_saved_settings()
+
+        for setting_name in DEFAULT_SETTINGS.keys():
+            # Fill settings values if not provided
+            if setting_name not in settings.keys():
+                if setting_name in saved_settings.keys():
+                    settings[setting_name] = saved_settings[setting_name]
+                else:
+                    settings[setting_name] = DEFAULT_SETTINGS[setting_name]
+
+        if in_interactive_console():
+            # Don't block if in an interactive console (so you can view GUI and still continue running commands)
+            settings['block'] = False
+        else:
+            # If in a script, block or else the script will continue and finish without allowing GUI interaction
+            settings['block'] = True
 
         self.block = Setting(label="block",
-                             value=block,
+                             value=settings['block'],
                              description="Should GUI block code execution until closed?",
                              dtype=bool,
                              persist=False)
 
         self.editable = Setting(label="editable",
-                                value=editable,
+                                value=settings['editable'],
                                 description="Are table cells editable?",
                                 dtype=bool,
-                                persist=False)
+                                persist=True)
 
         self.style = Setting(label="style",
-                             value=style,
+                             value=settings['style'],
                              description="PyQt app style",
                              dtype=Enum("StylesEnum", QtWidgets.QStyleFactory.keys()),
-                             persist=False)
+                             persist=True)
 
         self.theme = Setting(label="theme",
-                             value=theme,
+                             value=settings['theme'],
                              description="UI theme",
                              dtype=Enum("ThemesEnum", ['light', 'dark', 'classic']),
                              persist=True)
+
+        self.title_format = Setting(label="title_format",
+                                    value=settings['title_format'],
+                                    description="format string for automatically generated chart title",
+                                    dtype=str,
+                                    persist=True)
+
+        self.render_mode = Setting(label="render_mode",
+                                   value=settings['render_mode'],
+                                   description="render mode for plotly express charts",
+                                   dtype=Enum("RenderEnum", ['auto', 'webgl', 'svg']),
+                                   persist=True)
+
+        self.apply_mean = Setting(label="apply_mean",
+                                  value=settings['apply_mean'],
+                                  description="Default flag for whether to aggregate automatically in Grapher",
+                                  dtype=bool,
+                                  persist=True)
+
+        self.apply_sort = Setting(label="apply_sort",
+                                  value=settings['apply_sort'],
+                                  description="Default flag for whether to sort automatically in Grapher",
+                                  dtype=bool,
+                                  persist=True)
 
 
 @dataclass
@@ -130,7 +195,7 @@ class PandasGuiDataFrameStore:
         self.history_imports = {"import pandas as pd"}
 
         # References to other object instances that may be assigned later
-        self.settings: SettingsStore = SettingsStore()
+        self.settings: SettingsStore = SETTINGS_STORE
         self.store: Union[PandasGuiStore, None] = None
         self.gui: Union["PandasGui", None] = None
         self.dataframe_explorer: Union["DataFrameExplorer", None] = None
@@ -340,6 +405,7 @@ class PandasGuiDataFrameStore:
         if self.filter_viewer is not None:
             self.models += [self.filter_viewer.list_model,
                             ]
+
         for model in self.models:
             model.beginResetModel()
             model.endResetModel()
@@ -361,7 +427,7 @@ class PandasGuiDataFrameStore:
         if isinstance(x, PandasGuiDataFrameStore):
             return x
         if isinstance(x, pd.DataFrame):
-            return PandasGuiDataFrameStore(x)
+            return PandasGuiDataFrameStore(x.copy())
         elif isinstance(x, pd.Series):
             return PandasGuiDataFrameStore(x.to_frame())
         else:
@@ -380,7 +446,7 @@ class PandasGuiStore:
     selected_pgdf: Union[PandasGuiDataFrameStore, None] = None
 
     def __post_init__(self):
-        self.settings = SettingsStore()
+        self.settings = SETTINGS_STORE
 
     ###################################
     # IPython magic
@@ -479,3 +545,6 @@ class PandasGuiStore:
     def to_dict(self):
         import json
         return json.loads(json.dumps(self, default=lambda o: o.__dict__))
+
+
+SETTINGS_STORE = SettingsStore()

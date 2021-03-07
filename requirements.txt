@@ -6,7 +6,6 @@ plotly
 wordcloud
 setuptools
 appdirs
-dacite
 pynput
 IPython
 pyarrow

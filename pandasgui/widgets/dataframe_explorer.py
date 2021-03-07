@@ -97,11 +97,12 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
                 "StdDev": pgdf.df.std(numeric_only=True),
                 "Min": pgdf.df.min(numeric_only=True),
                 "Max": pgdf.df.max(numeric_only=True),
-            }
+            },
+            index=pgdf.df.columns
         )
 
-        stats_pgdf = PandasGuiDataFrameStore(stats_df.reset_index())
-        w = DataFrameViewer(stats_pgdf)
+        self.stats_pgdf = PandasGuiDataFrameStore(stats_df.reset_index())
+        w = DataFrameViewer(self.stats_pgdf)
         w.setAutoFillBackground(True)
         return w
 

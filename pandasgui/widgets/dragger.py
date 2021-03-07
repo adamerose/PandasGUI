@@ -11,48 +11,50 @@ from pandasgui.utility import nunique
 import pandasgui
 import ast
 from typing import Union, List, Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
-# All argument schemas inherit from this
 @dataclass
-class Arg:
+class ColumnArg:
     arg_name: str
 
 
 @dataclass
-class ColumnArg(Arg):
-    pass
+class OptionListArg:
+    arg_name: str
+    values: List[str]
 
 
 @dataclass
-class OptionListArg(Arg):
-    values: List[str]
+class BooleanArg:
+    arg_name: str
+    default_value: bool
 
 
 # This schema is made up of multiple args, this defines all the drop zones available in the Dragger
 @dataclass
 class Schema:
-    name: str
-    args: List[Arg]
-    label: str
-    function: Callable
-    icon_path: str
+    name: str = "Untitled"
+    args: List[Union[ColumnArg, OptionListArg, BooleanArg]] = field(default_factory=list)
+    label: str = "Untitled"
+    function: Callable = None
+    icon_path: str = "Untitled"
 
 
 class Dragger(QtWidgets.QWidget):
     itemDropped = QtCore.pyqtSignal()
     finished = QtCore.pyqtSignal()
+    saving = QtCore.pyqtSignal()
 
     def __init__(self, sources: List[str],
-                 destinations: List[str], source_nunique: List[str], source_types: List[str]):
+                 schema: Schema, source_nunique: List[str], source_types: List[str]):
         super().__init__()
+        self.schema = schema
         self.remembered_values = {}
         self.source_tree_unfiltered = []
 
         # Ensure no duplicates
         assert (len(sources) == len(set(sources)))
-        assert (len(destinations) == len(set(destinations)))
         assert (len(sources) == len(source_nunique))
         assert (len(sources) == len(source_types))
 
@@ -80,7 +82,7 @@ class Dragger(QtWidgets.QWidget):
         self.dest_tree.setItemsExpandable(False)
         self.dest_tree.setRootIsDecorated(False)
 
-        self.set_destinations(destinations)
+        self.set_schema(schema)
         self.apply_tree_settings()
 
         # Configure drag n drop
@@ -97,13 +99,16 @@ class Dragger(QtWidgets.QWidget):
         # Buttons
         self.kwargs_button = QtWidgets.QPushButton("Custom Kwargs")
         self.reset_button = QtWidgets.QPushButton("Reset")
+        self.save_html_button = QtWidgets.QPushButton("Save HTML")
         self.finish_button = QtWidgets.QPushButton("Finish")
 
         # Signals
         self.itemDropped.connect(self.apply_tree_settings)
+        self.dest_tree.itemChanged.connect(self.remember_values)
         self.dest_tree.itemDoubleClicked.connect(self.handle_double_click)
         self.kwargs_button.clicked.connect(self.custom_kwargs)
         self.reset_button.clicked.connect(self.reset)
+        self.save_html_button.clicked.connect(self.save_html)
         self.finish_button.clicked.connect(self.finish)
 
         # Layout
@@ -114,6 +119,7 @@ class Dragger(QtWidgets.QWidget):
         self.button_layout = QtWidgets.QHBoxLayout()
         self.button_layout.addWidget(self.kwargs_button)
         self.button_layout.addWidget(self.reset_button)
+        self.button_layout.addWidget(self.save_html_button)
         self.button_layout.addWidget(self.finish_button)
 
         self.main_layout = QtWidgets.QGridLayout()
@@ -171,45 +177,72 @@ class Dragger(QtWidgets.QWidget):
     def finish(self):
         self.finished.emit()
 
+    def save_html(self):
+        self.saving.emit()
+
     def apply_tree_settings(self):
+        if len(self.schema.args) == 0:
+            return
+
         # Destination tree
         root = self.dest_tree.invisibleRootItem()
-        root.setFlags(Qt.ItemIsEnabled)
+        root.setFlags(root.flags() & Qt.ItemIsEnabled)
 
         for i in range(root.childCount()):
             child = root.child(i)
             child.setExpanded(True)
 
-            child.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled)
+            arg = next(arg for arg in self.schema.args if arg.arg_name == child.text(0))
+            if type(arg) == ColumnArg:
+                child.setFlags(child.flags() & Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled
+                               & ~Qt.ItemIsDragEnabled)
 
-            for j in range(child.childCount()):
-                sub_child = child.child(j)
-                sub_child.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
+                for j in range(child.childCount()):
+                    sub_child = child.child(j)
+                    sub_child.setFlags(
+                        sub_child.flags() & Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
+
+            if type(arg) == BooleanArg:
+                child.setFlags(child.flags() & Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
+                               & ~Qt.ItemIsDragEnabled & ~Qt.ItemIsDropEnabled)
+                for j in range(child.childCount()):
+                    sub_child = child.child(j)
+                    sub_child.setFlags(
+                        sub_child.flags() & Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
 
         # Source tree
         root = self.source_tree.invisibleRootItem()
-        root.setFlags(Qt.ItemIsEnabled)
+        root.setFlags(root.flags() & Qt.ItemIsEnabled)
 
         for i in range(root.childCount()):
             child = root.child(i)
-            child.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
+            child.setFlags(child.flags() & Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
 
-        # Remember values
+        self.remember_values()
+
+    def remember_values(self):
         self.remembered_values.update(self.get_data())
 
     def get_data(self):
         data = {}
 
+        # Get args from destination UI
         root = self.dest_tree.invisibleRootItem()
         for i in range(root.childCount()):
             child = root.child(i)
             section = child.text(0)
-            data[section] = []
 
-            for j in range(child.childCount()):
-                sub_child = child.child(j)
-                value = sub_child.text(0)
-                data[section].append(value)
+            arg = next(arg for arg in self.schema.args if arg.arg_name == child.text(0))
+
+            if type(arg) == ColumnArg:
+                data[section] = []
+                for j in range(child.childCount()):
+                    sub_child = child.child(j)
+                    value = sub_child.text(0)
+                    data[section].append(value)
+
+            if type(arg) == BooleanArg:
+                data[section] = child.checkState(0) == Qt.Checked
 
         # Add custom kwargs
         root = self.kwargs_dialog.tree_widget.invisibleRootItem()
@@ -234,18 +267,32 @@ class Dragger(QtWidgets.QWidget):
 
         self.filter()
 
-    def set_destinations(self, destinations: List[str]):
+    def set_schema(self, schema: Schema):
+        self.schema = schema
+
         # Delete all sections
         root = self.dest_tree.invisibleRootItem()
         for i in reversed(range(root.childCount())):
             sip.delete(root.child(i))
 
-        for dest in destinations:
-            section = QtWidgets.QTreeWidgetItem(self.dest_tree, [dest])
+        for arg in schema.args:
+            if type(arg) == ColumnArg:
+                section = QtWidgets.QTreeWidgetItem(self.dest_tree, [arg.arg_name])
+                if arg.arg_name in self.remembered_values.keys():
+                    for val in self.remembered_values[arg.arg_name]:
+                        item = QtWidgets.QTreeWidgetItem(section, [val])
 
-            if dest in self.remembered_values.keys():
-                for val in self.remembered_values[dest]:
-                    item = QtWidgets.QTreeWidgetItem(section, [val])
+            elif type(arg) == BooleanArg:
+                section = QtWidgets.QTreeWidgetItem(self.dest_tree, [arg.arg_name])
+                if arg.arg_name in self.remembered_values.keys():
+                    # Use remembered value
+                    val = self.remembered_values[arg.arg_name]
+                    section.setCheckState(0, Qt.Checked if val else Qt.Unchecked)
+                else:
+                    # Use default value
+                    val = arg.default_value
+                    section.setCheckState(0, Qt.Checked if val else Qt.Unchecked)
+                section.setFlags(section.flags() | Qt.ItemIsUserCheckable)
 
         self.apply_tree_settings()
 
@@ -368,7 +415,12 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
 
-    test = Dragger(sources=pokemon.columns, destinations=["x", "y", "color"],
+    test = Dragger(sources=pokemon.columns,
+                   schema=Schema(name='line',
+                                 args=[ColumnArg(arg_name='x'),
+                                       ColumnArg(arg_name='y'),
+                                       ColumnArg(arg_name='color'),
+                                       BooleanArg(arg_name='apply_mean', default_value=True)], ),
                    source_nunique=nunique(pokemon).apply('{: >6}'.format).values,
                    source_types=pokemon.dtypes.values.astype(str))
     test.finished.connect(lambda: print(test.get_data()))

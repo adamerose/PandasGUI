@@ -8,13 +8,18 @@ import pandas as pd
 import pkg_resources
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
+import plotly.basedatatypes
 
 from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore
 from pandasgui.utility import fix_ipython, fix_pyqt, as_dict, delete_datasets, resize_widget
 from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
+from pandasgui.widgets.grapher import schemas
+from pandasgui.widgets.dragger import BooleanArg
 from pandasgui.widgets.find_toolbar import FindToolbar
 from pandasgui.widgets.json_viewer import JsonViewer
 from pandasgui.widgets.navigator import Navigator
+from pandasgui.widgets.plotly_viewer import PlotlyViewer
+from pandasgui.widgets.settings_editor import SettingsEditor
 from pandasgui.themes import qstylish
 from pandasgui.widgets.python_highlighter import PythonHighlighter
 from IPython.core.magic import (register_line_magic, register_cell_magic,
@@ -37,6 +42,7 @@ fix_ipython()
 
 # Keep a list of PandasGUI widgets so they don't get garbage collected
 refs = []
+plotly_refs = []
 
 
 class PandasGui(QtWidgets.QMainWindow):
@@ -64,6 +70,16 @@ class PandasGui(QtWidgets.QMainWindow):
         for key, value in settings.items():
             setting = self.store.settings[key]
             setting.value = value
+
+        # update default schema
+        for i, chart in enumerate(schemas):
+            if chart.name in ('bar','line'):
+                args = schemas[i].args
+                for j, arg in enumerate(args):
+                    if arg.arg_name == 'apply_sort':
+                        args[j] = BooleanArg(arg_name='apply_sort', default_value=self.store.settings.apply_sort.value)
+                    elif arg.arg_name == 'apply_mean':
+                        args[j] = BooleanArg(arg_name='apply_mean', default_value=self.store.settings.apply_mean.value)
 
         # This will silently fail if the style isn't available on the OS, which is okay
         self.app.setStyle(QtWidgets.QStyleFactory.create(self.store.settings.style.value))
@@ -97,6 +113,9 @@ class PandasGui(QtWidgets.QMainWindow):
         self.setWindowTitle("PandasGUI")
         pdgui_icon_path = pkg_resources.resource_filename(__name__, "resources/images/icon.png")
         self.app.setWindowIcon(QtGui.QIcon(pdgui_icon_path))
+
+        # Hide the question mark on dialogs
+        self.app.setAttribute(Qt.AA_DisableWindowContextHelpButton)
 
         # Accept drops, for importing files. See methods below: dropEvent, dragEnterEvent, dragMoveEvent
         self.setAcceptDrops(True)
@@ -162,24 +181,37 @@ class PandasGui(QtWidgets.QMainWindow):
                           MenuItem(name='Delete Selected DataFrames',
                                    func=self.delete_selected_dataframes),
                           MenuItem(name='Refresh Data',
-                                   func=self.refresh,
+                                   func=self.reload_data,
                                    shortcut='Ctrl+R'),
                           MenuItem(name='Code Export',
                                    func=self.code_export),
                           ],
-                 'Debug': [MenuItem(name='Print Data PandasGuiStore',
+                 'Settings': [MenuItem(name='Add To Context Menu',
+                                       func=self.add_to_context_menu),
+                              MenuItem(name='Remove From Context Menu',
+                                       func=self.remove_from_context_menu),
+                              MenuItem(name='Preferences...',
+                                       func=self.edit_settings),
+
+                              ],
+                 'Debug': [MenuItem(name='About',
+                                    func=self.about),
+                           MenuItem(name='Print Data PandasGuiStore',
                                     func=self.print_store),
                            MenuItem(name='View Data PandasGuiStore',
                                     func=self.view_store),
                            MenuItem(name='Print History (for current DataFrame)',
                                     func=self.print_history),
-                           MenuItem(name='Delete local data',
-                                    func=delete_datasets),
-                           ]}
+                           MenuItem(name='Browse Sample Datasets',
+                                    func=self.show_sample_datasets),
+                           ]
+                 }
 
+        menus = {}
         # Add menu items and actions to UI using the schema defined above
         for menu_name in items.keys():
             menu = menubar.addMenu(menu_name)
+            menus[menu_name] = menu
             for x in items[menu_name]:
                 action = QtWidgets.QAction(x.name, self)
                 action.setShortcut(x.shortcut)
@@ -187,7 +219,7 @@ class PandasGui(QtWidgets.QMainWindow):
                 menu.addAction(action)
 
         # Add an extra option list to the menu for each GUI style that exist for the user's system
-        theme_menu = menubar.addMenu("&Set Theme")
+        theme_menu = menus['Settings'].addMenu("&Set Theme")
         theme_group = QtWidgets.QActionGroup(theme_menu)
         for theme in ["light", "dark", "classic"]:
             theme_action = QtWidgets.QAction(f"&{theme}", self, checkable=True)
@@ -243,6 +275,9 @@ class PandasGui(QtWidgets.QMainWindow):
     def delete_selected_dataframes(self):
         for name in [item.text(0) for item in self.navigator.selectedItems()]:
             self.store.remove_dataframe(name)
+
+    def reorder_columns(self):
+        self.store.selected_pgdf
 
     def dropEvent(self, e):
         if e.mimeData().hasUrls:
@@ -312,16 +347,61 @@ class PandasGui(QtWidgets.QMainWindow):
         df = pd.read_clipboard()
         self.store.add_dataframe(df)
 
+    # https://stackoverflow.com/a/29769228/3620725
+    def add_to_context_menu(self):
+        import winreg
+
+        key = winreg.HKEY_CURRENT_USER
+        value = rf'{sys.executable} -m pandasgui.run_with_args "%V"'
+        icon_value = r"C:\_MyFiles\Programming\pandasgui\pandasgui\resources\images\icon.ico"
+
+        handle = winreg.CreateKeyEx(key, "Software\Classes\*\shell\Open with PandasGUI\command", 0,
+                                    winreg.KEY_SET_VALUE)
+        winreg.SetValueEx(handle, "", 0, winreg.REG_SZ, value)
+        handle = winreg.CreateKeyEx(key, "Software\Classes\*\shell\Open with PandasGUI", 0, winreg.KEY_SET_VALUE)
+        winreg.SetValueEx(handle, "icon", 0, winreg.REG_SZ, icon_value)
+
+    def remove_from_context_menu(self):
+        import winreg
+        key = winreg.HKEY_CURRENT_USER
+        winreg.DeleteKey(key, "Software\Classes\*\shell\Open with PandasGUI\command")
+        winreg.DeleteKey(key, "Software\Classes\*\shell\Open with PandasGUI")
+
+    def edit_settings(self):
+
+        dialog = QtWidgets.QDialog(self)
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(SettingsEditor(self.store.settings))
+        dialog.setLayout(layout)
+        dialog.show()
+
+    def about(self):
+        import pandasgui
+        dialog = QtWidgets.QDialog(self)
+        layout = QtWidgets.QVBoxLayout()
+        dialog.setLayout(layout)
+        layout.addWidget(QtWidgets.QLabel(f"Version: {pandasgui.__version__}"))
+        layout.addWidget(QtWidgets.QLabel(
+            f'''GitHub: <a style="color: #1e81cc;" href="https://github.com/adamerose/PandasGUI">https://github.com/adamerose/PandasGUI</a>'''))
+        # dialog.resize(500, 500)
+        dialog.setWindowTitle("About")
+        dialog.show()
+
+    def show_sample_datasets(self):
+        from pandasgui.datasets import LOCAL_DATASET_DIR
+        import os
+        os.startfile(LOCAL_DATASET_DIR, 'explore')
+
     def closeEvent(self, e: QtGui.QCloseEvent) -> None:
         refs.remove(self)
         super().closeEvent(e)
 
     # Replace all GUI DataFrames with the current DataFrame of the same name from the scope show was called
-    def refresh(self):
+    def reload_data(self):
         callers_local_vars = self.caller_stack.f_locals.items()
         refreshed_names = []
         for var_name, var_val in callers_local_vars:
-            for ix, name in enumerate([pgdf.name for pgdf in self.store.data]):
+            for ix, name in enumerate([pgdf.name for pgdf in self.store.data.values()]):
                 if var_name == name:
                     none_found_flag = False
                     self.store.remove_dataframe(var_name)
@@ -329,7 +409,7 @@ class PandasGui(QtWidgets.QMainWindow):
                     refreshed_names.append(var_name)
 
         if not refreshed_names:
-            print("No matching DataFrames found to refresh")
+            print("No matching DataFrames found to reload")
         else:
             print(f"Refreshed {', '.join(refreshed_names)}")
 
@@ -341,44 +421,56 @@ def show(*args,
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
 
     # Make a dictionary of the DataFrames from the position args and get their variable names using inspect
-    dataframes = {}
+    items = {}
     untitled_number = 1
-    for i, df_object in enumerate(args):
-        df_name = None
+    for ix, item in enumerate(args):
+        name = None
 
         for var_name, var_val in callers_local_vars:
-            if var_val is df_object:
-                df_name = var_name
+            if var_val is item:
+                name = var_name
 
-        if df_name is None:
-            df_name = f"untitled_{untitled_number}"
+        if name is None:
+            name = f"untitled_{untitled_number}"
             untitled_number += 1
-        dataframes[df_name] = df_object
+        items[name] = item
 
-    # Add the dictionary of positional args to the kwargs
-    if any([key in kwargs.keys() for key in dataframes.keys()]):
+    dupes = [key for key in items.keys() if key in kwargs.keys()]
+    if any(dupes):
         logger.warning("Duplicate DataFrame names were provided, duplicates were ignored.")
 
-    kwargs = {**kwargs, **dataframes}
+    kwargs = {**kwargs, **items}
 
-    pandas_gui = PandasGui(settings=settings, **kwargs)
-    pandas_gui.caller_stack = inspect.currentframe().f_back
+    plotly_kwargs = {key: value for (key, value) in kwargs.items() if
+                     issubclass(type(value), plotly.basedatatypes.BaseFigure)}
+    if plotly_kwargs:
+        for name, fig in plotly_kwargs.items():
+            pv = PlotlyViewer(fig)
+            pv.show()
+            plotly_refs.append(pv)
+            pv.setWindowTitle(name)
 
-    # Register IPython magic
-    try:
-        @register_line_magic
-        def pg(line):
-            pandas_gui.store.eval_magic(line)
-            return line
+    dataframe_kwargs = {key: value for (key, value) in kwargs.items() if issubclass(type(value), pd.DataFrame)}
+    if dataframe_kwargs:
+        pandas_gui = PandasGui(settings=settings, **dataframe_kwargs)
+        pandas_gui.caller_stack = inspect.currentframe().f_back
 
-    except Exception as e:
-        # Let this silently fail if no IPython console exists
-        if e.args[0] == 'Decorator can only run in context where `get_ipython` exists':
-            pass
-        else:
-            raise e
+        # Register IPython magic
+        try:
+            @register_line_magic
+            def pg(line):
+                pandas_gui.store.eval_magic(line)
+                return line
 
-    return pandas_gui
+        except Exception as e:
+            # Let this silently fail if no IPython console exists
+            if e.args[0] == 'Decorator can only run in context where `get_ipython` exists':
+                pass
+            else:
+                raise e
+
+        return pandas_gui
+
 
 if __name__ == "__main__":
     from pandasgui.datasets import all_datasets, pokemon, mi_manufacturing

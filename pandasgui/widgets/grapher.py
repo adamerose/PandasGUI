@@ -1,4 +1,3 @@
-import datetime
 import inspect
 import sys
 from typing import NewType, Union, List, Callable, Iterable
@@ -12,12 +11,11 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
 import pandas as pd
-from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore, HistoryItem
+from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore, HistoryItem, SETTINGS_STORE
 
 from pandasgui.widgets.plotly_viewer import PlotlyViewer, plotly_markers
-from pandasgui.utility import flatten_df, flatten_iter, kwargs_string, nunique, unique
-from pandasgui.widgets.plotly_viewer import PlotlyViewer
-from pandasgui.widgets.dragger import Dragger, ColumnArg, Schema
+from pandasgui.utility import flatten_df, flatten_iter, kwargs_string, nunique, unique, eval_title
+from pandasgui.widgets.dragger import Dragger, ColumnArg, Schema, BooleanArg
 
 import logging
 
@@ -56,7 +54,8 @@ class Grapher(QtWidgets.QWidget):
                                          QtWidgets.QSizePolicy.Expanding)
 
         df = flatten_df(self.pgdf.df)
-        self.dragger = Dragger(sources=df.columns, destinations=[],
+        self.dragger = Dragger(sources=df.columns,
+                               schema=Schema(),
                                source_nunique=nunique(df).apply('{: >7}'.format).values,
                                source_types=df.dtypes.values.astype(str))
 
@@ -74,6 +73,7 @@ class Grapher(QtWidgets.QWidget):
         # Signals
         self.plot_type_picker.itemSelectionChanged.connect(self.on_type_changed)
         self.dragger.finished.connect(self.on_dragger_finished)
+        self.dragger.saving.connect(self.on_dragger_saving)
 
         # Initial selection
         self.plot_type_picker.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
@@ -92,7 +92,20 @@ class Grapher(QtWidgets.QWidget):
         self.current_schema = next(filter(lambda schema: schema.label == self.selected_plot_label, schemas))
         arg_list = [arg.arg_name for arg in self.current_schema.args]
 
-        self.dragger.set_destinations(arg_list)
+        self.dragger.set_schema(self.current_schema)
+
+    def on_dragger_saving(self):
+        options = QtWidgets.QFileDialog.Options()
+        # using native widgets so it matches the PNG download button
+
+        filename, _ = QtWidgets.QFileDialog().getSaveFileName(self, "Save plot to", "", "HTML Files (*.html)",
+                                                              options=options)
+        if filename:
+            if filename[-5:] != ".html":
+                filename += ".html"
+            self.fig.write_html(filename)
+            self.pgdf.add_history_item("Grapher",
+                                       f"fig.write_html('{filename})'")
 
     def on_dragger_finished(self):
         # df = flatten_df(self.pgdf.df)
@@ -107,6 +120,25 @@ class Grapher(QtWidgets.QWidget):
             else:
                 kwargs[key] = val
 
+        render_mode = self.pgdf.settings.render_mode.value
+        if kwargs.get("render_mode", "") == "":
+            if self.current_schema.name in ("line", "line_polar", "scatter", "scatter_polar"):
+                kwargs["render_mode"] = render_mode
+
+        # delayed evaluation of string to use kwargs
+        title_format = self.pgdf.settings.title_format.value
+        if title_format:
+            # user might have provided a title
+            title = kwargs.get("title", "")
+            if "{title}" in title:
+                # user is just adding to the default title
+                kwargs["title"] = title.replace("{title}", title_format)
+                kwargs["title"] = eval_title(self.pgdf, self.current_schema, kwargs)
+            elif title == "":
+                # nothing provided
+                kwargs["title"] = title_format
+                kwargs["title"] = eval_title(self.pgdf, self.current_schema, kwargs)
+
         func = self.current_schema.function
 
         self.fig = func(self.pgdf, kwargs)
@@ -114,6 +146,7 @@ class Grapher(QtWidgets.QWidget):
         self.pgdf.history_imports.add("import plotly.express as px")
 
         self.figure_viewer.set_figure(self.fig)
+
 
 def clear_layout(layout):
     for i in reversed(range(layout.count())):
@@ -138,72 +171,124 @@ def scatter(pgdf, kwargs):
 
 
 def line(pgdf, kwargs):
-    pgdf.add_history_item("Grapher",
-                          f"# *Code history for line plot not yet implemented*")
+    # Argument in Schema but not a Plotly argument
+    apply_mean = kwargs.pop('apply_mean')
+    apply_sort = kwargs.pop('apply_sort')
 
-    key_cols = []
-    for arg in [a for a in ['x', 'color', 'line_dash', 'line_group', 'hover_name', 'facet_row', 'facet_col', 'marker_symbol'] if
-                a in kwargs.keys()]:
-        key_cols_subset = kwargs[arg]
-        if type(key_cols_subset) == list:
-            key_cols += key_cols_subset
-        elif type(key_cols_subset) == str:
-            key_cols += [key_cols_subset]
+    key_cols = flatten_iter([kwargs[arg] for arg in
+                             ['x', 'color', 'line_dash', 'line_group', 'hover_name', 'facet_row', 'facet_col',
+                              'marker_symbol'] if arg in kwargs.keys()])
+
+    df = pgdf.df
+    if apply_mean and key_cols != []:
+        df = df.groupby(key_cols).mean().reset_index()
+        title = kwargs.get("title", "")
+        if "{groupby_obs}" in title:
+            # this wasn't available when we rendered the title
+            kwargs["title"] = title.replace("{groupby_obs}", str(df.shape[0]))
+    if apply_sort and key_cols != []:
+        df = df.sort_values(key_cols)
+    text = kwargs.get("text")
+    marker_symbol = "marker_symbol" in kwargs.keys()
+    mode = 'lines'
+    trace_kwargs = {}
+    # optional
+    for trace_attribute in ['textfont', 'textfont_size', 'textfont_color', 'textfont_family', 'textposition',
+                             'texttemplate', 'showlegend']:
+        try:
+            trace_kwargs[trace_attribute] = kwargs.pop(trace_attribute)
+        except KeyError:
+            pass
+    if marker_symbol or text:
+        if marker_symbol:
+            mode += "+markers"
+        if text:
+            texthover = kwargs.pop('texthover', None)
+            # don't add +text if we want to see text in hover instead of on the plot
+            if texthover is None:
+                mode += "+text"
+
+        if marker_symbol:
+            # get from custom kwargs, but invalid for px.line, so pop them
+            marker_col = kwargs.pop('marker_symbol')
+            marker_size = kwargs.pop('marker_size', 10)  # optional
+            marker_line_width = kwargs.pop('marker_line_width', 2)  # optional
+
+            marker_unique = sorted(unique(df[marker_col]))
+            unique_markers = len(plotly_markers)
+
+            kwargs['hover_name'] = kwargs.get('hover_name', marker_col)
+            fig = None
+
+            for i in range(0, len(marker_unique)):
+                df_sub = df[df[marker_col] == marker_unique[i]]
+
+                if fig is None:
+                    fig = px.line(data_frame=df_sub, **kwargs).update_traces(
+                        mode=mode,
+                        marker_symbol=plotly_markers[i % unique_markers],
+                        marker_size=marker_size,
+                        marker_line_width=marker_line_width,
+                        **trace_kwargs)
+                else:
+                    fig.add_traces(px.line(data_frame=df_sub, **kwargs).update_traces(
+                        mode=mode,
+                        marker_symbol=plotly_markers[i % unique_markers],
+                        marker_size=marker_size,
+                        marker_line_width=marker_line_width,
+                        **trace_kwargs).data)
         else:
-            raise TypeError
-
-    key_cols = list(set(key_cols))
-    print(kwargs, key_cols)
-
-    if key_cols == []:
-        df = pgdf.df
-    else:
-        df = pgdf.df.groupby(key_cols).mean().reset_index()
-
-
-    if 'marker_symbol' in kwargs.keys():
-
-        # get from custom kwargs, but invalid for px.line, so pop them
-        marker_col = kwargs.pop('marker_symbol')
-        marker_size = kwargs.pop('marker_size', 10)  # optional
-        marker_line_width = kwargs.pop('marker_line_width', 2)  # optional
-
-        marker_unique = sorted(unique(df[marker_col]))
-        unique_markers = len(plotly_markers)
-
-        kwargs['hover_name'] = kwargs.get('hover_name', marker_col)
-
-        fig = None
-
-        for i in range(0, len(marker_unique)):
-            df_sub = df[df[marker_col] == marker_unique[i]]
-
-            if fig is None:
-                fig = px.line(data_frame=df_sub, **kwargs).update_traces(
-                    mode='lines+markers',
-                    marker_symbol=plotly_markers[i % unique_markers],
-                    marker_size=marker_size,
-                    marker_line_width=marker_line_width)
-            else:
-                fig.add_traces(px.line(data_frame=df_sub, **kwargs).update_traces(
-                    mode='lines+markers',
-                    marker_symbol=plotly_markers[i % unique_markers],
-                    marker_size=marker_size,
-                    marker_line_width=marker_line_width).data)
+            # observations have text to label them, but no markers
+            fig = px.line(data_frame=df, **kwargs).update_traces(mode=mode, **trace_kwargs)
     else:
         fig = px.line(data_frame=df, **kwargs)
+        if len(trace_kwargs) > 0:
+            fig = fig.update_traces(**trace_kwargs)
 
+    if apply_sort and df[kwargs['x']].dtype.name == 'object':
+        fig.update_xaxes(type='category', categoryorder='category ascending')
+
+    pgdf.add_history_item("Grapher",
+                          f"# *Code history for line plot not yet fully implemented*\n"
+                          f"fig = px.line(data_frame=df, {kwargs_string(kwargs)})")
     return fig
 
 
 def bar(pgdf, kwargs):
+    # Argument in Schema but not a Plotly argument
+    apply_mean = kwargs.pop('apply_mean')
+    apply_sort = kwargs.pop('apply_sort')
+
     key_cols = flatten_iter([kwargs[arg] for arg in ['x', 'color', 'facet_row', 'facet_col'] if arg in kwargs.keys()])
-    if any(key_cols):
-        pgdf.df = pgdf.df.groupby(key_cols).mean().reset_index()
+
+    df = pgdf.df
+    if apply_mean and key_cols != []:
+        df = df.groupby(key_cols).mean().reset_index()
+        title = kwargs.get("title", "")
+        if "{groupby_obs}" in title:
+            # this wasn't available when we rendered the title
+            kwargs["title"] = title.replace("{groupby_obs}", str(df.shape[0]))
+    if apply_sort and key_cols != []:
+        df = df.sort_values(key_cols)
+    trace_kwargs = {}
+    for trace_attribute in ['textfont', 'textfont_size', 'textfont_color', 'textfont_family', 'textposition',
+                             'texttemplate', 'showlegend']:
+        try:
+            trace_kwargs[trace_attribute] = kwargs.pop(trace_attribute)
+        except KeyError:
+            pass
 
     pgdf.add_history_item("Grapher",
-                          f"# *Code history for bar plot not yet implemented*")
-    return px.bar(data_frame=pgdf.df, **kwargs)
+                          f"# *Code history for bar plot not yet fully implemented*\n"
+                          f"fig = px.bar(data_frame=df, {kwargs_string(kwargs)})")
+    fig = px.bar(data_frame=df, **kwargs)
+    if len(trace_kwargs) > 0:
+        fig = fig.update_traces(**trace_kwargs)
+
+    if apply_sort and df[kwargs['x']].dtype.name == 'object':
+        fig.update_xaxes(type='category', categoryorder='category ascending')
+
+    return fig
 
 
 def box(pgdf, kwargs):
@@ -268,7 +353,8 @@ def word_cloud(pgdf, kwargs):
     from wordcloud import WordCloud
     text = ' '.join(pd.concat([pgdf.df[x].dropna().astype(str) for x in columns]))
     wc = WordCloud(scale=2, collocations=False).generate(text)
-    fig = px.imshow(wc)
+    title = kwargs.get("title", "")
+    fig = px.imshow(wc, title=title)
 
     pgdf.history_imports.add("from wordcloud import WordCloud")
     pgdf.add_history_item("Grapher",
@@ -283,6 +369,7 @@ def word_cloud(pgdf, kwargs):
 
 schemas = [Schema(name='histogram',
                   args=[ColumnArg(arg_name='x'),
+                        ColumnArg(arg_name='y'),
                         ColumnArg(arg_name='color'),
                         ColumnArg(arg_name='facet_row'),
                         ColumnArg(arg_name='facet_col')],
@@ -295,6 +382,7 @@ schemas = [Schema(name='histogram',
                         ColumnArg(arg_name='color'),
                         ColumnArg(arg_name='symbol'),
                         ColumnArg(arg_name='size'),
+                        ColumnArg(arg_name='text'),
                         ColumnArg(arg_name='hover_name'),
                         ColumnArg(arg_name='facet_row'),
                         ColumnArg(arg_name='facet_col')],
@@ -308,9 +396,12 @@ schemas = [Schema(name='histogram',
                         ColumnArg(arg_name='line_dash'),
                         ColumnArg(arg_name='line_group'),
                         ColumnArg(arg_name='marker_symbol'),
+                        ColumnArg(arg_name='text'),
                         ColumnArg(arg_name='hover_name'),
                         ColumnArg(arg_name='facet_row'),
-                        ColumnArg(arg_name='facet_col')],
+                        ColumnArg(arg_name='facet_col'),
+                        BooleanArg(arg_name='apply_mean', default_value=SETTINGS_STORE.apply_mean.value),
+                        BooleanArg(arg_name='apply_sort', default_value=SETTINGS_STORE.apply_sort.value)],
                   label='Line',
                   function=line,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-line.svg')),
@@ -318,8 +409,12 @@ schemas = [Schema(name='histogram',
                   args=[ColumnArg(arg_name='x'),
                         ColumnArg(arg_name='y'),
                         ColumnArg(arg_name='color'),
+                        ColumnArg(arg_name='text'),
+                        ColumnArg(arg_name='hover_name'),
                         ColumnArg(arg_name='facet_row'),
-                        ColumnArg(arg_name='facet_col')],
+                        ColumnArg(arg_name='facet_col'),
+                        BooleanArg(arg_name='apply_mean', default_value=SETTINGS_STORE.apply_mean.value),
+                        BooleanArg(arg_name='apply_sort', default_value=SETTINGS_STORE.apply_sort.value)],
                   label='Bar',
                   function=bar,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-bar.svg')),
@@ -372,13 +467,16 @@ schemas = [Schema(name='histogram',
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-contour.svg')),
            Schema(name='pie',
                   args=[ColumnArg(arg_name='names'),
-                        ColumnArg(arg_name='values')],
+                        ColumnArg(arg_name='values'),
+                        ColumnArg(arg_name='color'), ],
                   label='Pie',
                   function=pie,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-pie.svg')),
            Schema(name='scatter_matrix',
                   args=[ColumnArg(arg_name='dimensions'),
-                        ColumnArg(arg_name='color')],
+                        ColumnArg(arg_name='color'),
+                        ColumnArg(arg_name='symbol'),
+                        ColumnArg(arg_name='size'), ],
                   label='Splom',
                   function=scatter_matrix,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-splom.svg')),

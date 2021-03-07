@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf8") as fh:
 
 setup(
     name="pandasgui",
-    version="0.2.9",
+    version="0.2.10",
     description="A GUI for Pandas DataFrames.",
     author="Adam Rose",
     author_email="adam.e.rose@hotmail.com",
@@ -19,6 +19,7 @@ setup(
     setup_requires=['setuptools-git'],
     install_requires=[
         "pandas",
+        "numpy",
         "PyQt5",
         "PyQt5-sip",
         "PyQtWebEngine",
@@ -26,7 +27,6 @@ setup(
         "wordcloud",
         "setuptools",
         "appdirs",
-        "dacite",
         "pynput",
         "IPython",
         "pyarrow",
