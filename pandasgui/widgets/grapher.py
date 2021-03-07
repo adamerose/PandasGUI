@@ -11,7 +11,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
 import pandas as pd
-from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore, HistoryItem
+from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore, HistoryItem, SETTINGS_STORE
 
 from pandasgui.widgets.plotly_viewer import PlotlyViewer, plotly_markers
 from pandasgui.utility import flatten_df, flatten_iter, kwargs_string, nunique, unique, eval_title
@@ -249,7 +249,7 @@ def line(pgdf, kwargs):
         fig.update_xaxes(type='category', categoryorder='category ascending')
 
     pgdf.add_history_item("Grapher",
-                          f"# *Code history for bar plot not yet fully implemented*\n"
+                          f"# *Code history for line plot not yet fully implemented*\n"
                           f"fig = px.line(data_frame=df, {kwargs_string(kwargs)})")
     return fig
 
@@ -400,8 +400,8 @@ schemas = [Schema(name='histogram',
                         ColumnArg(arg_name='hover_name'),
                         ColumnArg(arg_name='facet_row'),
                         ColumnArg(arg_name='facet_col'),
-                        BooleanArg(arg_name='apply_mean', default_value=True),
-                        BooleanArg(arg_name='apply_sort', default_value=True)],
+                        BooleanArg(arg_name='apply_mean', default_value=SETTINGS_STORE.apply_mean.value),
+                        BooleanArg(arg_name='apply_sort', default_value=SETTINGS_STORE.apply_sort.value)],
                   label='Line',
                   function=line,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-line.svg')),
@@ -413,8 +413,8 @@ schemas = [Schema(name='histogram',
                         ColumnArg(arg_name='hover_name'),
                         ColumnArg(arg_name='facet_row'),
                         ColumnArg(arg_name='facet_col'),
-                        BooleanArg(arg_name='apply_mean', default_value=True),
-                        BooleanArg(arg_name='apply_sort', default_value=True)],
+                        BooleanArg(arg_name='apply_mean', default_value=SETTINGS_STORE.apply_mean.value),
+                        BooleanArg(arg_name='apply_sort', default_value=SETTINGS_STORE.apply_sort.value)],
                   label='Bar',
                   function=bar,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-bar.svg')),

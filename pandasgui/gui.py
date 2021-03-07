@@ -19,6 +19,7 @@ from pandasgui.widgets.find_toolbar import FindToolbar
 from pandasgui.widgets.json_viewer import JsonViewer
 from pandasgui.widgets.navigator import Navigator
 from pandasgui.widgets.plotly_viewer import PlotlyViewer
+from pandasgui.widgets.settings_editor import SettingsEditor
 from pandasgui.themes import qstylish
 from pandasgui.widgets.python_highlighter import PythonHighlighter
 from IPython.core.magic import (register_line_magic, register_cell_magic,
@@ -189,6 +190,8 @@ class PandasGui(QtWidgets.QMainWindow):
                                        func=self.add_to_context_menu),
                               MenuItem(name='Remove From Context Menu',
                                        func=self.remove_from_context_menu),
+                              MenuItem(name='Preferences...',
+                                       func=self.edit_settings),
 
                               ],
                  'Debug': [MenuItem(name='About',
@@ -363,6 +366,14 @@ class PandasGui(QtWidgets.QMainWindow):
         key = winreg.HKEY_CURRENT_USER
         winreg.DeleteKey(key, "Software\Classes\*\shell\Open with PandasGUI\command")
         winreg.DeleteKey(key, "Software\Classes\*\shell\Open with PandasGUI")
+
+    def edit_settings(self):
+
+        dialog = QtWidgets.QDialog(self)
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(SettingsEditor(self.store.settings))
+        dialog.setLayout(layout)
+        dialog.show()
 
     def about(self):
         import pandasgui
