@@ -21,7 +21,6 @@ class SettingsEditor(QtWidgets.QWidget):
         settings_to_show = {k: v for k, v in self.settings.__dict__.items() if k not in ['block', 'style', 'editable']}
 
         for setting_name, setting in settings_to_show.items():
-            print(setting.dtype)
             if setting.dtype == str:
                 widget = self.text_editor(setting)
             elif setting.dtype == bool:
