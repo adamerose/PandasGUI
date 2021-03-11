@@ -2,14 +2,12 @@ import os
 import sys
 import tempfile
 
-from plotly.io import to_html
-import plotly.graph_objs as go
-from plotly.validators.scatter.marker import SymbolValidator
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5.QtCore import Qt
 import PyQt5
-
 import logging
+
+from pandasgui.utility import get_figure_type
 
 logger = logging.getLogger(__name__)
 
@@ -35,12 +33,8 @@ if "PyQt5.QtWebEngineWidgets" not in sys.modules:
 
         app.__init__(sys.argv + ["--ignore-gpu-blacklist", "--enable-gpu-rasterization"])
 
-# Available symbol names for a given version of Plotly
-_extended_symbols = SymbolValidator().values[0::2][1::3]
-plotly_markers = [symbol for symbol in _extended_symbols if symbol[-3:] != "dot"]
 
-
-class PlotlyViewer(PyQt5.QtWebEngineWidgets.QWebEngineView):
+class FigureViewer(PyQt5.QtWebEngineWidgets.QWebEngineView):
     def __init__(self, fig=None, store=None):
         super().__init__()
         self.store = store
@@ -61,15 +55,35 @@ class PlotlyViewer(PyQt5.QtWebEngineWidgets.QWebEngineView):
 
         self.temp_file.seek(0)
 
-        if fig is None:
-            fig = go.Figure()
-
         dark = self.store is not None and self.store.settings.theme.value == "dark"
-        if dark:
-            fig.update_layout(template="plotly_dark", autosize=True)
-        html = to_html(fig, config={"responsive": True})
-        html += "\n<style>body{margin: 0;}" \
-                "\n.plot-container,.main-svg,.svg-container{width:100% !important; height:100% !important;}</style>"
+        fig_type = get_figure_type(fig)
+        if fig is None:
+            html = ""
+        elif fig_type == "plotly":
+            from plotly.io import to_html
+            html = to_html(fig, config={"responsive": True})
+            html += "\n<style>body{margin: 0;}" \
+                    "\n.plot-container,.main-svg,.svg-container{width:100% !important; height:100% !important;}</style>"
+            if dark:
+                fig.update_layout(template="plotly_dark", autosize=True)
+        elif fig_type == "bokeh":
+            from bokeh.resources import CDN
+            from bokeh.embed import file_html
+            html = file_html(fig, resources=CDN, title="my fig")
+        elif fig_type == "matplotlib":
+
+            fig = fig.get_figure() or fig
+
+            import base64
+            from io import BytesIO
+
+            tmpfile = BytesIO()
+            fig.savefig(tmpfile, format='png')
+            encoded = base64.b64encode(tmpfile.getvalue()).decode('utf-8')
+
+            html = '<img src=\'data:image/png;base64,{}\'>'.format(encoded)
+        else:
+            raise TypeError
 
         self.temp_file.write(html)
         self.temp_file.truncate()
@@ -100,7 +114,7 @@ if __name__ == "__main__":
 
     import numpy as np
     import plotly.graph_objs as go
-    from pandasgui.utility import fix_ipython, fix_pyqt
+    from pandasgui.utility import fix_ipython, fix_pyqt, get_figure_type
 
     fix_ipython()
     fix_pyqt()
@@ -118,6 +132,6 @@ if __name__ == "__main__":
         },
     )
 
-    pv = PlotlyViewer(fig)
+    pv = FigureViewer(fig)
     pv.show()
     app.exec_()

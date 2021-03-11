@@ -416,12 +416,12 @@ def eval_title(pgdf, current_schema, kwargs):
     if chart == "histogram":
         histfunc = kwargs.get("histfunc", "sum" if y else "count")
         if x is None and y:
-            y=f"{y} {histfunc}"
+            y = f"{y} {histfunc}"
     elif chart in ("box", "violin"):
         histfunc = "distribution"
         over_by = " by "
         if x is None and y:
-            y=f"{y} {histfunc}"
+            y = f"{y} {histfunc}"
     elif chart == "bar":
         over_by = " by "
         if y == "":
@@ -452,7 +452,7 @@ def eval_title(pgdf, current_schema, kwargs):
         elif y:
             y = f"estimated count density of {y}"
         histfunc = ""
-    elif chart =="scatter_3d":
+    elif chart == "scatter_3d":
         if y and z:
             # need to separate them
             z = ", " + z
@@ -587,6 +587,31 @@ def refactor_variable(expr, old_name, new_name):
 
     return astor.code_gen.to_source(tree)
 
+
+def get_figure_type(fig):
+    try:
+        import plotly
+        if issubclass(type(fig), plotly.basedatatypes.BaseFigure):
+            return "plotly"
+    except ModuleNotFoundError:
+        pass
+
+    try:
+        import matplotlib.axes, matplotlib.figure
+        if issubclass(type(fig), matplotlib.axes.Axes) \
+                or issubclass(type(fig), matplotlib.figure.Figure):
+            return "matplotlib"
+    except ModuleNotFoundError:
+        pass
+
+    try:
+        import bokeh.plotting
+        if issubclass(type(fig), bokeh.plotting.Figure):
+            return "bokeh"
+    except ModuleNotFoundError:
+        pass
+
+    return None
 
 
 event_lookup = {"0": "QEvent::None",

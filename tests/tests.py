@@ -64,7 +64,7 @@ sys.excepthook = except_hook
 
 def test_webengine_import():
     app = QtWidgets.QApplication([])
-    from pandasgui.widgets.plotly_viewer import PlotlyViewer
+    from pandasgui.widgets.figure_viewer import FigureViewer
     import plotly.graph_objs as go
 
     fig = go.Figure()
@@ -80,7 +80,7 @@ def test_webengine_import():
         },
     )
 
-    pv = PlotlyViewer(fig)
+    pv = FigureViewer(fig)
     pv.show()
 
 

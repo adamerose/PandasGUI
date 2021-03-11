@@ -13,13 +13,19 @@ from PyQt5.QtCore import Qt
 import pandas as pd
 from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore, HistoryItem, SETTINGS_STORE
 
-from pandasgui.widgets.plotly_viewer import PlotlyViewer, plotly_markers
+from pandasgui.widgets.figure_viewer import FigureViewer
 from pandasgui.utility import flatten_df, flatten_iter, kwargs_string, nunique, unique, eval_title
 from pandasgui.widgets.dragger import Dragger, ColumnArg, Schema, BooleanArg
 
 import logging
 
 logger = logging.getLogger(__name__)
+
+import plotly.graph_objs as go
+from plotly.validators.scatter.marker import SymbolValidator
+# Available symbol names for a given version of Plotly
+_extended_symbols = SymbolValidator().values[0::2][1::3]
+plotly_markers = [symbol for symbol in _extended_symbols if symbol[-3:] != "dot"]
 
 
 class Grapher(QtWidgets.QWidget):
@@ -49,7 +55,7 @@ class Grapher(QtWidgets.QWidget):
             self.plot_type_picker.addItem(item)
 
         # UI setup
-        self.figure_viewer = PlotlyViewer(store=self.pgdf.store)
+        self.figure_viewer = FigureViewer(store=self.pgdf.store)
         self.figure_viewer.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
                                          QtWidgets.QSizePolicy.Expanding)
 

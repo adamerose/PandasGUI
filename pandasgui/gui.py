@@ -11,14 +11,14 @@ from PyQt5.QtCore import Qt
 import plotly.basedatatypes
 
 from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore
-from pandasgui.utility import fix_ipython, fix_pyqt, as_dict, delete_datasets, resize_widget
+from pandasgui.utility import fix_ipython, fix_pyqt, as_dict, delete_datasets, resize_widget, get_figure_type
 from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
 from pandasgui.widgets.grapher import schemas
 from pandasgui.widgets.dragger import BooleanArg
 from pandasgui.widgets.find_toolbar import FindToolbar
 from pandasgui.widgets.json_viewer import JsonViewer
 from pandasgui.widgets.navigator import Navigator
-from pandasgui.widgets.plotly_viewer import PlotlyViewer
+from pandasgui.widgets.figure_viewer import FigureViewer
 from pandasgui.widgets.settings_editor import SettingsEditor
 from pandasgui.themes import qstylish
 from pandasgui.widgets.python_highlighter import PythonHighlighter
@@ -73,7 +73,7 @@ class PandasGui(QtWidgets.QMainWindow):
 
         # update default schema
         for i, chart in enumerate(schemas):
-            if chart.name in ('bar','line'):
+            if chart.name in ('bar', 'line'):
                 args = schemas[i].args
                 for j, arg in enumerate(args):
                     if arg.arg_name == 'apply_sort':
@@ -442,10 +442,10 @@ def show(*args,
     kwargs = {**kwargs, **items}
 
     plotly_kwargs = {key: value for (key, value) in kwargs.items() if
-                     issubclass(type(value), plotly.basedatatypes.BaseFigure)}
+                     get_figure_type(value) is not None}
     if plotly_kwargs:
         for name, fig in plotly_kwargs.items():
-            pv = PlotlyViewer(fig)
+            pv = FigureViewer(fig)
             pv.show()
             plotly_refs.append(pv)
             pv.setWindowTitle(name)
