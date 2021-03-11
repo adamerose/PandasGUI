@@ -8,3 +8,13 @@ class QTreeWidget(QtWidgets.QTreeWidget):
         for i in range(self.columnCount()):
             self.resizeColumnToContents(i)
         event.accept()
+
+
+class QTreeWidgetItem(QtWidgets.QTreeWidgetItem):
+    def __lt__(self, otherItem):
+        column = self.treeWidget().sortColumn()
+
+        try:
+            return float(self.text(column)) < float(otherItem.text(column))
+        except ValueError:
+            return self.text(column) < otherItem.text(column)

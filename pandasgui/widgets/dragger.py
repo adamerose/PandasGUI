@@ -131,8 +131,6 @@ class Dragger(QtWidgets.QWidget):
 
         self.setLayout(self.main_layout)
 
-        image_dir = os.path.join(pandasgui.__path__[0], 'images')
-
     def handle_double_click(self, item, column):
 
         # Delete chldren if is section
@@ -264,7 +262,7 @@ class Dragger(QtWidgets.QWidget):
     def set_sources(self, sources: List[str], source_nunique: List[str], source_types: List[str]):
 
         for i in range(len(sources)):
-            item = QtWidgets.QTreeWidgetItem(self.source_tree,
+            item = base_widgets.QTreeWidgetItem(self.source_tree,
                                              [str(sources[i]), str(source_nunique[i]), str(source_types[i])])
 
         self.filter()
@@ -279,13 +277,13 @@ class Dragger(QtWidgets.QWidget):
 
         for arg in schema.args:
             if type(arg) == ColumnArg:
-                section = QtWidgets.QTreeWidgetItem(self.dest_tree, [arg.arg_name])
+                section = base_widgets.QTreeWidgetItem(self.dest_tree, [arg.arg_name])
                 if arg.arg_name in self.remembered_values.keys():
                     for val in self.remembered_values[arg.arg_name]:
-                        item = QtWidgets.QTreeWidgetItem(section, [val])
+                        item = base_widgets.QTreeWidgetItem(section, [val])
 
             elif type(arg) == BooleanArg:
-                section = QtWidgets.QTreeWidgetItem(self.dest_tree, [arg.arg_name])
+                section = base_widgets.QTreeWidgetItem(self.dest_tree, [arg.arg_name])
                 if arg.arg_name in self.remembered_values.keys():
                     # Use remembered value
                     val = self.remembered_values[arg.arg_name]
@@ -346,7 +344,7 @@ class Dragger(QtWidgets.QWidget):
                 self.kwarg_name.setText("")
                 self.kwarg_value.setText("")
 
-                item = QtWidgets.QTreeWidgetItem(self.tree_widget, [name, value])
+                item = base_widgets.QTreeWidgetItem(self.tree_widget, [name, value])
 
                 item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable)
 
@@ -423,7 +421,7 @@ if __name__ == "__main__":
                                        ColumnArg(arg_name='y'),
                                        ColumnArg(arg_name='color'),
                                        BooleanArg(arg_name='apply_mean', default_value=True)], ),
-                   source_nunique=nunique(pokemon).apply('{: >6}'.format).values,
+                   source_nunique=nunique(pokemon),
                    source_types=pokemon.dtypes.values.astype(str))
     test.finished.connect(lambda: print(test.get_data()))
     test.show()

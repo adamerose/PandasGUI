@@ -63,7 +63,7 @@ class Grapher(QtWidgets.QWidget):
 
         self.dragger = Dragger(sources=df.columns,
                                schema=Schema(),
-                               source_nunique=nunique(df).apply('{: >7}'.format).values,
+                               source_nunique=nunique(df),
                                source_types=df.dtypes.values.astype(str))
 
         # Layout
