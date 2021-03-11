@@ -1,5 +1,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5.QtCore import Qt
+from pandasgui.widgets import base_widgets
 
 import tempfile
 import os
@@ -41,7 +42,7 @@ class DelayedMimeData(QtCore.QMimeData):
         return QtCore.QMimeData.retrieveData(self, mime_type, preferred_type)
 
 
-class Navigator(QtWidgets.QTreeWidget):
+class Navigator(base_widgets.QTreeWidget):
     def __init__(self, store):
         super().__init__()
         self.store = store
@@ -60,9 +61,12 @@ class Navigator(QtWidgets.QTreeWidget):
         self.setSelectionBehavior(self.SelectRows)
         self.apply_tree_settings()
 
-        self.setColumnWidth(0, 150)
-        self.setColumnWidth(1, 150)
-
+    def showEvent(self, event: QtGui.QShowEvent):
+        self.resizeColumnToContents(0)
+        self.setColumnWidth(0, self.columnWidth(0) + 20)
+        # Zero because see note at https://doc.qt.io/qt-5/qheaderview.html#stretchLastSection-prop
+        self.setColumnWidth(1, 0)
+        event.accept()
 
     def remove_item(self, name):
         for item in traverse_tree_widget(self):

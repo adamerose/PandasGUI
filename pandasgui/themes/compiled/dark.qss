@@ -19,6 +19,9 @@ QTreeView::item:selected:!active,
 QTreeView::branch:selected:!active {
   background-color: #42464b; }
 
+QTreeView::item {
+  padding: 0 15px 0 0; }
+
 QWidget {
   background-color: #373a3f; }
 
@@ -454,6 +457,12 @@ QMenu {
     height: 1px;
     background: #7f7f7f;
     margin: 5px; }
+
+QSplitter::handle:horizontal {
+  width: 3px; }
+
+QSplitter::handle:vertical {
+  height: 3px; }
 
 QToolButton,
 QComboBox,

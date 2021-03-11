@@ -37,22 +37,22 @@ class Grapher(QtWidgets.QWidget):
         self.setWindowTitle("Graph Builder")
 
         # Dropdown to select plot type
-        self.plot_type_picker = QtWidgets.QListWidget()
-        self.plot_type_picker.setViewMode(self.plot_type_picker.IconMode)
-        self.plot_type_picker.setWordWrap(False)
-        self.plot_type_picker.setSpacing(20)
-        self.plot_type_picker.setResizeMode(self.plot_type_picker.Adjust)
-        self.plot_type_picker.setDragDropMode(self.plot_type_picker.NoDragDrop)
-        self.plot_type_picker.setStyleSheet("QListView::item {border: 2px solid transparent; padding: 3px;}"
+        self.type_picker = QtWidgets.QListWidget()
+        self.type_picker.setViewMode(self.type_picker.IconMode)
+        self.type_picker.setWordWrap(False)
+        self.type_picker.setSpacing(20)
+        self.type_picker.setResizeMode(self.type_picker.Adjust)
+        self.type_picker.setDragDropMode(self.type_picker.NoDragDrop)
+        self.type_picker.setStyleSheet("QListView::item {border: 2px solid transparent; padding: 3px;}"
                                             "QListView::item:selected {background: none; border: 2px solid #777;}")
 
-        self.plot_type_picker.sizeHint = lambda: QtCore.QSize(500, 250)
+        self.type_picker.sizeHint = lambda: QtCore.QSize(500, 250)
 
         for schema in schemas:
             icon = QtGui.QIcon(schema.icon_path)
             text = schema.label
             item = QtWidgets.QListWidgetItem(icon, text)
-            self.plot_type_picker.addItem(item)
+            self.type_picker.addItem(item)
 
         # UI setup
         self.figure_viewer = FigureViewer(store=self.pgdf.store)
@@ -60,20 +60,31 @@ class Grapher(QtWidgets.QWidget):
                                          QtWidgets.QSizePolicy.Expanding)
 
         df = flatten_df(self.pgdf.df)
+
         self.dragger = Dragger(sources=df.columns,
                                schema=Schema(),
                                source_nunique=nunique(df).apply('{: >7}'.format).values,
                                source_types=df.dtypes.values.astype(str))
 
+        # Layout
+        self.layout = QtWidgets.QGridLayout()
+        self.layout.addWidget(self.type_picker, 0, 0)
+        self.layout.addWidget(self.dragger, 1, 0)
+        self.layout.addWidget(self.figure_viewer, 0, 1, 2, 1)
+        self.layout.setColumnStretch(0, 0)
+        self.layout.setColumnStretch(1, 1)
+        self.dragger.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.type_picker.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+
         self.plot_splitter = QtWidgets.QSplitter(Qt.Horizontal)
         self.plot_splitter.setHandleWidth(3)
         self.left_panel = QtWidgets.QGridLayout()
-        self.left_panel.addWidget(self.plot_type_picker, 0, 0)
+        self.left_panel.addWidget(self.type_picker, 0, 0)
         self.left_panel.addWidget(self.dragger, 1, 0)
 
         self.dragger.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
 
-        self.plot_type_picker.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.type_picker.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
 
         # QGrid for first half of splitter
         self.selection_grid = QtWidgets.QWidget()
@@ -91,13 +102,13 @@ class Grapher(QtWidgets.QWidget):
         self.setLayout(self.layout)
 
         # Signals
-        self.plot_type_picker.itemSelectionChanged.connect(self.on_type_changed)
+        self.type_picker.itemSelectionChanged.connect(self.on_type_changed)
         self.dragger.finished.connect(self.on_dragger_finished)
         self.dragger.saving.connect(self.on_dragger_saving)
 
         # Initial selection
-        self.plot_type_picker.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
-        self.plot_type_picker.setCurrentRow(0)
+        self.type_picker.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.type_picker.setCurrentRow(0)
         self.on_type_changed()
 
         # Show a blank axis initially
@@ -105,10 +116,10 @@ class Grapher(QtWidgets.QWidget):
         self.figure_viewer.set_figure(self.fig)
 
     def on_type_changed(self):
-        if len(self.plot_type_picker.selectedItems()) == 0:
+        if len(self.type_picker.selectedItems()) == 0:
             return
 
-        self.selected_plot_label = self.plot_type_picker.selectedItems()[0].text()
+        self.selected_plot_label = self.type_picker.selectedItems()[0].text()
         self.current_schema = next(filter(lambda schema: schema.label == self.selected_plot_label, schemas))
         arg_list = [arg.arg_name for arg in self.current_schema.args]
 

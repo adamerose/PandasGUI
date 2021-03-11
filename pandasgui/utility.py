@@ -613,7 +613,6 @@ def get_figure_type(fig):
 
     return None
 
-
 event_lookup = {"0": "QEvent::None",
                 "114": "QEvent::ActionAdded",
                 "113": "QEvent::ActionChanged",

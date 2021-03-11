@@ -13,6 +13,8 @@ import ast
 from typing import Union, List, Iterable
 from dataclasses import dataclass, field
 
+from pandasgui.widgets import base_widgets
+
 
 @dataclass
 class ColumnArg:
@@ -296,12 +298,12 @@ class Dragger(QtWidgets.QWidget):
 
         self.apply_tree_settings()
 
-    class DestinationTree(QtWidgets.QTreeWidget):
+    class DestinationTree(base_widgets.QTreeWidget):
         def dropEvent(self, e: QtGui.QDropEvent):
             super().dropEvent(e)
             self.parent().itemDropped.emit()
 
-    class SourceTree(QtWidgets.QTreeWidget):
+    class SourceTree(base_widgets.QTreeWidget):
         def dropEvent(self, e: QtGui.QDropEvent):
             super().dropEvent(e)
             self.parent().itemDropped.emit()
