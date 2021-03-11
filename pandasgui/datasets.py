@@ -77,6 +77,11 @@ simple = pd.DataFrame({'name': ['John', 'John', 'Mary', 'Mary', 'Pete', 'Pete', 
                       )
 all_datasets['simple'] = simple
 
+small = pd.DataFrame({'a': [1, 2],
+                      'b': [3, 4]}
+                     )
+all_datasets['small'] = small
+
 multiindex = pd.DataFrame(np.random.randn(8, 4),
                           index=pd.MultiIndex.from_product([('bar', 'baz', 'foo', 'qux'),
                                                             ('one', 'two')],

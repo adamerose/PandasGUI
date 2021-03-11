@@ -5,7 +5,7 @@ QWidget {
   selection-background-color: #bcdaf5;
   selection-color: #000; }
   QWidget:disabled {
-    color: #bfbfbf; }
+    color: #d9d9d9; }
 
 QListView::item:selected:active,
 QTableView::item:selected:active,
@@ -82,7 +82,7 @@ QToolBox {
   QDateEdit > QAbstractItemView:disabled,
   QDateTimeEdit > QAbstractItemView:disabled,
   QToolBox:disabled {
-    color: #bfbfbf; }
+    color: #d9d9d9; }
 
 QStatusBar,
 QDockWidget::title {
@@ -127,7 +127,7 @@ QComboBox {
   QComboBox:!editable {
     background-color: qlineargradient(x1: 0.0, y1: 0.0, x2: 0.0, y2: 1.0, stop: 0.1 rgba(255, 255, 255, 100%), stop: 0.8 rgba(239, 239, 239, 100%)); }
   QComboBox:disabled {
-    color: #bfbfbf; }
+    color: #d9d9d9; }
   QComboBox::drop-down {
     padding: 4px;
     border: none;
@@ -168,12 +168,12 @@ QAbstractSpinBox::up-button, QAbstractSpinBox::down-button {
   background-color: qlineargradient(x1: 0.0, y1: 0.0, x2: 0.0, y2: 1.0, stop: 0.1 rgba(255, 255, 255, 100%), stop: 0.8 rgba(239, 239, 239, 100%)); }
 
 QTableView {
-  border: 1px solid #b3b3b3;
-  background-color: #b3b3b3; }
+  border: 1px solid #f0f0f0;
+  background-color: #f0f0f0; }
   QTableView:selected {
-    background-color: red; }
+    background-color: #ffffff; }
   QTableView::item {
-    padding: 5px;
+    padding: 0px;
     border: none;
     background-color: #ffffff; }
 
@@ -184,7 +184,7 @@ QHeaderView {
   border: none;
   outline: none; }
   QHeaderView::section {
-    border: 1px solid #b3b3b3;
+    border: 1px solid #f0f0f0;
     outline: none;
     padding: 2px 8px; }
     QHeaderView::section:horizontal {
@@ -222,7 +222,7 @@ QHeaderView {
   .HeaderNamesView[orientation="horizontal"] {
     border-width: 1px 1px 1px 1px; }
   .HeaderNamesView[orientation="vertical"] {
-    border-width: 1px 0px 1px 1px; }
+    border-width: 1px 0px 0px 1px; }
   .HeaderNamesView::item {
     background-color: qlineargradient(x1: 0.0, y1: 1.0, x2: 0.0, y2: 0.0, stop: 0.0 rgba(242, 242, 242, 100%), stop: 1.0 rgba(255, 255, 255, 100%)); }
     .HeaderNamesView::item:selected:active {
@@ -233,74 +233,64 @@ QHeaderView {
 QScrollBar {
   background-color: transparent;
   border: 1px solid #b3b3b3;
-  border-radius: 8px; }
+  border-radius: 0px; }
   QScrollBar::add-page, QScrollBar::sub-page {
     background-color: transparent; }
   QScrollBar::handle {
-    background-color: gray;
-    border-radius: 4px;
-    margin: 3px; }
+    background-color: #bfbfbf;
+    border-radius: 2px;
+    margin: 2px; }
     QScrollBar::handle:hover {
-      background-color: #1e81cc; }
+      background-color: #a6a6a6; }
     QScrollBar::handle:disabled {
-      background-color: #bfbfbf; }
+      background-color: #d9d9d9; }
     QScrollBar::handle:vertical {
-      min-height: 40px; }
+      min-height: 60px; }
     QScrollBar::handle:horizontal {
-      min-width: 40px; }
+      min-width: 60px; }
   QScrollBar:horizontal {
-    height: 16px;
-    margin: 0px 16px; }
+    height: 20px;
+    margin: 0px 20px; }
   QScrollBar:vertical {
-    width: 16px;
-    margin: 16px 0px; }
+    width: 20px;
+    margin: 20px 0px; }
   QScrollBar::add-line {
     margin: 0;
-    border: none;
+    border: 1px solid #b3b3b3;
     background-color: transparent; }
     QScrollBar::add-line:horizontal {
-      height: 16px;
-      width: 16px;
+      height: 18px;
+      width: 18px;
       subcontrol-position: right;
       subcontrol-origin: margin; }
     QScrollBar::add-line:vertical {
-      height: 16px;
-      width: 16px;
+      height: 18px;
+      width: 18px;
       subcontrol-position: bottom;
       subcontrol-origin: margin; }
   QScrollBar::sub-line {
     margin: 0;
-    border: none;
+    border: 1px solid #b3b3b3;
     background-color: transparent; }
     QScrollBar::sub-line:horizontal {
-      image: url(":/resources/dark/arrow_left.svg");
-      height: 16px;
-      width: 16px;
+      height: 18px;
+      width: 18px;
       subcontrol-position: left;
       subcontrol-origin: margin; }
-      QScrollBar::sub-line:horizontal:hover {
-        image: url(":/resources/selected/arrow_left.svg"); }
-      QScrollBar::sub-line:horizontal:disabled {
-        image: url(":/resources/light/arrow_left.svg"); }
     QScrollBar::sub-line:vertical {
-      image: url(":/resources/dark/arrow_up.svg");
-      height: 16px;
-      width: 16px;
+      height: 18px;
+      width: 18px;
       subcontrol-position: top;
       subcontrol-origin: margin; }
-      QScrollBar::sub-line:vertical:hover {
-        image: url(":/resources/selected/arrow_up.svg"); }
-      QScrollBar::sub-line:vertical:disabled {
-        image: url(":/resources/light/arrow_up.svg"); }
 
 QSlider::handle {
-  background: gray;
+  background: #a6a6a6;
   border: #b3b3b3; }
   QSlider::handle:hover {
     background: #1e81cc;
     border: #1e81cc; }
   QSlider::handle:disabled {
-    background-color: #bfbfbf; }
+    background-color: #d9d9d9; }
   QSlider::handle:horizontal {
     width: 8px;
     height: 8px;
@@ -331,7 +321,7 @@ QSlider::add-page:vertical {
   margin: 0px;
   border-radius: 2px; }
   QSlider::add-page:vertical:disabled {
-    background-color: #bfbfbf; }
+    background-color: #d9d9d9; }
 
 QSlider::sub-page:horizontal {
   background: #1e81cc;
@@ -340,7 +330,7 @@ QSlider::sub-page:horizontal {
   margin: 0px;
   border-radius: 2px; }
   QSlider::sub-page:horizontal:disabled {
-    background-color: #bfbfbf; }
+    background-color: #d9d9d9; }
 
 QTabWidget::pane {
   border: 1px solid #b3b3b3;
@@ -462,7 +452,7 @@ QMenu {
       background-color: #bcdaf5; }
   QMenu::separator {
     height: 1px;
-    background: gray;
+    background: #a6a6a6;
     margin: 5px; }
 
 QToolButton,
@@ -504,6 +494,22 @@ QScrollBar::add-line:vertical {
     image: url(":/resources/selected/arrow_down.svg"); }
   QScrollBar::add-line:vertical:disabled {
     image: url(":/resources/light/arrow_down.svg"); }
+
+QScrollBar::sub-line:horizontal {
+  image: url(":/resources/dark/arrow_left.svg");
+  icon-size: 32px; }
+  QScrollBar::sub-line:horizontal:hover {
+    image: url(":/resources/selected/arrow_left.svg"); }
+  QScrollBar::sub-line:horizontal:disabled {
+    image: url(":/resources/light/arrow_left.svg"); }
+
+QScrollBar::sub-line:vertical {
+  image: url(":/resources/dark/arrow_up.svg");
+  icon-size: 32px; }
+  QScrollBar::sub-line:vertical:hover {
+    image: url(":/resources/selected/arrow_up.svg"); }
+  QScrollBar::sub-line:vertical:disabled {
+    image: url(":/resources/light/arrow_up.svg"); }
 
 QSizeGrip {
   width: 12px;
