@@ -17,7 +17,7 @@ QListView::item:selected:!active,
 QTableView::item:selected:!active,
 QTreeView::item:selected:!active,
 QTreeView::branch:selected:!active {
-  background-color: #eeeeee; }
+  background-color: #bcdaf5; }
 
 QTreeView::item {
   padding: 0 15px 0 0; }
@@ -213,9 +213,9 @@ QHeaderView {
   .HeaderView::item {
     background-color: qlineargradient(x1: 0.0, y1: 1.0, x2: 0.0, y2: 0.0, stop: 0.0 rgba(242, 242, 242, 100%), stop: 1.0 rgba(255, 255, 255, 100%)); }
     .HeaderView::item:selected:active {
-      background-color: qlineargradient(x1: 0.0, y1: 1.0, x2: 0.0, y2: 0.0, stop: 0.0 rgba(165, 205, 241, 100%), stop: 1.0 rgba(188, 218, 245, 100%)); }
+      background-color: qlineargradient(x1: 0.0, y1: 1.0, x2: 0.0, y2: 0.0, stop: 0.0 rgba(156, 200, 240, 100%), stop: 1.0 rgba(188, 218, 245, 100%)); }
     .HeaderView::item:selected:!active {
-      background-color: qlineargradient(x1: 0.0, y1: 1.0, x2: 0.0, y2: 0.0, stop: 0.0 rgba(225, 225, 225, 100%), stop: 1.0 rgba(238, 238, 238, 100%)); }
+      background-color: qlineargradient(x1: 0.0, y1: 1.0, x2: 0.0, y2: 0.0, stop: 0.0 rgba(156, 200, 240, 100%), stop: 1.0 rgba(188, 218, 245, 100%)); }
 
 .CornerWidget {
   border-right: 1px solid #b3b3b3; }
