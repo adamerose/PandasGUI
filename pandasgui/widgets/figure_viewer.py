@@ -42,7 +42,7 @@ class FigureViewer(PyQt5.QtWebEngineWidgets.QWebEngineView):
 
         # Fix scrollbar sometimes disappearing after Plotly autosizes and leaving behind white space
         self.settings().setAttribute(self.settings().ShowScrollBars, False)
-        self.settings().setAttribute(QtWebEngineWidgets.QWebEngineSettings.WebGLEnabled, True)
+        self.settings().setAttribute(PyQt5.QtWebEngineWidgets.QWebEngineSettings.WebGLEnabled, True)
 
         # https://stackoverflow.com/a/8577226/3620725
         self.temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False)
@@ -54,41 +54,53 @@ class FigureViewer(PyQt5.QtWebEngineWidgets.QWebEngineView):
     def set_figure(self, fig=None):
 
         self.temp_file.seek(0)
-
         dark = self.store is not None and self.store.settings.theme.value == "dark"
         fig_type = get_figure_type(fig)
+
         if fig is None:
             html = ""
         elif fig_type == "plotly":
             from plotly.io import to_html
-            html = to_html(fig, config={"responsive": True})
-            html += "\n<style>body{margin: 0;}" \
-                    "\n.plot-container,.main-svg,.svg-container{width:100% !important; height:100% !important;}</style>"
             if dark:
                 fig.update_layout(template="plotly_dark", autosize=True)
+            html = to_html(fig, config={"responsive": True})
         elif fig_type == "bokeh":
             from bokeh.resources import CDN
             from bokeh.embed import file_html
             html = file_html(fig, resources=CDN, title="my fig")
         elif fig_type == "matplotlib":
-
             fig = fig.get_figure() or fig
-
             import base64
             from io import BytesIO
-
             tmpfile = BytesIO()
             fig.savefig(tmpfile, format='png')
             encoded = base64.b64encode(tmpfile.getvalue()).decode('utf-8')
-
             html = '<img src=\'data:image/png;base64,{}\'>'.format(encoded)
+        elif fig_type == "altair":
+            fig = fig.properties(
+                width='container',
+                height='container'
+            )
+            from io import StringIO
+            tmp = StringIO()
+            fig.save(tmp, format='html')
+            html = tmp.getvalue()
+
         else:
             raise TypeError
+
+        html = html.replace("<style>",
+                     "<style>"
+                     "body{margin: 0; width:100vw; height:100vh;} "
+                     # https://github.com/vega/react-vega/issues/85#issuecomment-795138175
+                     ".vega-embed{width:100%; height:100%;} "
+                     )
 
         self.temp_file.write(html)
         self.temp_file.truncate()
         self.temp_file.seek(0)
         self.load(QtCore.QUrl.fromLocalFile(self.temp_file.name))
+        print(self.temp_file.name)
 
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
         self.temp_file.close()
@@ -114,7 +126,7 @@ if __name__ == "__main__":
 
     import numpy as np
     import plotly.graph_objs as go
-    from pandasgui.utility import fix_ipython, fix_pyqt, get_figure_type
+    from pandasgui.utility import fix_ipython, fix_pyqt
 
     fix_ipython()
     fix_pyqt()

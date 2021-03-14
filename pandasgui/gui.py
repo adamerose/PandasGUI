@@ -441,8 +441,15 @@ def show(*args,
 
     kwargs = {**kwargs, **items}
 
-    plotly_kwargs = {key: value for (key, value) in kwargs.items() if
-                     get_figure_type(value) is not None}
+    plotly_kwargs = {key: value for (key, value) in kwargs.items() if get_figure_type(value) is not None}
+    dataframe_kwargs = {key: value for (key, value) in kwargs.items() if issubclass(type(value), pd.DataFrame)}
+    invalid_kwargs = {key: value for (key, value) in kwargs.items()
+                      if key not in list(plotly_kwargs.keys()) + list(dataframe_kwargs.keys())}
+
+    if invalid_kwargs:
+        for key, val in invalid_kwargs.items():
+            logger.warning(f"Invalid type passed to pandasgui.show: type({key}) = {type(val)}")
+
     if plotly_kwargs:
         for name, fig in plotly_kwargs.items():
             pv = FigureViewer(fig)
@@ -450,7 +457,6 @@ def show(*args,
             plotly_refs.append(pv)
             pv.setWindowTitle(name)
 
-    dataframe_kwargs = {key: value for (key, value) in kwargs.items() if issubclass(type(value), pd.DataFrame)}
     if dataframe_kwargs:
         pandas_gui = PandasGui(settings=settings, **dataframe_kwargs)
         pandas_gui.caller_stack = inspect.currentframe().f_back

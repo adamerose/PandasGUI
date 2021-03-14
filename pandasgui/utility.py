@@ -589,13 +589,14 @@ def refactor_variable(expr, old_name, new_name):
 
 
 def get_figure_type(fig):
+    # Plotly
     try:
         import plotly
         if issubclass(type(fig), plotly.basedatatypes.BaseFigure):
             return "plotly"
     except ModuleNotFoundError:
         pass
-
+    # Matplotlib
     try:
         import matplotlib.axes, matplotlib.figure
         if issubclass(type(fig), matplotlib.axes.Axes) \
@@ -603,14 +604,20 @@ def get_figure_type(fig):
             return "matplotlib"
     except ModuleNotFoundError:
         pass
-
+    # Bokeh
     try:
         import bokeh.plotting
         if issubclass(type(fig), bokeh.plotting.Figure):
             return "bokeh"
     except ModuleNotFoundError:
         pass
-
+    # Altair
+    try:
+        import altair.vegalite.v4.api
+        if issubclass(type(fig), altair.vegalite.v4.api.Chart):
+            return "altair"
+    except ModuleNotFoundError:
+        pass
     return None
 
 event_lookup = {"0": "QEvent::None",
