@@ -65,15 +65,29 @@ class Grapher(QtWidgets.QWidget):
                                source_nunique=nunique(df).apply('{: >7}'.format).values,
                                source_types=df.dtypes.values.astype(str))
 
-        self.layout = QtWidgets.QGridLayout()
-        self.layout.addWidget(self.plot_type_picker, 0, 0)
-        self.layout.addWidget(self.dragger, 1, 0)
-        self.layout.addWidget(self.figure_viewer, 0, 1, 2, 1)
-        self.layout.setColumnStretch(0, 0)
-        self.layout.setColumnStretch(1, 1)
-        self.dragger.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        self.plot_type_picker.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        self.plot_splitter = QtWidgets.QSplitter(Qt.Horizontal)
+        self.plot_splitter.setHandleWidth(3)
+        self.left_panel = QtWidgets.QGridLayout()
+        self.left_panel.addWidget(self.plot_type_picker, 0, 0)
+        self.left_panel.addWidget(self.dragger, 1, 0)
 
+        self.dragger.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+
+        self.plot_type_picker.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+
+        # QGrid for first half of splitter
+        self.selection_grid = QtWidgets.QWidget()
+        self.selection_grid.setLayout(self.left_panel)
+        self.plot_splitter.addWidget(self.selection_grid)
+
+        # Figure Viewer for the second half of splitter
+        self.figure_viewer.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.plot_splitter.addWidget(self.figure_viewer)
+
+        self.plot_splitter.setStretchFactor(1, 1)
+
+        self.layout = QtWidgets.QGridLayout()
+        self.layout.addWidget(self.plot_splitter)
         self.setLayout(self.layout)
 
         # Signals
