@@ -90,7 +90,6 @@ class Grapher(QtWidgets.QWidget):
         self.layout.addWidget(self.plot_splitter)
         self.setLayout(self.layout)
 
-
         # Signals
         self.plot_type_picker.itemSelectionChanged.connect(self.on_type_changed)
         self.dragger.finished.connect(self.on_dragger_finished)
