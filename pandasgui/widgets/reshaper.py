@@ -11,7 +11,7 @@ from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore
 
 from pandasgui.utility import flatten_df, kwargs_string, nunique
 from pandasgui.widgets.spinner import Spinner
-from pandasgui.widgets.dragger import Dragger, Schema, ColumnArg, OptionListArg
+from pandasgui.widgets.func_ui import FuncUi, Schema, ColumnArg, OptionListArg
 
 import logging
 
@@ -34,7 +34,7 @@ class Reshaper(QtWidgets.QWidget):
         self.type_picker.setResizeMode(self.type_picker.Adjust)
         self.type_picker.setDragDropMode(self.type_picker.NoDragDrop)
         self.type_picker.setStyleSheet("QListView::item {border: 2px solid transparent; padding: 3px;}"
-                                               "QListView::item:selected {background: none; border: 2px solid #777;}")
+                                       "QListView::item:selected {background: none; border: 2px solid #777;}")
 
         for schema in schemas:
             icon = QtGui.QIcon(schema.icon_path)
@@ -43,9 +43,7 @@ class Reshaper(QtWidgets.QWidget):
             self.type_picker.addItem(item)
 
         df = flatten_df(self.pgdf.df)
-        self.dragger = Dragger(sources=df.columns, schema=Schema(),
-                               source_nunique=nunique(df),
-                               source_types=df.dtypes.values.astype(str))
+        self.dragger = FuncUi(df=df, schema=Schema())
 
         # Layout
         self.layout = QtWidgets.QGridLayout()

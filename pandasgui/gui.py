@@ -14,7 +14,7 @@ from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore
 from pandasgui.utility import fix_ipython, fix_pyqt, as_dict, delete_datasets, resize_widget, get_figure_type
 from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
 from pandasgui.widgets.grapher import schemas
-from pandasgui.widgets.dragger import BooleanArg
+from pandasgui.widgets.func_ui import BooleanArg
 from pandasgui.widgets.find_toolbar import FindToolbar
 from pandasgui.widgets.json_viewer import JsonViewer
 from pandasgui.widgets.navigator import Navigator

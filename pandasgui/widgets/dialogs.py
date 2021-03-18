@@ -11,7 +11,7 @@ from pandasgui.store import Store, PandasGuiDataFrame, track_history
 
 from pandasgui.utility import flatten_df
 from pandasgui.widgets.spinner import Spinner
-from pandasgui.widgets.dragger import Dragger, Schema, ColumnArg, OptionListArg
+from pandasgui.widgets.func_ui import FuncUi, Schema, ColumnArg, OptionListArg
 
 import logging
 logger = logging.getLogger(__name__)

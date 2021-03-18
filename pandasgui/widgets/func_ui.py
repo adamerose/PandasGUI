@@ -1,30 +1,48 @@
-"""Dialog box widgets for various GUI functions"""
-
 import re
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5.QtCore import Qt
 from typing import List, Callable
+import typing
 import os
-
+import inspect
+import pprint
 from pandasgui.utility import nunique
 
 import pandasgui
 import ast
-from typing import Union, List, Iterable
+from typing import Union, List, Iterable, Literal, get_args
 from dataclasses import dataclass, field
 
 from pandasgui.widgets import base_widgets
+from pandasgui import jotly
 
 
 @dataclass
 class ColumnArg:
     arg_name: str
+    default_value: str
+
+    def __init__(self, arg_name, default_value=None):
+        if default_value is None:
+            default_value = ""
+
+        self.arg_name = arg_name
+        self.default_value = default_value
 
 
 @dataclass
 class OptionListArg:
     arg_name: str
     values: List[str]
+    default_value: List[str]
+
+    def __init__(self, arg_name, values, default_value=None):
+        if default_value is None:
+            default_value = values[0]
+
+        self.arg_name = arg_name
+        self.values = values
+        self.default_value = default_value
 
 
 @dataclass
@@ -32,37 +50,92 @@ class BooleanArg:
     arg_name: str
     default_value: bool
 
+    def __init__(self, arg_name, default_value=None):
+        if default_value is None:
+            default_value = True
+
+        self.arg_name = arg_name
+        self.default_value = default_value
+
 
 # This schema is made up of multiple args, this defines all the drop zones available in the Dragger
 @dataclass
 class Schema:
-    name: str = "Untitled"
-    args: List[Union[ColumnArg, OptionListArg, BooleanArg]] = field(default_factory=list)
-    label: str = "Untitled"
-    function: Callable = None
-    icon_path: str = "Untitled"
+
+    def __init__(self,
+                 name="Untitled",
+                 label="Untitled",
+                 function=None,
+                 icon_path=None,
+                 args=None,
+                 ):
+
+        if args is None:
+            args = []
+
+            if function is not None:
+                sig = inspect.signature(function)
+                for _, param in sig.parameters.items():
+                    arg_name = param.name
+                    arg_default = param.default
+                    arg_type = param.annotation
+
+                    if typing.get_origin(arg_type) == typing.Literal:
+                        values = get_args(arg_type)
+                        args.append(OptionListArg(arg_name, values, default_value=arg_default))
+
+                    elif issubclass(arg_type, str):
+                        args.append(ColumnArg(arg_name, default_value=arg_default or ''))
 
 
-class Dragger(QtWidgets.QWidget):
+                    elif arg_type == bool:
+                        args.append(BooleanArg(arg_name, default_value=arg_default))
+
+        self.name = name
+        self.args = args
+        self.label = label
+        self.function = function
+        self.icon_path = icon_path
+
+    name: str
+    args: List[Union[ColumnArg, OptionListArg, BooleanArg]]
+    label: str
+    function: Callable
+    icon_path: str
+
+
+class FuncUi(QtWidgets.QWidget):
+    valuesChanges = QtCore.pyqtSignal()
     itemDropped = QtCore.pyqtSignal()
     finished = QtCore.pyqtSignal()
     saving = QtCore.pyqtSignal()
 
-    def __init__(self, sources: List[str],
-                 schema: Schema, source_nunique: List[str], source_types: List[str]):
+    def __init__(self, df=None, schema: Schema = None):
         super().__init__()
-        self.schema = schema
         self.remembered_values = {}
         self.source_tree_unfiltered = []
+
+        sources = df.columns
+        source_nunique = nunique(df)
+        source_types = df.dtypes.values.astype(str)
 
         # Ensure no duplicates
         assert (len(sources) == len(set(sources)))
         assert (len(sources) == len(source_nunique))
         assert (len(sources) == len(source_types))
 
+        self.schema = schema
+
         # Custom kwargs dialog
         self.kwargs_dialog = self.CustomKwargsEditor(self)
 
+        # Preview dialog
+        self.preview_dialog = QtWidgets.QDialog(self)
+        self.preview_dialog_text = QtWidgets.QTextEdit()
+        self.preview_dialog.setLayout(QtWidgets.QVBoxLayout())
+        self.preview_dialog.layout().addWidget(self.preview_dialog_text)
+        self.valuesChanges.connect(lambda: self.preview_dialog_text.setText(
+            pprint.pformat(self.get_data(), width=40)))
         # Search box
         self.search_bar = QtWidgets.QLineEdit()
         self.search_bar.textChanged.connect(self.filter)
@@ -78,13 +151,11 @@ class Dragger(QtWidgets.QWidget):
 
         # Destinations tree
         self.dest_tree = self.DestinationTree(self)
-        self.dest_tree.setHeaderLabels(['Name', '', ''])
-        self.dest_tree.setColumnHidden(1, True)
-        self.dest_tree.setColumnHidden(2, True)
+        self.dest_tree.setHeaderLabels(['Name', 'Value'])
         self.dest_tree.setItemsExpandable(False)
         self.dest_tree.setRootIsDecorated(False)
 
-        self.set_schema(schema)
+        self.set_schema(self.schema)
         self.apply_tree_settings()
 
         # Configure drag n drop
@@ -100,8 +171,9 @@ class Dragger(QtWidgets.QWidget):
 
         # Buttons
         self.kwargs_button = QtWidgets.QPushButton("Custom Kwargs")
-        self.reset_button = QtWidgets.QPushButton("Reset")
         self.save_html_button = QtWidgets.QPushButton("Save HTML")
+        self.reset_button = QtWidgets.QPushButton("Reset")
+        self.preview_button = QtWidgets.QPushButton("Preview Kwargs")
         self.finish_button = QtWidgets.QPushButton("Finish")
 
         # Signals
@@ -111,6 +183,7 @@ class Dragger(QtWidgets.QWidget):
         self.kwargs_button.clicked.connect(self.custom_kwargs)
         self.reset_button.clicked.connect(self.reset)
         self.save_html_button.clicked.connect(self.save_html)
+        self.preview_button.clicked.connect(self.preview)
         self.finish_button.clicked.connect(self.finish)
 
         # Layout
@@ -120,8 +193,9 @@ class Dragger(QtWidgets.QWidget):
 
         self.button_layout = QtWidgets.QHBoxLayout()
         self.button_layout.addWidget(self.kwargs_button)
-        self.button_layout.addWidget(self.reset_button)
         self.button_layout.addWidget(self.save_html_button)
+        self.button_layout.addWidget(self.reset_button)
+        self.button_layout.addWidget(self.preview_button)
         self.button_layout.addWidget(self.finish_button)
 
         self.main_layout = QtWidgets.QGridLayout()
@@ -169,6 +243,9 @@ class Dragger(QtWidgets.QWidget):
 
     def custom_kwargs(self):
         self.kwargs_dialog.setVisible(not self.kwargs_dialog.isVisible())
+
+    def preview(self):
+        self.preview_dialog.setVisible(not self.preview_dialog.isVisible())
 
     def reset(self):
         self.remembered_values = {}
@@ -229,27 +306,25 @@ class Dragger(QtWidgets.QWidget):
         # Get args from destination UI
         root = self.dest_tree.invisibleRootItem()
         for i in range(root.childCount()):
-            child = root.child(i)
-            section = child.text(0)
+            item = root.child(i)
+            section = item.text(0)
 
-            arg = next(arg for arg in self.schema.args if arg.arg_name == child.text(0))
+            arg = next(arg for arg in self.schema.args if arg.arg_name == item.text(0))
 
             if type(arg) == ColumnArg:
-                data[section] = []
-                for j in range(child.childCount()):
-                    sub_child = child.child(j)
-                    value = sub_child.text(0)
-                    data[section].append(value)
+                data[section] = item.data(1, Qt.UserRole)
 
             if type(arg) == BooleanArg:
-                data[section] = child.checkState(0) == Qt.Checked
+                data[section] = item.data(1, Qt.UserRole)
+            else:
+                data[section] = item.data(1, Qt.UserRole)
 
         # Add custom kwargs
         root = self.kwargs_dialog.tree_widget.invisibleRootItem()
         for i in range(root.childCount()):
-            child = root.child(i)
-            key = child.text(0)
-            value = child.text(1)
+            item = root.child(i)
+            key = item.text(0)
+            value = item.text(1)
             try:
                 value = ast.literal_eval(value)
             except (SyntaxError, ValueError):
@@ -263,7 +338,7 @@ class Dragger(QtWidgets.QWidget):
 
         for i in range(len(sources)):
             item = base_widgets.QTreeWidgetItem(self.source_tree,
-                                             [str(sources[i]), str(source_nunique[i]), str(source_types[i])])
+                                                [str(sources[i]), str(source_nunique[i]), str(source_types[i])])
 
         self.filter()
 
@@ -277,34 +352,93 @@ class Dragger(QtWidgets.QWidget):
 
         for arg in schema.args:
             if type(arg) == ColumnArg:
-                section = base_widgets.QTreeWidgetItem(self.dest_tree, [arg.arg_name])
+                item = base_widgets.QTreeWidgetItem(self.dest_tree, [arg.arg_name])
+
+                class CustomQLineEdit(QtWidgets.QLineEdit):
+                    def __init__(self):
+                        super().__init__()
+
+                    def dropEvent(self, event):
+                        input_text = event.mimeData().text()
+                        self.setText(input_text)
+
+                text_edit = CustomQLineEdit()
+
+                item.treeWidget().setItemWidget(item, 1, text_edit)
+
+                text_edit.textChanged.connect(lambda text, item=item: item.setData(1, Qt.UserRole, text))
+                text_edit.textChanged.connect(lambda: self.valuesChanges.emit())
+
                 if arg.arg_name in self.remembered_values.keys():
-                    for val in self.remembered_values[arg.arg_name]:
-                        item = base_widgets.QTreeWidgetItem(section, [val])
+                    val = self.remembered_values[arg.arg_name]
+                else:
+                    val = arg.default_value
+                text_edit.setText(val)
+                text_edit.textChanged.emit(val)  # Need this incase value was same
+                text_edit.textChanged.connect(lambda: self.valuesChanges.emit())
 
             elif type(arg) == BooleanArg:
-                section = base_widgets.QTreeWidgetItem(self.dest_tree, [arg.arg_name])
+                item = base_widgets.QTreeWidgetItem(self.dest_tree, [arg.arg_name])
+                checkbox = QtWidgets.QCheckBox()
+
+                checkbox.stateChanged.connect(
+                    lambda state, item=item: item.setData(1, Qt.UserRole, state == Qt.Checked))
+
+                item.treeWidget().setItemWidget(item, 1, checkbox)
                 if arg.arg_name in self.remembered_values.keys():
-                    # Use remembered value
                     val = self.remembered_values[arg.arg_name]
-                    section.setCheckState(0, Qt.Checked if val else Qt.Unchecked)
                 else:
-                    # Use default value
                     val = arg.default_value
-                    section.setCheckState(0, Qt.Checked if val else Qt.Unchecked)
-                section.setFlags(section.flags() | Qt.ItemIsUserCheckable)
+                checkbox.setChecked(val)
+                checkbox.stateChanged.emit(Qt.Checked if val else Qt.Unchecked)
+                checkbox.stateChanged.connect(lambda: self.valuesChanges.emit())
+
+            elif type(arg) == OptionListArg:
+                item = base_widgets.QTreeWidgetItem(self.dest_tree, [arg.arg_name])
+                combo_box = QtWidgets.QComboBox()
+                combo_box.addItems(arg.values)
+                item.treeWidget().setItemWidget(item, 1, combo_box)
+
+                combo_box.currentTextChanged.connect(lambda text, item=item: item.setData(1, Qt.UserRole, text))
+                combo_box.currentTextChanged.connect(lambda: self.valuesChanges.emit())
+
+                if arg.arg_name in self.remembered_values.keys():
+                    val = self.remembered_values[arg.arg_name]
+                else:
+                    val = arg.default_value
+                combo_box.setCurrentText(val)
+                combo_box.currentTextChanged.emit(val)  # Need this incase value was same
 
         self.apply_tree_settings()
+        self.valuesChanges.emit()
 
     class DestinationTree(base_widgets.QTreeWidget):
+
         def dropEvent(self, e: QtGui.QDropEvent):
-            super().dropEvent(e)
-            self.parent().itemDropped.emit()
+            mime_type = 'application/x-qabstractitemmodeldatalist'
+            target = self.itemAt(e.pos())
+            if e.mimeData().hasFormat(mime_type):
+                # Extract the value in the first column from the drag source
+                data = e.mimeData().data(mime_type)
+
+                source_item = QtGui.QStandardItemModel()
+                source_item.dropMimeData(e.mimeData(), Qt.CopyAction, 0, 0, QtCore.QModelIndex())
+                name = source_item.item(0, 0).text()
+
+                target.setText(1, name)
+            else:
+                self.parent().itemDropped.emit()
 
     class SourceTree(base_widgets.QTreeWidget):
         def dropEvent(self, e: QtGui.QDropEvent):
             super().dropEvent(e)
             self.parent().itemDropped.emit()
+
+        def mimeData(self, indexes):
+            mimedata = super().mimeData(indexes)
+            if indexes:
+                mimedata.setText(indexes[0].text(0))
+            return mimedata
 
     class CustomKwargsEditor(QtWidgets.QDialog):
         def __init__(self, parent=None):
@@ -415,15 +549,14 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
 
-    test = Dragger(sources=pokemon.columns,
-                   schema=Schema(name='line',
-                                 args=[ColumnArg(arg_name='x'),
-                                       ColumnArg(arg_name='y'),
-                                       ColumnArg(arg_name='color'),
-                                       BooleanArg(arg_name='apply_mean', default_value=True)], ),
-                   source_nunique=nunique(pokemon),
-                   source_types=pokemon.dtypes.values.astype(str))
+    test = FuncUi(df=pokemon,
+                  schema=Schema(name='histogram',
+                                label='Histogram',
+                                function=jotly.histogram,
+                                icon_path=os.path.join(pandasgui.__path__[0],
+                                                       'resources/images/draggers/trace-type-histogram.svg')),
+                  )
     test.finished.connect(lambda: print(test.get_data()))
     test.show()
-
+    print(test.schema)
     sys.exit(app.exec_())

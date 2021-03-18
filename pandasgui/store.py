@@ -10,7 +10,7 @@ from functools import wraps
 from datetime import datetime
 from pandasgui.utility import unique_name, in_interactive_console, rename_duplicates, refactor_variable, parse_dates, \
     clean_dataframe
-from pandasgui.constants import LOCAL_DATA_DIR, DEFAULT_TITLE_FORMAT, RENDER_MODE
+from pandasgui.constants import LOCAL_DATA_DIR
 import os
 import collections
 from enum import Enum
@@ -74,8 +74,6 @@ DEFAULT_SETTINGS = {'editable': False,
                     'style': "Fusion",
                     'block': True,
                     'theme': 'Dark',
-                    'title_format': DEFAULT_TITLE_FORMAT,
-                    'render_mode': RENDER_MODE,
                     'apply_mean': True,
                     'apply_sort': True}
 
@@ -133,18 +131,6 @@ class SettingsStore(DictLike):
                              description="UI theme",
                              dtype=Enum("ThemesEnum", ['light', 'dark', 'classic']),
                              persist=True)
-
-        self.title_format = Setting(label="title_format",
-                                    value=settings['title_format'],
-                                    description="format string for automatically generated chart title",
-                                    dtype=str,
-                                    persist=True)
-
-        self.render_mode = Setting(label="render_mode",
-                                   value=settings['render_mode'],
-                                   description="render mode for plotly express charts",
-                                   dtype=Enum("RenderEnum", ['auto', 'webgl', 'svg']),
-                                   persist=True)
 
         self.apply_mean = Setting(label="apply_mean",
                                   value=settings['apply_mean'],
