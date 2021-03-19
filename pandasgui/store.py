@@ -9,7 +9,7 @@ import traceback
 from functools import wraps
 from datetime import datetime
 from pandasgui.utility import unique_name, in_interactive_console, rename_duplicates, refactor_variable, parse_dates, \
-    clean_dataframe
+    clean_dataframe, nunique
 from pandasgui.constants import LOCAL_DATA_DIR
 import os
 import collections
@@ -186,6 +186,7 @@ class PandasGuiDataFrameStore:
         self.gui: Union["PandasGui", None] = None
         self.dataframe_explorer: Union["DataFrameExplorer", None] = None
         self.dataframe_viewer: Union["DataFrameViewer", None] = None
+        self.stats_viewer: Union["DataFrameViewer", None] = None
         self.filter_viewer: Union["FilterViewer", None] = None
 
         self.column_sorted: Union[int, None] = None
@@ -194,6 +195,39 @@ class PandasGuiDataFrameStore:
 
         self.filters: List[Filter] = []
         self.filtered_index_map = df.reset_index().index
+
+        # Statistics
+        self.column_statistics = None
+        self.row_statistics = None
+
+        self.data_changed()
+
+    def refresh_statistics(self):
+
+        df = self.df
+        self.column_statistics = pd.DataFrame({
+            "Type": df.dtypes.astype(str),
+            "Count": df.count(),
+            "N Unique": nunique(df),
+            "Mean": df.mean(numeric_only=True),
+            "StdDev": df.std(numeric_only=True),
+            "Min": df.min(numeric_only=True),
+            "Max": df.max(numeric_only=True),
+        }, index=df.columns
+        )
+
+        df = self.df.transpose()
+        df_numeric = self.df.select_dtypes('number').transpose()
+        self.row_statistics = pd.DataFrame({
+            # "Type": df.dtypes.astype(str),
+            # "Count": df.count(),
+            # "N Unique": nunique(df),
+            # "Mean": df_numeric.mean(numeric_only=True),
+            # "StdDev": df_numeric.std(numeric_only=True),
+            # "Min": df_numeric.min(numeric_only=True),
+            "Max": df_numeric.max(numeric_only=True),
+        }, index=df.columns
+        )
 
     ###################################
     # Code history
@@ -370,43 +404,29 @@ class PandasGuiDataFrameStore:
         df = df.drop('_temp_range_index', axis=1)
 
         self.df = df
-        self.update()
+        self.data_changed()
 
     ###################################
     # Other
 
-    # Refresh PyQt models when the underlying pgdf is changed in anyway that needs to be reflected in the GUI
-    def update(self):
+    def data_changed(self):
+        self.refresh_ui()
+        self.refresh_statistics()
 
-        # Update models
+    # Refresh PyQt models when the underlying pgdf is changed in anyway that needs to be reflected in the GUI
+    def refresh_ui(self):
+
         self.models = []
-        if self.dataframe_viewer is not None:
-            self.models += [self.dataframe_viewer.dataView.model(),
-                            self.dataframe_viewer.columnHeader.model(),
-                            self.dataframe_viewer.indexHeader.model(),
-                            self.dataframe_viewer.columnHeaderNames.model(),
-                            self.dataframe_viewer.indexHeaderNames.model(),
-                            ]
 
         if self.filter_viewer is not None:
-            self.models += [self.filter_viewer.list_model,
-                            ]
+            self.models += [self.filter_viewer.list_model]
 
         for model in self.models:
             model.beginResetModel()
             model.endResetModel()
 
         if self.dataframe_viewer is not None:
-            # Update multi-index spans
-            for view in [self.dataframe_viewer.columnHeader,
-                         self.dataframe_viewer.indexHeader]:
-                view.set_spans()
-
-            # Update sizing
-            for view in [self.dataframe_viewer.columnHeader,
-                         self.dataframe_viewer.indexHeader,
-                         self.dataframe_viewer.dataView]:
-                view.updateGeometry()
+            self.dataframe_viewer.refresh_ui()
 
     @staticmethod
     def cast(x: Union["PandasGuiDataFrameStore", pd.DataFrame, pd.Series, Iterable]):

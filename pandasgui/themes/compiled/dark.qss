@@ -7,16 +7,10 @@ QWidget {
   QWidget:disabled {
     color: #4c4c4c; }
 
-QListView::item:selected:active,
-QTableView::item:selected:active,
-QTreeView::item:selected:active,
-QTreeView::branch:selected:active {
-  background-color: #0f456e; }
-
-QListView::item:selected:!active,
-QTableView::item:selected:!active,
-QTreeView::item:selected:!active,
-QTreeView::branch:selected:!active {
+QListView::item:selected,
+QTableView::item:selected,
+QTreeView::item:selected,
+QTreeView::branch:selected {
   background-color: #0f456e; }
 
 QTreeView::item {
@@ -172,13 +166,7 @@ QAbstractSpinBox::up-button, QAbstractSpinBox::down-button {
 
 QTableView {
   border: 1px solid rgba(55, 58, 63, 0.4);
-  background-color: rgba(55, 58, 63, 0.4); }
-  QTableView:selected {
-    background-color: #242629; }
-  QTableView::item {
-    padding: 0px;
-    border: none;
-    background-color: #242629; }
+  background-color: #242629; }
 
 QAbstractScrollArea::corner {
   background-color: #373a3f; }
@@ -198,11 +186,6 @@ QHeaderView {
       border-top-width: 0px;
       border-left-width: 0px;
       background-color: qlineargradient(x1: 0.0, y1: 1.0, x2: 0.0, y2: 0.0, stop: 0.1 rgba(55, 58, 62, 100%), stop: 0.8 rgba(74, 78, 84, 100%)); }
-
-.DataTableView {
-  border: none; }
-  .DataTableView::item {
-    background-color: #242629; }
 
 .HeaderView {
   border: 0px solid rgba(133, 139, 148, 0.4); }

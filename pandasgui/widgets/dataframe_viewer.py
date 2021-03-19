@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
-
+from typing import Literal
 from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore
 import pandasgui
 
@@ -22,6 +22,10 @@ class DataFrameViewer(QtWidgets.QWidget):
         pgdf = PandasGuiDataFrameStore.cast(pgdf)
         pgdf.dataframe_viewer = self
         self.pgdf = pgdf
+
+        # Local state
+        # How to color cells
+        self.color_mode: Literal[None, 'column', 'row', 'all'] = None
 
         # Set up DataFrame TableView and Model
         self.dataView = DataTableView(parent=self)
@@ -262,6 +266,32 @@ class DataFrameViewer(QtWidgets.QWidget):
 
         self.dataView.setSelectionMode(temp)
 
+    def refresh_ui(self):
+
+        # Update models
+        self.models = []
+        self.models += [self.dataView.model(),
+                        self.columnHeader.model(),
+                        self.indexHeader.model(),
+                        self.columnHeaderNames.model(),
+                        self.indexHeaderNames.model(),
+                        ]
+
+        for model in self.models:
+            model.beginResetModel()
+            model.endResetModel()
+
+        # Update multi-index spans
+        for view in [self.columnHeader,
+                     self.indexHeader]:
+            view.set_spans()
+
+        # Update sizing
+        for view in [self.columnHeader,
+                     self.indexHeader,
+                     self.dataView]:
+            view.updateGeometry()
+
 
 # Remove dotted border on cell focus.  https://stackoverflow.com/a/55252650/3620725
 class NoFocusDelegate(QtWidgets.QStyledItemDelegate):
@@ -297,14 +327,16 @@ class DataTableModel(QtCore.QAbstractTableModel):
 
     # Returns the data from the DataFrame
     def data(self, index, role=QtCore.Qt.DisplayRole):
+
+        row = index.row()
+        col = index.column()
+        cell = self.pgdf.df.iloc[row, col]
+
         if (
                 role == QtCore.Qt.DisplayRole
                 or role == QtCore.Qt.EditRole
                 or role == QtCore.Qt.ToolTipRole
         ):
-            row = index.row()
-            col = index.column()
-            cell = self.pgdf.df.iloc[row, col]
 
             # Need to check type since a cell might contain a list or Series, then .isna returns a Series not a bool
             cell_is_na = pd.isna(cell)
@@ -324,11 +356,32 @@ class DataTableModel(QtCore.QAbstractTableModel):
             return str(cell)
 
         elif role == QtCore.Qt.ToolTipRole:
-            row = index.row()
-            col = index.column()
-            cell = self.pgdf.df.iloc[row, col]
-
             return str(cell)
+
+        elif role == QtCore.Qt.BackgroundRole:
+
+            color_mode = self.parent().color_mode
+
+            if color_mode == None or pd.isna(cell):
+                return None
+
+            try:
+                x = float(cell)
+            except:
+                # Cell isn't numeric
+                return None
+
+            if color_mode == 'all':
+                percentile = cell / self.pgdf.column_statistics['Max'].max()
+                return QtGui.QColor(QtGui.QColor(255, 0, 0, int(255 * percentile)))
+
+            elif color_mode == 'row':
+                percentile = cell / self.pgdf.row_statistics['Max'][row]
+                return QtGui.QColor(QtGui.QColor(255, 0, 0, int(255 * percentile)))
+
+            elif color_mode == 'column':
+                percentile = cell / self.pgdf.column_statistics['Max'][col]
+                return QtGui.QColor(QtGui.QColor(255, 0, 0, int(255 * percentile)))
 
     def flags(self, index):
         if self.parent().pgdf.settings.editable:
@@ -554,12 +607,29 @@ class HeaderView(QtWidgets.QTableView):
         point = event.pos()
         ix = self.indexAt(point)
 
-        if event.button() == QtCore.Qt.RightButton \
-                and self.orientation == Qt.Horizontal:
+        if event.button() == QtCore.Qt.RightButton and self.orientation == Qt.Horizontal:
+
             menu = QtWidgets.QMenu(self)
-            action = QtWidgets.QAction("Sort")
-            action.triggered.connect(lambda: self.pgdf.sort_column(ix.column()))
-            menu.addAction(action)
+
+            action1 = QtWidgets.QAction("Sort column")
+            action1.triggered.connect(lambda: self.pgdf.sort_column(ix.column()))
+
+            action2 = QtWidgets.QAction("Color by None")
+            action2.triggered.connect(lambda: [setattr(self.parent(), 'color_mode', None),
+                                               self.parent().refresh_ui()])
+            action3 = QtWidgets.QAction("Color by columns")
+            action3.triggered.connect(lambda: [setattr(self.parent(), 'color_mode', 'column'),
+                                               self.parent().refresh_ui()])
+            action4 = QtWidgets.QAction("Color by rows")
+            action4.triggered.connect(lambda: [setattr(self.parent(), 'color_mode', 'row'),
+                                               self.parent().refresh_ui()])
+            action5 = QtWidgets.QAction("Color by all")
+            action5.triggered.connect(lambda: [setattr(self.parent(), 'color_mode', 'all'),
+                                               self.parent().refresh_ui()])
+
+            for action in [action1, action2, action3, action4, action5]:
+                menu.addAction(action)
+
             menu.exec_(self.mapToGlobal(point))
         else:
             super().mousePressEvent(event)
@@ -1002,7 +1072,7 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     from pandasgui.datasets import pokemon, mi_manufacturing, multiindex, simple
 
-    view = DataFrameViewer(pd.DataFrame({'a': [1, 2], 'b': [3, 4]}))
+    view = DataFrameViewer(pokemon)
 
     view.show()
     app.exec_()

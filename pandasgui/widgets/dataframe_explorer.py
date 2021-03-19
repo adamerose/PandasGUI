@@ -9,11 +9,14 @@ from pandasgui.widgets.dataframe_viewer import DataFrameViewer
 from pandasgui.widgets.grapher import Grapher
 from pandasgui.widgets.reshaper import Reshaper
 from pandasgui.widgets.filter_viewer import FilterViewer
+from pandasgui.widgets.stats_viewer import StatisticsViewer
 from pandasgui.widgets.dock_widget import DockWidget
 from pandasgui.store import PandasGuiDataFrameStore
 
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 class DataFrameExplorer(QtWidgets.QMainWindow):
     def __init__(self, pgdf: PandasGuiDataFrameStore):
@@ -37,7 +40,7 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
         self.filters_dock = self.add_view(self.filter_viewer, "Filters")
 
         # Statistics tab
-        self.statistics_viewer = self.make_statistics_tab(pgdf)
+        self.statistics_viewer = StatisticsViewer(pgdf)
         self.statistics_dock = self.add_view(self.statistics_viewer, "Statistics")
 
         # Grapher tab
@@ -50,6 +53,7 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
 
         def set_active_tab(name):
             self.active_tab = name
+
         self.dataframe_dock.activated.connect(lambda: set_active_tab("DataFrame"))
         self.filters_dock.activated.connect(lambda: set_active_tab("Filters"))
         self.statistics_dock.activated.connect(lambda: set_active_tab("Statistics"))
@@ -81,30 +85,6 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
 
         self.docks.append(dock)
         return dock
-
-    def __reduce__(self):
-        # This is so dataclasses.asdict doesn't complain about this being unpicklable
-        return "DataFrameExplorer"
-
-    def make_statistics_tab(self, pgdf: PandasGuiDataFrameStore):
-
-        stats_df = pd.DataFrame(
-            {
-                "Type": pgdf.df.dtypes.replace("object", "string").astype(str),
-                "Count": pgdf.df.count(),
-                "N Unique": nunique(pgdf.df),
-                "Mean": pgdf.df.mean(numeric_only=True),
-                "StdDev": pgdf.df.std(numeric_only=True),
-                "Min": pgdf.df.min(numeric_only=True),
-                "Max": pgdf.df.max(numeric_only=True),
-            },
-            index=pgdf.df.columns
-        )
-
-        self.stats_pgdf = PandasGuiDataFrameStore(stats_df.reset_index())
-        w = DataFrameViewer(self.stats_pgdf)
-        w.setAutoFillBackground(True)
-        return w
 
 
 if __name__ == "__main__":
