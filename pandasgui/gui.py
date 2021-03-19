@@ -442,13 +442,10 @@ def show(*args,
     kwargs = {**kwargs, **items}
 
     plotly_kwargs = {key: value for (key, value) in kwargs.items() if get_figure_type(value) is not None}
-    dataframe_kwargs = {key: value for (key, value) in kwargs.items() if issubclass(type(value), pd.DataFrame)}
-    invalid_kwargs = {key: value for (key, value) in kwargs.items()
-                      if key not in list(plotly_kwargs.keys()) + list(dataframe_kwargs.keys())}
-
-    if invalid_kwargs:
-        for key, val in invalid_kwargs.items():
-            logger.warning(f"Invalid type passed to pandasgui.show: type({key}) = {type(val)}")
+    # This breaks automatic conversion of objects to DataFrames
+    # dataframe_kwargs = {key: value for (key, value) in kwargs.items() if issubclass(type(value), pd.DataFrame)}
+    dataframe_kwargs = {key: value for (key, value) in kwargs.items()
+                        if key not in list(plotly_kwargs.keys())}
 
     if plotly_kwargs:
         for name, fig in plotly_kwargs.items():

@@ -100,7 +100,6 @@ class FigureViewer(PyQt5.QtWebEngineWidgets.QWebEngineView):
         self.temp_file.truncate()
         self.temp_file.seek(0)
         self.load(QtCore.QUrl.fromLocalFile(self.temp_file.name))
-        print(self.temp_file.name)
 
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
         self.temp_file.close()

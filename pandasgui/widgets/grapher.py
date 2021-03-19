@@ -45,8 +45,6 @@ class Grapher(QtWidgets.QWidget):
         self.type_picker.setSpacing(20)
         self.type_picker.setResizeMode(self.type_picker.Adjust)
         self.type_picker.setDragDropMode(self.type_picker.NoDragDrop)
-        self.type_picker.setStyleSheet("QListView::item {border: 2px solid transparent; padding: 3px;}"
-                                       "QListView::item:selected {background: none; border: 2px solid #777;}")
 
         self.type_picker.sizeHint = lambda: QtCore.QSize(500, 250)
 
@@ -111,7 +109,7 @@ class Grapher(QtWidgets.QWidget):
         # Signals
         self.type_picker.itemSelectionChanged.connect(self.on_type_changed)
         self.dragger.finished.connect(self.on_dragger_finished)
-        self.dragger.valuesChanges.connect(self.on_dragger_finished)
+        self.dragger.valuesChanged.connect(self.on_dragger_finished)
         self.dragger.saving.connect(self.on_dragger_saving)
 
     def on_type_changed(self):
@@ -140,8 +138,6 @@ class Grapher(QtWidgets.QWidget):
     def on_dragger_finished(self):
         # df = flatten_df(self.pgdf.df)
         kwargs = self.dragger.get_data()
-        # Replace empty strings with None
-        kwargs = {k: (None if v == '' else v) for k, v in kwargs.items()}
 
         # TODO: move this to jotly
         # render_mode = self.pgdf.settings.render_mode.value
@@ -164,7 +160,6 @@ class Grapher(QtWidgets.QWidget):
         #         kwargs["title"] = title_format
         #         kwargs["title"] = eval_title(self.pgdf, self.current_schema.name, kwargs)
 
-        print(kwargs)
         func = self.current_schema.function
 
         try:

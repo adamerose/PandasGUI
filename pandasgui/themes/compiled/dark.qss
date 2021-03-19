@@ -86,12 +86,6 @@ QDockWidget::title {
   background: #4a4e54;
   border: 1px solid rgba(133, 139, 148, 0.4); }
 
-QLabel,
-QCheckBox,
-QRadioButton,
-QSlider {
-  background-color: transparent; }
-
 QPushButton,
 QToolBox::tab {
   background-color: qlineargradient(x1: 0.0, y1: 1.0, x2: 0.0, y2: 0.0, stop: 0.1 rgba(55, 58, 62, 100%), stop: 0.8 rgba(74, 78, 84, 100%));

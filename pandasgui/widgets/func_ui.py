@@ -105,7 +105,7 @@ class Schema:
 
 
 class FuncUi(QtWidgets.QWidget):
-    valuesChanges = QtCore.pyqtSignal()
+    valuesChanged = QtCore.pyqtSignal()
     itemDropped = QtCore.pyqtSignal()
     finished = QtCore.pyqtSignal()
     saving = QtCore.pyqtSignal()
@@ -127,21 +127,21 @@ class FuncUi(QtWidgets.QWidget):
         self.schema = schema
 
         # Custom kwargs dialog
-        self.kwargs_dialog = self.CustomKwargsEditor(self)
+        self.kwargs_dialog = CustomKwargsEditor(self)
 
         # Preview dialog
         self.preview_dialog = QtWidgets.QDialog(self)
         self.preview_dialog_text = QtWidgets.QTextEdit()
         self.preview_dialog.setLayout(QtWidgets.QVBoxLayout())
         self.preview_dialog.layout().addWidget(self.preview_dialog_text)
-        self.valuesChanges.connect(lambda: self.preview_dialog_text.setText(
+        self.valuesChanged.connect(lambda: self.preview_dialog_text.setText(
             pprint.pformat(self.get_data(), width=40)))
         # Search box
         self.search_bar = QtWidgets.QLineEdit()
         self.search_bar.textChanged.connect(self.filter)
 
         # Sources list
-        self.source_tree = self.SourceTree(self)
+        self.source_tree = SourceTree(self)
         self.source_tree.setHeaderLabels(['Name', '#Unique', 'Type'])
         self.set_sources(sources, source_nunique, source_types)
         self.source_tree.setSortingEnabled(True)
@@ -150,13 +150,11 @@ class FuncUi(QtWidgets.QWidget):
         self.filter()
 
         # Destinations tree
-        self.dest_tree = self.DestinationTree(self)
+        self.dest_tree = DestinationTree(self)
         self.dest_tree.setHeaderLabels(['Name', 'Value'])
-        self.dest_tree.setItemsExpandable(False)
-        self.dest_tree.setRootIsDecorated(False)
 
+        # Set schema
         self.set_schema(self.schema)
-        self.apply_tree_settings()
 
         # Configure drag n drop
         sorc = self.source_tree
@@ -177,9 +175,9 @@ class FuncUi(QtWidgets.QWidget):
         self.finish_button = QtWidgets.QPushButton("Finish")
 
         # Signals
-        self.itemDropped.connect(self.apply_tree_settings)
-        self.dest_tree.itemChanged.connect(self.remember_values)
+        self.valuesChanged.connect(self.remember_values)
         self.dest_tree.itemDoubleClicked.connect(self.handle_double_click)
+
         self.kwargs_button.clicked.connect(self.custom_kwargs)
         self.reset_button.clicked.connect(self.reset)
         self.save_html_button.clicked.connect(self.save_html)
@@ -206,7 +204,6 @@ class FuncUi(QtWidgets.QWidget):
         self.setLayout(self.main_layout)
 
     def handle_double_click(self, item, column):
-
         # Delete chldren if is section
         if item.parent() is None:
             for i in reversed(range(item.childCount())):
@@ -214,8 +211,6 @@ class FuncUi(QtWidgets.QWidget):
         # Delete if not section
         else:
             sip.delete(item)
-
-        self.apply_tree_settings()
 
     def filter(self):
         root = self.source_tree.invisibleRootItem()
@@ -257,46 +252,6 @@ class FuncUi(QtWidgets.QWidget):
     def save_html(self):
         self.saving.emit()
 
-    def apply_tree_settings(self):
-        if len(self.schema.args) == 0:
-            return
-
-        # Destination tree
-        root = self.dest_tree.invisibleRootItem()
-        root.setFlags(root.flags() & Qt.ItemIsEnabled)
-
-        for i in range(root.childCount()):
-            child = root.child(i)
-            child.setExpanded(True)
-
-            arg = next(arg for arg in self.schema.args if arg.arg_name == child.text(0))
-            if type(arg) == ColumnArg:
-                child.setFlags(child.flags() & Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled
-                               & ~Qt.ItemIsDragEnabled)
-
-                for j in range(child.childCount()):
-                    sub_child = child.child(j)
-                    sub_child.setFlags(
-                        sub_child.flags() & Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
-
-            if type(arg) == BooleanArg:
-                child.setFlags(child.flags() & Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
-                               & ~Qt.ItemIsDragEnabled & ~Qt.ItemIsDropEnabled)
-                for j in range(child.childCount()):
-                    sub_child = child.child(j)
-                    sub_child.setFlags(
-                        sub_child.flags() & Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
-
-        # Source tree
-        root = self.source_tree.invisibleRootItem()
-        root.setFlags(root.flags() & Qt.ItemIsEnabled)
-
-        for i in range(root.childCount()):
-            child = root.child(i)
-            child.setFlags(child.flags() & Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
-
-        self.remember_values()
-
     def remember_values(self):
         self.remembered_values.update(self.get_data())
 
@@ -312,9 +267,9 @@ class FuncUi(QtWidgets.QWidget):
             arg = next(arg for arg in self.schema.args if arg.arg_name == item.text(0))
 
             if type(arg) == ColumnArg:
-                data[section] = item.data(1, Qt.UserRole)
-
-            if type(arg) == BooleanArg:
+                val = item.data(1, Qt.UserRole)
+                data[section] = None if val == "" else val
+            elif type(arg) == BooleanArg:
                 data[section] = item.data(1, Qt.UserRole)
             else:
                 data[section] = item.data(1, Qt.UserRole)
@@ -351,34 +306,25 @@ class FuncUi(QtWidgets.QWidget):
             sip.delete(root.child(i))
 
         for arg in schema.args:
+
+            item = base_widgets.QTreeWidgetItem(self.dest_tree, [arg.arg_name])
+            item.setFlags(item.flags() & Qt.ItemIsEnabled & ~Qt.ItemIsDropEnabled & ~Qt.ItemIsDragEnabled)
+
             if type(arg) == ColumnArg:
-                item = base_widgets.QTreeWidgetItem(self.dest_tree, [arg.arg_name])
 
-                class CustomQLineEdit(QtWidgets.QLineEdit):
-                    def __init__(self):
-                        super().__init__()
-
-                    def dropEvent(self, event):
-                        input_text = event.mimeData().text()
-                        self.setText(input_text)
-
-                text_edit = CustomQLineEdit()
-
-                item.treeWidget().setItemWidget(item, 1, text_edit)
-
-                text_edit.textChanged.connect(lambda text, item=item: item.setData(1, Qt.UserRole, text))
-                text_edit.textChanged.connect(lambda: self.valuesChanges.emit())
+                cdz = ColumnDropZone()
+                item.treeWidget().setItemWidget(item, 1, cdz)
+                cdz.valueChanged.connect(lambda text, item=item: item.setData(1, Qt.UserRole, text))
 
                 if arg.arg_name in self.remembered_values.keys():
                     val = self.remembered_values[arg.arg_name]
                 else:
                     val = arg.default_value
-                text_edit.setText(val)
-                text_edit.textChanged.emit(val)  # Need this incase value was same
-                text_edit.textChanged.connect(lambda: self.valuesChanges.emit())
+                cdz.setText(val)
+                cdz.valueChanged.emit(val)  # Need this incase value was same
+                cdz.valueChanged.connect(lambda: self.valuesChanged.emit())
 
             elif type(arg) == BooleanArg:
-                item = base_widgets.QTreeWidgetItem(self.dest_tree, [arg.arg_name])
                 checkbox = QtWidgets.QCheckBox()
 
                 checkbox.stateChanged.connect(
@@ -391,100 +337,163 @@ class FuncUi(QtWidgets.QWidget):
                     val = arg.default_value
                 checkbox.setChecked(val)
                 checkbox.stateChanged.emit(Qt.Checked if val else Qt.Unchecked)
-                checkbox.stateChanged.connect(lambda: self.valuesChanges.emit())
+                checkbox.stateChanged.connect(lambda: self.valuesChanged.emit())
 
             elif type(arg) == OptionListArg:
-                item = base_widgets.QTreeWidgetItem(self.dest_tree, [arg.arg_name])
                 combo_box = QtWidgets.QComboBox()
-                combo_box.addItems(arg.values)
+                combo_box.addItems([str(x) for x in arg.values])
                 item.treeWidget().setItemWidget(item, 1, combo_box)
 
-                combo_box.currentTextChanged.connect(lambda text, item=item: item.setData(1, Qt.UserRole, text))
-                combo_box.currentTextChanged.connect(lambda: self.valuesChanges.emit())
+                combo_box.currentIndexChanged.connect(
+                    lambda ix, values=arg.values, item=item: item.setData(1, Qt.UserRole, values[ix]))
+                combo_box.currentIndexChanged.connect(lambda: self.valuesChanged.emit())
 
                 if arg.arg_name in self.remembered_values.keys():
                     val = self.remembered_values[arg.arg_name]
                 else:
                     val = arg.default_value
-                combo_box.setCurrentText(val)
-                combo_box.currentTextChanged.emit(val)  # Need this incase value was same
+                combo_box.setCurrentIndex(0)
+                combo_box.currentIndexChanged.emit(0)  # Need this incase value was same
 
-        self.apply_tree_settings()
-        self.valuesChanges.emit()
+        self.valuesChanged.emit()
 
-    class DestinationTree(base_widgets.QTreeWidget):
 
-        def dropEvent(self, e: QtGui.QDropEvent):
-            mime_type = 'application/x-qabstractitemmodeldatalist'
-            target = self.itemAt(e.pos())
-            if e.mimeData().hasFormat(mime_type):
-                # Extract the value in the first column from the drag source
-                data = e.mimeData().data(mime_type)
+class ColumnDropZone(QtWidgets.QLabel):
+    valueChanged = QtCore.pyqtSignal(str)
 
-                source_item = QtGui.QStandardItemModel()
-                source_item.dropMimeData(e.mimeData(), Qt.CopyAction, 0, 0, QtCore.QModelIndex())
-                name = source_item.item(0, 0).text()
+    def __init__(self):
+        super().__init__()
+        self.setAcceptDrops(True)
+        self.setFrameStyle(QtWidgets.QFrame.Box)
+        self.setFrameShadow(QtWidgets.QFrame.Raised)
 
-                target.setText(1, name)
-            else:
-                self.parent().itemDropped.emit()
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.drag_start_position = event.pos()
 
-    class SourceTree(base_widgets.QTreeWidget):
-        def dropEvent(self, e: QtGui.QDropEvent):
-            super().dropEvent(e)
-            self.parent().itemDropped.emit()
+    def mouseMoveEvent(self, event):
+        if not (event.buttons() & Qt.LeftButton):
+            return
+        if (event.pos() - self.drag_start_position).manhattanLength() < QtWidgets.QApplication.startDragDistance():
+            return
+        drag = QtGui.QDrag(self)
+        mimedata = QtCore.QMimeData()
+        mimedata.setText(self.text())
+        drag.setMimeData(mimedata)
+        pixmap = QtGui.QPixmap(self.size())
+        painter = QtGui.QPainter(pixmap)
+        painter.drawPixmap(self.rect(), self.grab())
+        painter.end()
+        drag.setPixmap(pixmap)
+        drag.setHotSpot(event.pos())
+        drag.exec_(Qt.MoveAction)
 
-        def mimeData(self, indexes):
-            mimedata = super().mimeData(indexes)
-            if indexes:
-                mimedata.setText(indexes[0].text(0))
-            return mimedata
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasText():
+            event.acceptProposedAction()
 
-    class CustomKwargsEditor(QtWidgets.QDialog):
-        def __init__(self, parent=None):
-            super().__init__(parent)
-            self.setVisible(False)
-            self.setWindowTitle("Custom Kwargs")
+    def dropEvent(self, event):
+        pos = event.pos()
+        dropped_text = event.mimeData().text()
 
-            self.tree_widget = QtWidgets.QTreeWidget()
-            self.tree_widget.setHeaderLabels(['Kwarg Name', 'Kwarg Value'])
-            self.kwarg_name = QtWidgets.QLineEdit()
-            self.kwarg_value = QtWidgets.QLineEdit()
-            self.submit_button = QtWidgets.QPushButton("Add")
-            self.delete_button = QtWidgets.QPushButton("Delete")
+        # Swap text between source and this
+        current_text = self.text()
+        source = event.source()
+        if type(source) == ColumnDropZone:
+            source.setText(current_text)
+            source.valueChanged.emit(current_text)
 
-            # Signals
-            self.kwarg_name.returnPressed.connect(self.add_item)
-            self.kwarg_value.returnPressed.connect(self.add_item)
-            self.submit_button.pressed.connect(self.add_item)
-            self.delete_button.pressed.connect(self.delete)
+        self.setText(dropped_text)
+        self.valueChanged.emit(dropped_text)
 
-            # Layout
-            self.layout = QtWidgets.QVBoxLayout()
-            self.input_layout = QtWidgets.QHBoxLayout()
-            self.input_layout.addWidget(self.kwarg_name)
-            self.input_layout.addWidget(self.kwarg_value)
-            self.input_layout.addWidget(self.submit_button)
-            self.layout.addLayout(self.input_layout)
-            self.layout.addWidget(self.tree_widget)
-            self.layout.addWidget(self.delete_button)
-            self.setLayout(self.layout)
+        event.acceptProposedAction()
 
-        def add_item(self):
-            name = self.kwarg_name.text()
-            value = self.kwarg_value.text()
+    def mouseDoubleClickEvent(self, e: QtGui.QMouseEvent) -> None:
+        self.setText("")
+        self.valueChanged.emit("")
+        super().mouseDoubleClickEvent(e)
 
-            if name != "" and value != "":
-                self.kwarg_name.setText("")
-                self.kwarg_value.setText("")
 
-                item = base_widgets.QTreeWidgetItem(self.tree_widget, [name, value])
+class DestinationTree(base_widgets.QTreeWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setItemsExpandable(False)
+        self.setRootIsDecorated(False)
+        self.setAcceptDrops(False)
+        root = self.invisibleRootItem()
+        root.setFlags(root.flags() & Qt.ItemIsEnabled & ~Qt.ItemIsDropEnabled & ~Qt.ItemIsDragEnabled)
 
-                item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable)
+    # def dropEvent(self, e: QtGui.QDropEvent):
+    #     mime_type = 'application/x-qabstractitemmodeldatalist'
+    #     target = self.itemAt(e.pos())
+    #     if e.mimeData().hasFormat(mime_type):
+    #         # Extract the value in the first column from the drag source
+    #         data = e.mimeData().data(mime_type)
+    #         source_item = QtGui.QStandardItemModel()
+    #         source_item.dropMimeData(e.mimeData(), Qt.CopyAction, 0, 0, QtCore.QModelIndex())
+    #         name = source_item.item(0, 0).text()
+    #         target.setText(1, name)
+    #     else:
+    #         self.parent().itemDropped.emit()
 
-        def delete(self):
-            for item in self.tree_widget.selectedItems():
-                sip.delete(item)
+
+class SourceTree(base_widgets.QTreeWidget):
+    def dropEvent(self, e: QtGui.QDropEvent):
+        super().dropEvent(e)
+        self.parent().itemDropped.emit()
+
+    def mimeData(self, indexes):
+        mimedata = super().mimeData(indexes)
+        if indexes:
+            mimedata.setText(indexes[0].text(0))
+        return mimedata
+
+
+class CustomKwargsEditor(QtWidgets.QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setVisible(False)
+        self.setWindowTitle("Custom Kwargs")
+
+        self.tree_widget = QtWidgets.QTreeWidget()
+        self.tree_widget.setHeaderLabels(['Kwarg Name', 'Kwarg Value'])
+        self.kwarg_name = QtWidgets.QLineEdit()
+        self.kwarg_value = QtWidgets.QLineEdit()
+        self.submit_button = QtWidgets.QPushButton("Add")
+        self.delete_button = QtWidgets.QPushButton("Delete")
+
+        # Signals
+        self.kwarg_name.returnPressed.connect(self.add_item)
+        self.kwarg_value.returnPressed.connect(self.add_item)
+        self.submit_button.pressed.connect(self.add_item)
+        self.delete_button.pressed.connect(self.delete)
+
+        # Layout
+        self.layout = QtWidgets.QVBoxLayout()
+        self.input_layout = QtWidgets.QHBoxLayout()
+        self.input_layout.addWidget(self.kwarg_name)
+        self.input_layout.addWidget(self.kwarg_value)
+        self.input_layout.addWidget(self.submit_button)
+        self.layout.addLayout(self.input_layout)
+        self.layout.addWidget(self.tree_widget)
+        self.layout.addWidget(self.delete_button)
+        self.setLayout(self.layout)
+
+    def add_item(self):
+        name = self.kwarg_name.text()
+        value = self.kwarg_value.text()
+
+        if name != "" and value != "":
+            self.kwarg_name.setText("")
+            self.kwarg_value.setText("")
+
+            item = base_widgets.QTreeWidgetItem(self.tree_widget, [name, value])
+
+            item.setFlags(Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable)
+
+    def delete(self):
+        for item in self.tree_widget.selectedItems():
+            sip.delete(item)
 
 
 class SearchableListWidget(QtWidgets.QWidget):
@@ -552,11 +561,10 @@ if __name__ == "__main__":
     test = FuncUi(df=pokemon,
                   schema=Schema(name='histogram',
                                 label='Histogram',
-                                function=jotly.histogram,
+                                function=jotly.scatter,
                                 icon_path=os.path.join(pandasgui.__path__[0],
                                                        'resources/images/draggers/trace-type-histogram.svg')),
                   )
     test.finished.connect(lambda: print(test.get_data()))
     test.show()
-    print(test.schema)
     sys.exit(app.exec_())
