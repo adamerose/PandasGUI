@@ -124,17 +124,22 @@ class DataFrameViewer(QtWidgets.QWidget):
         Set the size of column at column_index to fit its contents
         """
 
-        self.columnHeader.resizeColumnToContents(column_index)
-        width = self.columnHeader.columnWidth(column_index)
+        width = 0
 
-        # Iterate over the column's rows and check the width of each to determine the max width for the column
+        # Iterate over the data view rows and check the width of each to determine the max width for the column
         # Only check the first N rows for performance. If there is larger content in cells below it will be cut off
         N = 100
         for i in range(self.dataView.model().rowCount())[:N]:
             mi = self.dataView.model().index(i, column_index)
             text = self.dataView.model().data(mi)
             w = self.dataView.fontMetrics().boundingRect(text).width()
+            width = max(width, w)
 
+        # Repeat for header cells
+        for i in range(self.columnHeader.model().rowCount()):
+            mi = self.columnHeader.model().index(i, column_index)
+            text = self.columnHeader.model().data(mi)
+            w = self.columnHeader.fontMetrics().boundingRect(text).width()
             width = max(width, w)
 
         padding = 20
@@ -332,12 +337,9 @@ class DataTableModel(QtCore.QAbstractTableModel):
         col = index.column()
         cell = self.pgdf.df.iloc[row, col]
 
-        if (
-                role == QtCore.Qt.DisplayRole
+        if (role == QtCore.Qt.DisplayRole
                 or role == QtCore.Qt.EditRole
-                or role == QtCore.Qt.ToolTipRole
-        ):
-
+                or role == QtCore.Qt.ToolTipRole):
             # Need to check type since a cell might contain a list or Series, then .isna returns a Series not a bool
             cell_is_na = pd.isna(cell)
             if type(cell_is_na) == bool and cell_is_na:
