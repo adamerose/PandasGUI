@@ -279,8 +279,17 @@ def clean_dataframe(df, name="DataFrame"):
     dtypes_old = df.dtypes
     df = parse_dates(df)
     dtypes_new = df.dtypes
-    for col_name in [df.columns[ix] for ix in range(len(dtypes_new)) if dtypes_old[ix] != dtypes_new[ix]]:
-        converted_names.append(str(col_name))
+
+    for ix in range(len(dtypes_new)):
+        col_name = df.columns[ix]
+
+        # Pandas is sometimes buggy when comparing dtypes
+        try:
+            if dtypes_old[ix] != dtypes_new[ix]:
+                converted_names.append(str(col_name))
+        except:
+            pass
+
     if converted_names:
         logger.warning(f"In {name}, converted columns to datetime: {', '.join(converted_names)}")
 
