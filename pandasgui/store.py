@@ -84,8 +84,6 @@ class SettingsStore(DictLike):
     editable: Setting
     style: Setting
     theme: Setting
-    title_format: Setting
-    render_mode: Setting
     apply_mean: Setting
     apply_sort: Setting
 
