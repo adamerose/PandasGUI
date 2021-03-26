@@ -1,4 +1,5 @@
 import textwrap
+import time
 from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Union, Iterable
 import pandas as pd
@@ -17,6 +18,8 @@ from enum import Enum
 import json
 import inspect
 import logging
+import re
+import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -162,6 +165,57 @@ class HistoryItem:
         self.time = datetime.now().strftime("%H:%M:%S")
 
 
+# Use this decorator on PandasGuiStore or PandasGuiDataFrameStore to display a status bar message during a method run
+def status_message_decorator(message):
+    def decorator(function):
+        def wrapper(self, *args, **kwargs):
+            full_kwargs = kwargs.copy()
+            # Allow putting method argument values in the status message by putting them in curly braces
+            args_spec = inspect.getfullargspec(function).args
+            args_spec.pop(0)  # Removes self
+            for ix, arg_name in enumerate(args_spec):
+                full_kwargs[arg_name] = args[ix]
+            new_message = message
+
+            for arg_name in full_kwargs.keys():
+                new_message = new_message.replace('{' + arg_name + '}', str(full_kwargs[arg_name]))
+
+            if self.gui is not None:
+                original_status = self.gui.statusBar().currentMessage()
+                self.gui.statusBar().showMessage(new_message)
+                self.gui.statusBar().repaint()
+                QtWidgets.QApplication.instance().processEvents()
+                try:
+                    result = function(self, *args, **kwargs)
+                finally:
+                    self.gui.statusBar().showMessage(original_status)
+                    self.gui.statusBar().repaint()
+                    QtWidgets.QApplication.instance().processEvents()
+            else:
+                result = function(self, *args, **kwargs)
+            return result
+
+        return wrapper
+
+    return decorator
+
+
+# Use this context to display a status message for a block. self should be a PandasGuiStore or PandasGuiDataFrameStore
+@contextlib.contextmanager
+def status_message_context(self, message):
+    if self.gui is not None:
+        original_status = self.gui.statusBar().currentMessage()
+        self.gui.statusBar().showMessage(message)
+        self.gui.statusBar().repaint()
+        QtWidgets.QApplication.instance().processEvents()
+        try:
+            yield
+        finally:
+            self.gui.statusBar().showMessage(original_status)
+            self.gui.statusBar().repaint()
+            QtWidgets.QApplication.instance().processEvents()
+
+
 class PandasGuiDataFrameStore:
     """
     All methods that modify the data should modify self.df_unfiltered, then self.df gets computed from that
@@ -200,6 +254,7 @@ class PandasGuiDataFrameStore:
 
         self.data_changed()
 
+    @status_message_decorator("Refreshing statistics...")
     def refresh_statistics(self):
 
         df = self.df
@@ -230,6 +285,7 @@ class PandasGuiDataFrameStore:
     ###################################
     # Code history
 
+    @status_message_decorator("Generating code export...")
     def code_export(self):
 
         if len(self.history) == 0:
@@ -260,6 +316,7 @@ class PandasGuiDataFrameStore:
     ###################################
     # Editing cell data
 
+    @status_message_decorator("Applying cell edit...")
     def edit_data(self, row, col, value):
         # Map the row number in the filtered df (which the user interacts with) to the unfiltered one
         row = self.filtered_index_map[row]
@@ -270,6 +327,7 @@ class PandasGuiDataFrameStore:
         self.add_history_item("edit_data",
                               f"df.iat[{row}, {col}] = {value}")
 
+    @status_message_decorator("Pasting data...")
     def paste_data(self, top_row, left_col, df_to_paste):
         new_df = self.df_unfiltered.copy()
 
@@ -296,6 +354,7 @@ class PandasGuiDataFrameStore:
     ###################################
     # Sorting
 
+    @status_message_decorator("Sorting column...")
     def sort_column(self, ix: int):
         col_name = self.df_unfiltered.columns[ix]
 
@@ -329,6 +388,7 @@ class PandasGuiDataFrameStore:
         self.index_sorted = None
         self.apply_filters()
 
+    @status_message_decorator("Sorting index...")
     def sort_index(self, ix: int):
         # Clicked an unsorted index level
         if ix != self.index_sorted:
@@ -386,6 +446,7 @@ class PandasGuiDataFrameStore:
         self.filters[index].enabled = not self.filters[index].enabled
         self.apply_filters()
 
+    @status_message_decorator("Applying filters...")
     def apply_filters(self):
         df = self.df_unfiltered.copy()
         df['_temp_range_index'] = df.reset_index().index
@@ -454,9 +515,8 @@ class PandasGuiStore:
 
     ###################################
     # IPython magic
-
+    @status_message_decorator("Executing IPython command...")
     def eval_magic(self, line):
-
         names_to_update = []
         command = line
         for name in self.data.keys():
@@ -473,16 +533,20 @@ class PandasGuiStore:
 
     ###################################
 
+    @status_message_decorator("Adding DataFrame...")
     def add_dataframe(self, pgdf: Union[DataFrame, PandasGuiDataFrameStore],
                       name: str = "Untitled"):
 
         name = unique_name(name, self.get_dataframes().keys())
-        pgdf = PandasGuiDataFrameStore.cast(pgdf)
+        with status_message_context(self, "Adding DataFrame (Creating DataFrame store)..."):
+            pgdf = PandasGuiDataFrameStore.cast(pgdf)
         pgdf.settings = self.settings
         pgdf.name = name
         pgdf.store = self
+        pgdf.gui = self.gui
 
-        pgdf.df = clean_dataframe(pgdf.df, name)
+        with status_message_context(self, "Adding DataFrame (Cleaning DataFrame)..."):
+            pgdf.df = clean_dataframe(pgdf.df, name)
 
         # Add it to store and create widgets
         self.data[name] = pgdf
@@ -505,6 +569,7 @@ class PandasGuiStore:
         self.data.pop(name)
         self.gui.navigator.remove_item(name)
 
+    @status_message_decorator('Importing file "{path}"...')
     def import_file(self, path):
         if not os.path.isfile(path):
             logger.warning("Path is not a file: " + path)

@@ -103,6 +103,9 @@ class PandasGui(QtWidgets.QMainWindow):
     def init_ui(self):
         resize_widget(self, 0.7, 0.7)
 
+        # Status bar
+        self.setStatusBar(QtWidgets.QStatusBar())
+
         # Center window on screen
         screen = QtWidgets.QDesktopWidget().screenGeometry()
         size = self.geometry()
