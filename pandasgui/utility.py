@@ -629,6 +629,56 @@ def get_figure_type(fig):
         pass
     return None
 
+
+def summarize_json(data, terse=True):
+    from collections import defaultdict
+
+    if len(data) == 0:
+        print(f"Data is an empty {type(data).__name__}")
+        return
+
+    def list_keys(data, parent_key='ROOT'):
+        parent_key = parent_key.strip('.')
+        keys = []
+        if isinstance(data, list):
+            parent_subkeys = parent_key.split(".")
+            for item in data:
+                keys += list_keys(item, f'{".".join(parent_subkeys[:-1])}.[{parent_subkeys[-1]}]')
+        elif isinstance(data, dict):
+            for key, item in data.items():
+                keys += list_keys(item, f'{parent_key}.{key}')
+        else:
+            return [f'{parent_key} - {type(data).__name__}']
+
+        return keys
+
+    keycount = defaultdict(lambda: 0)
+
+    for key in reversed(sorted(list_keys(data))):
+        keycount[key] += 1
+
+    summary = ""
+
+    width = max([len(str(count)) for count in keycount.values()])
+    redundant_subkeys = set()
+    for key, count in keycount.items():
+        if terse:
+            line = f"{count: <{width}} {key}"
+
+            for redundant_subkey in sorted(list(redundant_subkeys), key=len, reverse=True):
+                line = line.replace(redundant_subkey, ' ' * len(redundant_subkey))
+
+            for i in range(line.count('.')):
+                subkey = '.'.join(key.split('.')[:-1 - i])
+                redundant_subkeys.add(subkey)
+        else:
+            line = f"{count: <{width}} {key}"
+
+        summary += line + "\n"
+
+    return summary
+
+
 event_lookup = {"0": "QEvent::None",
                 "114": "QEvent::ActionAdded",
                 "113": "QEvent::ActionChanged",

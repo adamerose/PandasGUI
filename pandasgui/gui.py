@@ -40,12 +40,12 @@ sys.excepthook = except_hook
 # Enables PyQt event loop in IPython
 fix_ipython()
 
-# Keep a list of PandasGUI widgets so they don't get garbage collected
+# Keep a list of widgets so they don't get garbage collected
 refs = []
-plotly_refs = []
 
 
 class PandasGui(QtWidgets.QMainWindow):
+
     def __init__(self, settings: dict = {}, **kwargs):
         """
         Args:
@@ -87,9 +87,34 @@ class PandasGui(QtWidgets.QMainWindow):
         # Create all widgets
         self.init_ui()
 
-        # Adds DataFrames listed in kwargs to data store.
-        for df_name, df in kwargs.items():
-            self.store.add_dataframe(df, df_name)
+        plotly_kwargs = {key: value for (key, value) in kwargs.items() if get_figure_type(value) is not None}
+        json_kwargs = {key: value for (key, value) in kwargs.items() if any([
+            issubclass(type(value), list),
+            issubclass(type(value), dict),
+        ])}
+        dataframe_kwargs = {key: value for (key, value) in kwargs.items() if any([
+            issubclass(type(value), pd.DataFrame),
+            issubclass(type(value), pd.Series),
+        ])}
+
+        if json_kwargs:
+            for name, val in json_kwargs.items():
+                jv = JsonViewer(val)
+                jv.show()
+                refs.append(jv)  # TODO clean this up when these widgets are closed
+                jv.setWindowTitle(name)
+
+        if plotly_kwargs:
+            for name, fig in plotly_kwargs.items():
+                pv = FigureViewer(fig)
+                pv.show()
+                refs.append(pv)
+                pv.setWindowTitle(name)
+
+        if dataframe_kwargs:
+            # Adds DataFrames listed in kwargs to data store.
+            for df_name, df in dataframe_kwargs.items():
+                self.store.add_dataframe(df, df_name)
 
         # Default to first item
         self.navigator.setCurrentItem(self.navigator.topLevelItem(0))
@@ -273,6 +298,7 @@ class PandasGui(QtWidgets.QMainWindow):
         layout.addWidget(textbox)
         resize_widget(self.code_export_dialog, 0.5, 0.5)
         self.code_export_dialog.setLayout(layout)
+        self.code_export_dialog.setWindowTitle(f"Code Export ({self.store.selected_pgdf.name})")
         self.code_export_dialog.show()
 
     def delete_selected_dataframes(self):
@@ -420,6 +446,15 @@ class PandasGui(QtWidgets.QMainWindow):
 def show(*args,
          settings={},
          **kwargs):
+    '''
+    Objects provided as args and kwargs should be any of the following:
+    DataFrame   Show it using PandasGui
+    Series      Show it using PandasGui
+    Figure      Show it using FigureViewer. Supports figures from plotly, bokeh, matplotlib, altair
+    dict/list   Show it using JsonViewer
+
+    TODO - Display all these different widget types within a PandasGui and show them in the nav
+    '''
     # Get the variable names in the scope show() was called from
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
 
@@ -440,42 +475,28 @@ def show(*args,
 
     dupes = [key for key in items.keys() if key in kwargs.keys()]
     if any(dupes):
-        logger.warning("Duplicate DataFrame names were provided, duplicates were ignored.")
+        logger.warning("Duplicate names were provided, duplicates were ignored.")
 
     kwargs = {**kwargs, **items}
 
-    plotly_kwargs = {key: value for (key, value) in kwargs.items() if get_figure_type(value) is not None}
-    # This breaks automatic conversion of objects to DataFrames
-    # dataframe_kwargs = {key: value for (key, value) in kwargs.items() if issubclass(type(value), pd.DataFrame)}
-    dataframe_kwargs = {key: value for (key, value) in kwargs.items()
-                        if key not in list(plotly_kwargs.keys())}
+    pandas_gui = PandasGui(settings=settings, **kwargs)
+    pandas_gui.caller_stack = inspect.currentframe().f_back
 
-    if plotly_kwargs:
-        for name, fig in plotly_kwargs.items():
-            pv = FigureViewer(fig)
-            pv.show()
-            plotly_refs.append(pv)
-            pv.setWindowTitle(name)
+    # Register IPython magic
+    try:
+        @register_line_magic
+        def pg(line):
+            pandas_gui.store.eval_magic(line)
+            return line
 
-    if dataframe_kwargs:
-        pandas_gui = PandasGui(settings=settings, **dataframe_kwargs)
-        pandas_gui.caller_stack = inspect.currentframe().f_back
+    except Exception as e:
+        # Let this silently fail if no IPython console exists
+        if e.args[0] == 'Decorator can only run in context where `get_ipython` exists':
+            pass
+        else:
+            raise e
 
-        # Register IPython magic
-        try:
-            @register_line_magic
-            def pg(line):
-                pandas_gui.store.eval_magic(line)
-                return line
-
-        except Exception as e:
-            # Let this silently fail if no IPython console exists
-            if e.args[0] == 'Decorator can only run in context where `get_ipython` exists':
-                pass
-            else:
-                raise e
-
-        return pandas_gui
+    return pandas_gui
 
 
 if __name__ == "__main__":

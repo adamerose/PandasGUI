@@ -3,6 +3,7 @@ import json
 import sys
 from typing import Union
 from PyQt5 import QtCore, QtGui, QtWidgets
+from pandasgui.utility import summarize_json
 
 
 class JsonViewer(QtWidgets.QWidget):
@@ -34,15 +35,30 @@ class JsonViewer(QtWidgets.QWidget):
         top_section.addWidget(self.expand_all)
         top_section.addWidget(self.collapse_all)
 
+        main_view_layout = QtWidgets.QVBoxLayout()
+        main_view_layout.addLayout(top_section)
+        main_view_layout.addWidget(self.tree_widget)
+
+        main_view = QtWidgets.QWidget()
+        main_view.setLayout(main_view_layout)
+
+        summary_view = QtWidgets.QTextEdit()
+        summary_view.setReadOnly(True)
+        summary_view.setText(summarize_json(jdata))
+
+        font = QtGui.QFont("Monospace")
+        font.setStyleHint(QtGui.QFont.TypeWriter)
+        summary_view.setFont(font)
+
+        self.tabs = QtWidgets.QTabWidget()
+        self.tabs.addTab(main_view, "Viewer")
+        self.tabs.addTab(summary_view, "Structure")
+
         layout = QtWidgets.QVBoxLayout()
-        layout.addLayout(top_section)
-        layout.addWidget(self.tree_widget)
+        layout.addWidget(self.tabs)
 
         self.setLayout(layout)
-
-        self.resize(QtCore.QSize(400,500))
-
-
+        self.resize(QtCore.QSize(400, 500))
 
     def find(self):
 
@@ -53,7 +69,7 @@ class JsonViewer(QtWidgets.QWidget):
             return
 
         result = []
-        for col in [0,1]:
+        for col in [0, 1]:
             result += self.tree_widget.findItems(text,
                                                  QtCore.Qt.MatchRegExp | QtCore.Qt.MatchRecursive,
                                                  col)
@@ -90,30 +106,51 @@ class JsonViewer(QtWidgets.QWidget):
 
 
 if "__main__" == __name__:
-    qt_app = QtWidgets.QApplication(sys.argv)
-    data_list = [{
-        "name": "Tim",
-        "age": 22,
-        "cars": {
-            "car1": "Mazda",
-        }
-    }, {
-        "name": "John",
-        "age": 30,
-        "cars": {
-            "car1": "Ford",
-            "car2": "BMW",
-            "car3": "Fiat"
-        }
-    }]
+    app = QtWidgets.QApplication([])
 
-    data_dict = {
-        "name": "Tim",
-        "age": 22,
-        "cars": {
-            "car1": "Mazda",
-        }
-    }
-    json_viewer = JsonViewer(data_list)
-    json_viewer2 = JsonViewer(data_dict)
-    sys.exit(qt_app.exec_())
+    example1 = [{'apiVersion': 3,
+                 'details': {'date': '2012-04-23T18:25:43.511Z', 'userCount': 3},
+                 'users': [
+                     {'id': 'jross',
+                      'firstName': "Jeff",
+                      'lastName': "Reeves",
+                      'messages': [
+                          {'content': "Hello",
+                           'date_posted': "2012-04-23T18:25:43.511Z"},
+                          {'content': "I finished the thing",
+                           'date_posted': "2012-04-23T18:29:43.511Z"},
+                          {'content': "Here it is",
+                           'date_posted': "2012-04-23T18:30:43.511Z",
+                           'error': "Failed to send message"},
+                      ]},
+                     {'id': 'sbank',
+                      'firstName': "Steve",
+                      'lastName': "Banks",
+                      'messages': [
+                          {'content': "Hi",
+                           'date_posted': "2012-04-23T18:26:43.511Z"},
+                      ]},
+                     {'id': 'bscot',
+                      'firstName': "Bob",
+                      'messages': []},
+                 ]}]
+
+    json_viewer = JsonViewer(example1)
+    json_viewer.show()
+
+    import requests
+
+    examples = []
+    for url in ['https://jsonplaceholder.typicode.com/posts',  # 100 posts
+                'https://jsonplaceholder.typicode.com/comments',  # 500 comments
+                'https://jsonplaceholder.typicode.com/albums',  # 100 albums
+                'https://jsonplaceholder.typicode.com/photos',  # 5000 photos
+                'https://jsonplaceholder.typicode.com/todos',  # 200 todos
+                'https://jsonplaceholder.typicode.com/users',  # 10 users
+                ]:
+        data = requests.get(url).json()
+        x = JsonViewer(data)
+        x.show()
+        examples.append(x)
+
+    sys.exit(app.exec_())
