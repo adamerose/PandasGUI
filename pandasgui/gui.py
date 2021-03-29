@@ -71,18 +71,7 @@ class PandasGui(QtWidgets.QMainWindow):
             setting = self.store.settings[key]
             setting.value = value
 
-        # update default schema
-        for i, chart in enumerate(schemas):
-            if chart.name in ('bar', 'line'):
-                args = schemas[i].args
-                for j, arg in enumerate(args):
-                    if arg.arg_name == 'apply_sort':
-                        args[j] = BooleanArg(arg_name='apply_sort', default_value=self.store.settings.apply_sort.value)
-                    elif arg.arg_name == 'apply_mean':
-                        args[j] = BooleanArg(arg_name='apply_mean', default_value=self.store.settings.apply_mean.value)
-
-        # This will silently fail if the style isn't available on the OS, which is okay
-        self.app.setStyle(QtWidgets.QStyleFactory.create(self.store.settings.style.value))
+        self.app.setStyle(QtWidgets.QStyleFactory.create('Fusion'))
 
         # Create all widgets
         self.init_ui()
@@ -176,6 +165,10 @@ class PandasGui(QtWidgets.QMainWindow):
         self.make_menu_bar()
         self.setCentralWidget(self.splitter)
 
+        # Signals
+        self.store.settings.settingsChanged.connect(self.apply_settings)
+
+        self.apply_settings()
     ####################
     # Menu bar functions
 
@@ -246,27 +239,16 @@ class PandasGui(QtWidgets.QMainWindow):
                 action.triggered.connect(x.func)
                 menu.addAction(action)
 
-        # Add an extra option list to the menu for each GUI style that exist for the user's system
-        theme_menu = menus['Settings'].addMenu("&Set Theme")
-        theme_group = QtWidgets.QActionGroup(theme_menu)
-        for theme in ["light", "dark", "classic"]:
-            theme_action = QtWidgets.QAction(f"&{theme}", self, checkable=True)
-            theme_action.triggered.connect(lambda checked, theme=theme: self.set_theme(theme))
-            theme_group.addAction(theme_action)
-            theme_menu.addAction(theme_action)
 
-            # Set the default theme
-            if theme == self.store.settings.theme.value:
-                theme_action.trigger()
-
-    def set_theme(self, name: str):
-        if name == "classic":
+    def apply_settings(self):
+        theme = self.store.settings.theme.value
+        if theme == "classic":
             self.setStyleSheet("")
             self.store.settings.theme.value = 'classic'
-        elif name == "dark":
+        elif theme == "dark":
             self.setStyleSheet(qstylish.dark())
             self.store.settings.theme.value = 'dark'
-        elif name == "light":
+        elif theme == "light":
             self.setStyleSheet(qstylish.light())
             self.store.settings.theme.value = 'light'
 
@@ -373,7 +355,7 @@ class PandasGui(QtWidgets.QMainWindow):
         pgdf.df.to_csv(path, index=False)
 
     def import_from_clipboard(self):
-        df = pd.read_clipboard()
+        df = pd.read_clipboard(engine="python")
         self.store.add_dataframe(df)
 
     # https://stackoverflow.com/a/29769228/3620725
@@ -402,6 +384,7 @@ class PandasGui(QtWidgets.QMainWindow):
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(SettingsEditor(self.store.settings))
         dialog.setLayout(layout)
+        dialog.resize(700,800)
         dialog.show()
 
     def about(self):
@@ -502,4 +485,4 @@ def show(*args,
 if __name__ == "__main__":
     from pandasgui.datasets import all_datasets, pokemon, mi_manufacturing
 
-    gui = show(**all_datasets)
+    gui = show(pokemon)

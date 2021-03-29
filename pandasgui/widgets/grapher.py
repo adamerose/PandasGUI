@@ -15,7 +15,7 @@ from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore, HistoryItem
 from pandasgui.widgets.collapsible_panel import CollapsiblePanel
 
 from pandasgui.widgets.figure_viewer import FigureViewer
-from pandasgui.utility import flatten_df, flatten_iter, kwargs_string, nunique, unique, eval_title
+from pandasgui.utility import flatten_df, flatten_iter, kwargs_string, nunique, unique
 from pandasgui.widgets.func_ui import FuncUi, ColumnArg, Schema, BooleanArg
 
 import logging
@@ -67,13 +67,13 @@ class Grapher(QtWidgets.QWidget):
 
         df = flatten_df(self.pgdf.df)
 
-        self.dragger = FuncUi(df=df, schema=Schema())
+        self.func_ui = FuncUi(df=df, schema=Schema())
 
         self.plot_splitter = QtWidgets.QSplitter(Qt.Horizontal)
         self.plot_splitter.setHandleWidth(3)
         self.left_panel = QtWidgets.QGridLayout()
         self.left_panel.addWidget(self.type_picker, 0, 0)
-        self.left_panel.addWidget(self.dragger, 1, 0)
+        self.left_panel.addWidget(self.func_ui, 1, 0)
 
         # QGrid for first half of splitter
         self.selection_grid = QtWidgets.QWidget()
@@ -90,12 +90,10 @@ class Grapher(QtWidgets.QWidget):
         self.layout.addWidget(self.error_console_wrapper)
         self.setLayout(self.layout)
 
-
-        self.dragger.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.func_ui.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.plot_splitter.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.type_picker.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.error_console.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Minimum)
-
 
         # Initial selection
         self.type_picker.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
@@ -108,9 +106,9 @@ class Grapher(QtWidgets.QWidget):
 
         # Signals
         self.type_picker.itemSelectionChanged.connect(self.on_type_changed)
-        self.dragger.finished.connect(self.on_dragger_finished)
-        self.dragger.valuesChanged.connect(self.on_dragger_finished)
-        self.dragger.saving.connect(self.on_dragger_saving)
+        self.func_ui.finished.connect(self.on_dragger_finished)
+        self.func_ui.valuesChanged.connect(self.on_dragger_finished)
+        self.func_ui.saving.connect(self.on_dragger_saving)
 
     def on_type_changed(self):
         if len(self.type_picker.selectedItems()) == 0:
@@ -120,7 +118,7 @@ class Grapher(QtWidgets.QWidget):
         self.current_schema = next(filter(lambda schema: schema.label == self.selected_plot_label, schemas))
         arg_list = [arg.arg_name for arg in self.current_schema.args]
 
-        self.dragger.set_schema(self.current_schema)
+        self.func_ui.set_schema(self.current_schema)
 
     def on_dragger_saving(self):
         options = QtWidgets.QFileDialog.Options()
@@ -136,29 +134,7 @@ class Grapher(QtWidgets.QWidget):
                                        f"fig.write_html('{filename})'")
 
     def on_dragger_finished(self):
-        # df = flatten_df(self.pgdf.df)
-        kwargs = self.dragger.get_data()
-
-        # TODO: move this to jotly
-        # render_mode = self.pgdf.settings.render_mode.value
-        # if kwargs.get("render_mode", "") == "":
-        #     if self.current_schema.name in ("line", "line_polar", "scatter", "scatter_polar"):
-        #         kwargs["render_mode"] = render_mode
-
-        # TODO: move this to jotly
-        # # delayed evaluation of string to use kwargs
-        # title_format = self.pgdf.settings.title_format.value
-        # if title_format:
-        #     # user might have provided a title
-        #     title = kwargs.get("title", "")
-        #     if "{title}" in title:
-        #         # user is just adding to the default title
-        #         kwargs["title"] = title.replace("{title}", title_format)
-        #         kwargs["title"] = eval_title(self.pgdf, self.current_schema.name, kwargs)
-        #     elif title == "":
-        #         # nothing provided
-        #         kwargs["title"] = title_format
-        #         kwargs["title"] = eval_title(self.pgdf, self.current_schema.name, kwargs)
+        kwargs = self.func_ui.get_data()
 
         func = self.current_schema.function
 
@@ -172,7 +148,9 @@ class Grapher(QtWidgets.QWidget):
             self.error_console.setText(traceback.format_exc())
             self.error_console_wrapper.setTitle("*** Grapher Console ***")
 
-
+    def set_state(self, plot_type, dct):
+        self.type_picker.setCurrentIndex(self.type_picker.items)
+        self.func_ui.set_data(dct)
 
 def clear_layout(layout):
     for i in reversed(range(layout.count())):
@@ -238,7 +216,10 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
 
-    gb2 = Grapher(pokemon)
-    gb2.show()
+    gb = Grapher(pokemon)
+    gb.show()
+
+    gb.type_picker
+    gb.func_ui.set_data({'y': 'Attack', 'x': 'Defense'})
 
     app.exec_()

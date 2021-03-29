@@ -7,14 +7,18 @@ import os
 import inspect
 import pprint
 from pandasgui.utility import nunique
-
+from pandasgui.store import SETTINGS_STORE
 import pandasgui
 import ast
 from typing import Union, List, Iterable, Literal, get_args
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 
 from pandasgui.widgets import base_widgets
 from pandasgui import jotly
+
+
+class HiddenArg:
+    pass
 
 
 @dataclass
@@ -86,7 +90,6 @@ class Schema:
 
                     elif issubclass(arg_type, str):
                         args.append(ColumnArg(arg_name, default_value=arg_default or ''))
-
 
                     elif arg_type == bool:
                         args.append(BooleanArg(arg_name, default_value=arg_default))
@@ -289,6 +292,28 @@ class FuncUi(QtWidgets.QWidget):
 
         return data
 
+    def set_data(self, dct: dict):
+        for dct_key, dct_val in dct.items():
+            root = self.dest_tree.invisibleRootItem()
+            for i in range(root.childCount()):
+                item = root.child(i)
+                arg = next(arg for arg in self.schema.args if arg.arg_name == item.text(0))
+                if type(arg) == ColumnArg:
+                    item.setData(1, Qt.UserRole, dct_val)
+                elif type(arg) == BooleanArg:
+                    item.setData(1, Qt.UserRole, dct_val)
+                else:
+                    item.setData(1, Qt.UserRole, dct_val)
+
+            root = self.kwargs_dialog.tree_widget.invisibleRootItem()
+            for i in range(root.childCount()):
+                item = root.child(i)
+                key = item.text(0)
+                if key == dct_key:
+                    item.setText(1, dct_val)
+
+        self.valuesChanged.emit()
+
     def set_sources(self, sources: List[str], source_nunique: List[str], source_types: List[str]):
 
         for i in range(len(sources)):
@@ -318,6 +343,8 @@ class FuncUi(QtWidgets.QWidget):
 
                 if arg.arg_name in self.remembered_values.keys():
                     val = self.remembered_values[arg.arg_name]
+                elif arg.arg_name in asdict(SETTINGS_STORE).keys():
+                    val = SETTINGS_STORE[arg.arg_name].value
                 else:
                     val = arg.default_value
                 cdz.setText(val)
@@ -333,6 +360,8 @@ class FuncUi(QtWidgets.QWidget):
                 item.treeWidget().setItemWidget(item, 1, checkbox)
                 if arg.arg_name in self.remembered_values.keys():
                     val = self.remembered_values[arg.arg_name]
+                elif arg.arg_name in asdict(SETTINGS_STORE).keys():
+                    val = SETTINGS_STORE[arg.arg_name].value
                 else:
                     val = arg.default_value
                 checkbox.setChecked(val)
@@ -350,10 +379,13 @@ class FuncUi(QtWidgets.QWidget):
 
                 if arg.arg_name in self.remembered_values.keys():
                     val = self.remembered_values[arg.arg_name]
+                elif arg.arg_name in asdict(SETTINGS_STORE).keys():
+                    val = SETTINGS_STORE[arg.arg_name].value
                 else:
                     val = arg.default_value
-                combo_box.setCurrentIndex(0)
-                combo_box.currentIndexChanged.emit(0)  # Need this incase value was same
+                ix = arg.values.index(val)
+                combo_box.setCurrentIndex(ix)
+                combo_box.currentIndexChanged.emit(ix)  # Need this incase value was same
 
         self.valuesChanged.emit()
 

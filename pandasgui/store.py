@@ -1,7 +1,7 @@
 import textwrap
 import time
 from dataclasses import dataclass, field, asdict
-from typing import Dict, List, Union, Iterable
+from typing import Dict, List, Union, Iterable, Literal
 import pandas as pd
 from pandas import DataFrame
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
@@ -73,24 +73,30 @@ class Setting(DictLike):
         super().__setattr__(key, value)
 
 
-DEFAULT_SETTINGS = {'editable': False,
-                    'style': "Fusion",
+DEFAULT_SETTINGS = {'editable': True,
                     'block': True,
-                    'theme': 'Dark',
-                    'apply_mean': True,
-                    'apply_sort': True}
+                    'theme': 'dark',
+                    'render_mode': 'auto',
+                    'aggregation': 'mean',
+                    'title_format': "{name}: {title_columns}{title_dimensions}{names}{title_y}{title_z}{over_by}"
+                                    "{title_x} {selection}<br><sub>{groupings}{filters} {title_trendline}</sub>"
+
+                    }
 
 
 @dataclass
-class SettingsStore(DictLike):
+class SettingsStore(DictLike, QtCore.QObject):
+    settingsChanged = QtCore.pyqtSignal()
+
     block: Setting
     editable: Setting
-    style: Setting
     theme: Setting
-    apply_mean: Setting
-    apply_sort: Setting
+    render_mode: Setting
+    aggregation: Setting
+    title_format: Setting
 
     def __init__(self, **settings):
+        super().__init__()
 
         saved_settings = read_saved_settings()
 
@@ -121,29 +127,38 @@ class SettingsStore(DictLike):
                                 dtype=bool,
                                 persist=True)
 
-        self.style = Setting(label="style",
-                             value=settings['style'],
-                             description="PyQt app style",
-                             dtype=Enum("StylesEnum", QtWidgets.QStyleFactory.keys()),
-                             persist=True)
-
         self.theme = Setting(label="theme",
                              value=settings['theme'],
                              description="UI theme",
-                             dtype=Enum("ThemesEnum", ['light', 'dark', 'classic']),
+                             dtype=Literal['light', 'dark', 'classic'],
                              persist=True)
 
-        self.apply_mean = Setting(label="apply_mean",
-                                  value=settings['apply_mean'],
-                                  description="Default flag for whether to aggregate automatically in Grapher",
-                                  dtype=bool,
-                                  persist=True)
+        # Settings related to Grapher
 
-        self.apply_sort = Setting(label="apply_sort",
-                                  value=settings['apply_sort'],
-                                  description="Default flag for whether to sort automatically in Grapher",
-                                  dtype=bool,
-                                  persist=True)
+        self.render_mode = Setting(label="render_mode",
+                                   value=settings['render_mode'],
+                                   description="render_mode",
+                                   dtype=Literal['auto', 'webgl', 'svg'],
+                                   persist=True)
+
+        self.aggregation = Setting(label="aggregation",
+                                   value=settings['aggregation'],
+                                   description="aggregation",
+                                   dtype=Literal['mean', 'median', 'min', 'max', 'sum', 'none'],
+                                   persist=True)
+
+        self.title_format = Setting(label="title_format",
+                                    value=settings['title_format'],
+                                    description="title_format",
+                                    dtype=dict,
+                                    persist=True)
+
+    def reset_to_defaults(self):
+        for setting_name, setting_value in DEFAULT_SETTINGS.items():
+            self[setting_name].value = setting_value
+
+    def __repr__(self):
+        return '\n'.join([f"{key} = {val.value}" for key, val in self.__dict__.items()])
 
 
 @dataclass
@@ -169,12 +184,18 @@ class HistoryItem:
 def status_message_decorator(message):
     def decorator(function):
         def wrapper(self, *args, **kwargs):
+
+            if not (issubclass(type(self), PandasGuiStore) or issubclass(type(self), PandasGuiDataFrameStore)):
+                raise ValueError
+
             full_kwargs = kwargs.copy()
             # Allow putting method argument values in the status message by putting them in curly braces
             args_spec = inspect.getfullargspec(function).args
             args_spec.pop(0)  # Removes self
             for ix, arg_name in enumerate(args_spec):
-                full_kwargs[arg_name] = args[ix]
+                # Need to check length because if the param has default value it may be in args_spec but not args
+                if ix < len(args):
+                    full_kwargs[arg_name] = args[ix]
             new_message = message
 
             for arg_name in full_kwargs.keys():
@@ -253,6 +274,11 @@ class PandasGuiDataFrameStore:
         self.row_statistics = None
 
         self.data_changed()
+
+    def __setattr__(self, name, value):
+        if name == 'df':
+            value.pgdf = self
+        super().__setattr__(name, value)
 
     @status_message_decorator("Refreshing statistics...")
     def refresh_statistics(self):
@@ -488,18 +514,18 @@ class PandasGuiDataFrameStore:
             self.dataframe_viewer.refresh_ui()
 
     @staticmethod
-    def cast(x: Union["PandasGuiDataFrameStore", pd.DataFrame, pd.Series, Iterable]):
-        if isinstance(x, PandasGuiDataFrameStore):
-            return x
-        if isinstance(x, pd.DataFrame):
-            return PandasGuiDataFrameStore(x.copy())
-        elif isinstance(x, pd.Series):
-            return PandasGuiDataFrameStore(x.to_frame())
+    def cast(df: Union["PandasGuiDataFrameStore", pd.DataFrame, pd.Series, Iterable]):
+        if isinstance(df, PandasGuiDataFrameStore):
+            return df
+        if isinstance(df, pd.DataFrame):
+            return PandasGuiDataFrameStore(df.copy())
+        elif isinstance(df, pd.Series):
+            return PandasGuiDataFrameStore(df.to_frame())
         else:
             try:
-                return PandasGuiDataFrameStore(pd.DataFrame(x))
+                return PandasGuiDataFrameStore(pd.DataFrame(df))
             except:
-                raise TypeError(f"Could not convert {type(x)} to DataFrame")
+                raise TypeError(f"Could not convert {type(df)} to DataFrame")
 
 
 @dataclass
@@ -568,6 +594,9 @@ class PandasGuiStore:
     def remove_dataframe(self, name):
         self.data.pop(name)
         self.gui.navigator.remove_item(name)
+
+    def rename_dataframe(self, name, new_name):
+        pass
 
     @status_message_decorator('Importing file "{path}"...')
     def import_file(self, path):
