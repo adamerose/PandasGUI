@@ -74,8 +74,8 @@ class Setting(DictLike):
 
 
 DEFAULT_SETTINGS = {'editable': True,
-                    'block': True,
-                    'theme': 'dark',
+                    'block': None,
+                    'theme': 'light',
                     'render_mode': 'auto',
                     'aggregation': 'mean',
                     'title_format': "{name}: {title_columns}{title_dimensions}{names}{title_y}{title_z}{over_by}"
