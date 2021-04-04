@@ -2,6 +2,9 @@ import inspect
 import sys
 from typing import NewType, Union, List, Callable, Iterable
 from dataclasses import dataclass
+
+from PyQt5.QtWidgets import QStyleOptionViewItem
+
 import pandasgui
 import os
 import plotly.express as px
@@ -30,6 +33,53 @@ _extended_symbols = SymbolValidator().values[0::2][1::3]
 plotly_markers = [symbol for symbol in _extended_symbols if symbol[-3:] != "dot"]
 
 
+class TypePicker(QtWidgets.QListWidget):
+    def __init__(self, orientation=Qt.Horizontal):
+        super().__init__()
+        self.orientation = orientation
+        self.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.setWordWrap(False)
+        self.setSpacing(0)
+        self.setWrapping(False)
+        self.setUniformItemSizes(True)
+        if self.orientation == Qt.Vertical:
+            self.setFlow(QtWidgets.QListView.TopToBottom)
+            self.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        else:
+            self.setFlow(QtWidgets.QListView.LeftToRight)
+            self.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        self.setIconSize(QtCore.QSize(50, 50))
+
+    def viewOptions(self) -> 'QStyleOptionViewItem':
+        options = super().viewOptions()
+        options.decorationPosition = QStyleOptionViewItem.Top
+        options.displayAlignment = Qt.AlignCenter
+        return options
+
+    def sizeHint(self):
+        if self.orientation == Qt.Vertical:
+            width = self.sizeHintForColumn(0) + 5
+            if not self.verticalScrollBar().visibleRegion().isEmpty():
+                width += self.verticalScrollBar().sizeHint().width()
+            height = super().sizeHint().height()
+
+            return QtCore.QSize(width, height)
+        else:
+            height = self.sizeHintForRow(0) + 5
+            if not self.horizontalScrollBar().visibleRegion().isEmpty():
+                height += self.horizontalScrollBar().sizeHint().height()
+            width = super().sizeHint().width()
+
+            return QtCore.QSize(width, height)
+
+    def resizeEvent(self, e: QtGui.QResizeEvent) -> None:
+        if self.orientation == Qt.Vertical:
+            self.setFixedWidth(self.sizeHint().width())
+        else:
+            self.setFixedHeight(self.sizeHint().height())
+        super().resizeEvent(e)
+
+
 class Grapher(QtWidgets.QWidget):
     def __init__(self, pgdf: PandasGuiDataFrameStore):
         super().__init__()
@@ -39,14 +89,7 @@ class Grapher(QtWidgets.QWidget):
         self.setWindowTitle("Graph Builder")
 
         # Dropdown to select plot type
-        self.type_picker = QtWidgets.QListWidget()
-        self.type_picker.setViewMode(self.type_picker.IconMode)
-        self.type_picker.setWordWrap(False)
-        self.type_picker.setSpacing(20)
-        self.type_picker.setResizeMode(self.type_picker.Adjust)
-        self.type_picker.setDragDropMode(self.type_picker.NoDragDrop)
-
-        self.type_picker.sizeHint = lambda: QtCore.QSize(500, 250)
+        self.type_picker = TypePicker()
 
         self.error_console = QtWidgets.QTextEdit()
         self.error_console.setReadOnly(True)
@@ -69,34 +112,27 @@ class Grapher(QtWidgets.QWidget):
 
         self.func_ui = FuncUi(df=df, schema=Schema())
 
+        # Layouts
         self.plot_splitter = QtWidgets.QSplitter(Qt.Horizontal)
         self.plot_splitter.setHandleWidth(3)
-        self.left_panel = QtWidgets.QGridLayout()
-        self.left_panel.addWidget(self.type_picker, 0, 0)
-        self.left_panel.addWidget(self.func_ui, 1, 0)
 
-        # QGrid for first half of splitter
-        self.selection_grid = QtWidgets.QWidget()
-        self.selection_grid.setLayout(self.left_panel)
-        self.plot_splitter.addWidget(self.selection_grid)
-
-        # Figure Viewer for the second half of splitter
-        self.figure_viewer.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        self.plot_splitter.addWidget(self.func_ui)
         self.plot_splitter.addWidget(self.figure_viewer)
         self.plot_splitter.setStretchFactor(1, 1)
 
         self.layout = QtWidgets.QVBoxLayout()
+        self.layout.addWidget(self.type_picker)
         self.layout.addWidget(self.plot_splitter)
         self.layout.addWidget(self.error_console_wrapper)
         self.setLayout(self.layout)
 
+        # Size policies
+        self.figure_viewer.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         self.func_ui.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.plot_splitter.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        self.type_picker.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.error_console.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Minimum)
 
         # Initial selection
-        self.type_picker.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         self.type_picker.setCurrentRow(0)
         self.on_type_changed()
 
@@ -149,8 +185,13 @@ class Grapher(QtWidgets.QWidget):
             self.error_console_wrapper.setTitle("*** Grapher Console ***")
 
     def set_state(self, plot_type, dct):
-        self.type_picker.setCurrentIndex(self.type_picker.items)
+        self.type_picker.setCurrentIndex(self.type_picker.model().index(
+            [schema.name for schema in schemas].index(plot_type), 0
+        ))
+        self.on_type_changed()
+        print(self.current_schema)
         self.func_ui.set_data(dct)
+
 
 def clear_layout(layout):
     for i in reversed(range(layout.count())):
@@ -163,7 +204,6 @@ schemas = [Schema(name='histogram',
                   label='Histogram',
                   function=jotly.histogram,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-histogram.svg')),
-
            Schema(name='scatter',
                   label='Scatter',
                   function=jotly.scatter,
@@ -219,7 +259,7 @@ if __name__ == "__main__":
     gb = Grapher(pokemon)
     gb.show()
 
-    gb.type_picker
-    gb.func_ui.set_data({'y': 'Attack', 'x': 'Defense'})
+    gb.set_state('scatter', {'y': 'Attack', 'x': 'Defense'})
+    # gb.set_state('histogram', {'x': 'Defense'})
 
     app.exec_()

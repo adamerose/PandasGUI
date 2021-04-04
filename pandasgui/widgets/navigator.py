@@ -50,9 +50,8 @@ class Navigator(base_widgets.QTreeWidget):
 
         self.expandAll()
         self.setHeaderLabels(["Name", "Shape"])
-        for i in range(self.columnCount()):
-            self.resizeColumnToContents(i)
 
+        self.header().setStretchLastSection(False)
         self.setAcceptDrops(True)
         self.setDragEnabled(True)
         self.setDragDropMode(self.DragDrop)
@@ -62,10 +61,8 @@ class Navigator(base_widgets.QTreeWidget):
         self.apply_tree_settings()
 
     def showEvent(self, event: QtGui.QShowEvent):
-        self.resizeColumnToContents(0)
-        self.setColumnWidth(0, self.columnWidth(0) + 20)
-        # Zero because see note at https://doc.qt.io/qt-5/qheaderview.html#stretchLastSection-prop
-        self.setColumnWidth(1, 0)
+        for i in range(self.columnCount()):
+            self.resizeColumnToContents(i)
         event.accept()
 
     def remove_item(self, name):
@@ -77,13 +74,12 @@ class Navigator(base_widgets.QTreeWidget):
         super().rowsInserted(parent, start, end)
         self.expandAll()
 
-    def sizeHint(self):
-        # Width
-        width = 0
-        for i in range(self.columnCount()):
-            width += self.columnWidth(i)
-        return QtCore.QSize(300, 500)
+    def sizeHint(self) -> QtCore.QSize:
+        self.header().setStretchLastSection(False)
+        width = 5 + sum([self.columnWidth(i) for i in range(self.columnCount())])
+        self.header().setStretchLastSection(True)
 
+        return QtCore.QSize(width, super().sizeHint().height())
     def apply_tree_settings(self):
         root = self.invisibleRootItem()
         root.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled)

@@ -293,26 +293,38 @@ class FuncUi(QtWidgets.QWidget):
         return data
 
     def set_data(self, dct: dict):
-        for dct_key, dct_val in dct.items():
+        for dct_key in list(dct.keys()):
             root = self.dest_tree.invisibleRootItem()
             for i in range(root.childCount()):
                 item = root.child(i)
                 arg = next(arg for arg in self.schema.args if arg.arg_name == item.text(0))
-                if type(arg) == ColumnArg:
-                    item.setData(1, Qt.UserRole, dct_val)
-                elif type(arg) == BooleanArg:
-                    item.setData(1, Qt.UserRole, dct_val)
-                else:
-                    item.setData(1, Qt.UserRole, dct_val)
+                if arg.arg_name == dct_key:
+                    if type(arg) == ColumnArg:
+                        val = dct.pop(dct_key)
+                        item.setData(1, Qt.UserRole, val)
+                        self.remembered_values[dct_key] = val
+                    elif type(arg) == BooleanArg:
+                        val = dct.pop(dct_key)
+                        item.setData(1, Qt.UserRole, val)
+                        self.remembered_values[dct_key] = val
+                    else:
+                        val = dct.pop(dct_key)
+                        item.setData(1, Qt.UserRole, val)
+                        self.remembered_values[dct_key] = val
 
             root = self.kwargs_dialog.tree_widget.invisibleRootItem()
             for i in range(root.childCount()):
                 item = root.child(i)
                 key = item.text(0)
                 if key == dct_key:
-                    item.setText(1, dct_val)
+                    val = dct.pop(dct_key)
+                    item.setText(1, val)
+                    self.remembered_values[dct_key] = val
 
-        self.valuesChanged.emit()
+        if dct.keys():
+            raise ValueError(f"{dct.keys()} not in schema")
+
+        self.set_schema(self.schema)
 
     def set_sources(self, sources: List[str], source_nunique: List[str], source_types: List[str]):
 

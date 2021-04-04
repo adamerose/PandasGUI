@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 preferences_path = os.path.join(LOCAL_DATA_DIR, 'preferences.json')
 if not os.path.exists(preferences_path):
     with open(preferences_path, 'w') as f:
-        json.dump({'theme': "light"}, f)
+        json.dump({}, f)
 
 
 def read_saved_settings():
@@ -584,7 +584,7 @@ class PandasGuiStore:
 
         # Add to nav
         shape = pgdf.df.shape
-        shape = str(shape[0]) + " X " + str(shape[1])
+        shape = f"{shape[0]:,} x {shape[1]:,}"
 
         item = QtWidgets.QTreeWidgetItem(self.navigator, [name, shape])
         self.navigator.itemSelectionChanged.emit()

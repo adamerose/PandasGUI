@@ -153,10 +153,6 @@ class PandasGui(QtWidgets.QMainWindow):
         self.splitter.setStretchFactor(0, 0)
         self.splitter.setStretchFactor(1, 1)
 
-        nav_width = self.navigator.sizeHint().width()
-        self.splitter.setSizes([nav_width, self.width() - nav_width])
-        self.splitter.setContentsMargins(10, 10, 10, 10)
-
         # makes the find toolbar
         self.find_bar = FindToolbar(self)
         self.addToolBar(self.find_bar)
@@ -169,6 +165,15 @@ class PandasGui(QtWidgets.QMainWindow):
         self.store.settings.settingsChanged.connect(self.apply_settings)
 
         self.apply_settings()
+
+    def showEvent(self, a0: QtGui.QShowEvent) -> None:
+        self.fit_to_nav()
+
+    def fit_to_nav(self) -> None:
+        nav_width = self.navigator.sizeHint().width()
+        self.splitter.setSizes([nav_width, self.width() - nav_width])
+        self.splitter.setContentsMargins(10, 10, 10, 10)
+
     ####################
     # Menu bar functions
 
@@ -238,7 +243,6 @@ class PandasGui(QtWidgets.QMainWindow):
                 action.setShortcut(x.shortcut)
                 action.triggered.connect(x.func)
                 menu.addAction(action)
-
 
     def apply_settings(self):
         theme = self.store.settings.theme.value
@@ -384,7 +388,7 @@ class PandasGui(QtWidgets.QMainWindow):
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(SettingsEditor(self.store.settings))
         dialog.setLayout(layout)
-        dialog.resize(700,800)
+        dialog.resize(700, 800)
         dialog.show()
 
     def about(self):
