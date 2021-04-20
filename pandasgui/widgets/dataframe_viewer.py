@@ -375,14 +375,16 @@ class DataTableModel(QtCore.QAbstractTableModel):
 
             if color_mode == 'all':
                 percentile = cell / self.pgdf.column_statistics['Max'].max()
-                return QtGui.QColor(QtGui.QColor(255, 0, 0, int(255 * percentile)))
-
             elif color_mode == 'row':
                 percentile = cell / self.pgdf.row_statistics['Max'][row]
-                return QtGui.QColor(QtGui.QColor(255, 0, 0, int(255 * percentile)))
-
             elif color_mode == 'column':
                 percentile = cell / self.pgdf.column_statistics['Max'][col]
+            else:
+                raise ValueError
+
+            if pd.isna(percentile):
+                return None
+            else:
                 return QtGui.QColor(QtGui.QColor(255, 0, 0, int(255 * percentile)))
 
     def flags(self, index):
