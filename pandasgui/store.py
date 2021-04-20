@@ -1,3 +1,13 @@
+from __future__ import annotations
+import typing
+
+if typing.TYPE_CHECKING:
+    from pandasgui.gui import PandasGui
+    from pandasgui.widgets.filter_viewer import FilterViewer
+    from pandasgui.widgets.dataframe_viewer import DataFrameViewer
+    from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
+    from pandasgui.widgets.navigator import Navigator
+
 import textwrap
 import time
 from dataclasses import dataclass, field, asdict
@@ -256,11 +266,11 @@ class PandasGuiDataFrameStore:
         # References to other object instances that may be assigned later
         self.settings: SettingsStore = SETTINGS_STORE
         self.store: Union[PandasGuiStore, None] = None
-        self.gui: Union["PandasGui", None] = None
-        self.dataframe_explorer: Union["DataFrameExplorer", None] = None
-        self.dataframe_viewer: Union["DataFrameViewer", None] = None
-        self.stats_viewer: Union["DataFrameViewer", None] = None
-        self.filter_viewer: Union["FilterViewer", None] = None
+        self.gui: Union[PandasGui, None] = None
+        self.dataframe_explorer: DataFrameExplorer = None
+        self.dataframe_viewer: Union[DataFrameViewer, None] = None
+        self.stats_viewer: Union[DataFrameViewer, None] = None
+        self.filter_viewer: Union[FilterViewer, None] = None
 
         self.column_sorted: Union[int, None] = None
         self.index_sorted: Union[int, None] = None
@@ -514,7 +524,7 @@ class PandasGuiDataFrameStore:
             self.dataframe_viewer.refresh_ui()
 
     @staticmethod
-    def cast(df: Union["PandasGuiDataFrameStore", pd.DataFrame, pd.Series, Iterable]):
+    def cast(df: Union[PandasGuiDataFrameStore, pd.DataFrame, pd.Series, Iterable]):
         if isinstance(df, PandasGuiDataFrameStore):
             return df
         if isinstance(df, pd.DataFrame):
@@ -530,10 +540,10 @@ class PandasGuiDataFrameStore:
 
 @dataclass
 class PandasGuiStore:
-    settings: Union["SettingsStore", None] = None
+    settings: Union[SettingsStore, None] = None
     data: Dict[str, PandasGuiDataFrameStore] = field(default_factory=dict)
-    gui: Union["PandasGui", None] = None
-    navigator: Union["Navigator", None] = None
+    gui: Union[PandasGui, None] = None
+    navigator: Union[Navigator, None] = None
     selected_pgdf: Union[PandasGuiDataFrameStore, None] = None
 
     def __post_init__(self):
