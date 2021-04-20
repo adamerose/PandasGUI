@@ -86,6 +86,7 @@ class Setting(DictLike):
 DEFAULT_SETTINGS = {'editable': True,
                     'block': None,
                     'theme': 'light',
+                    'refresh_statistics': False,
                     'render_mode': 'auto',
                     'aggregation': 'mean',
                     'title_format': "{name}: {title_columns}{title_dimensions}{names}{title_y}{title_z}{over_by}"
@@ -142,6 +143,12 @@ class SettingsStore(DictLike, QtCore.QObject):
                              description="UI theme",
                              dtype=Literal['light', 'dark', 'classic'],
                              persist=True)
+
+        self.refresh_statistics = Setting(label="refresh_statistics",
+                                          value=settings['refresh_statistics'],
+                                          description="Recalculate statistics when data changes",
+                                          dtype=bool,
+                                          persist=True)
 
         # Settings related to Grapher
 
@@ -282,6 +289,7 @@ class PandasGuiDataFrameStore:
         # Statistics
         self.column_statistics = None
         self.row_statistics = None
+        self.statistics_outdated = True
 
         self.data_changed()
 
@@ -291,32 +299,32 @@ class PandasGuiDataFrameStore:
         super().__setattr__(name, value)
 
     @status_message_decorator("Refreshing statistics...")
-    def refresh_statistics(self):
+    def refresh_statistics(self, force=True):
+        if force or self.settings.refresh_statistics.value:
+            df = self.df
+            self.column_statistics = pd.DataFrame({
+                "Type": df.dtypes.astype(str),
+                "Count": df.count(),
+                "N Unique": nunique(df),
+                "Mean": df.mean(numeric_only=True),
+                "StdDev": df.std(numeric_only=True),
+                "Min": df.min(numeric_only=True),
+                "Max": df.max(numeric_only=True),
+            }, index=df.columns
+            )
 
-        df = self.df
-        self.column_statistics = pd.DataFrame({
-            "Type": df.dtypes.astype(str),
-            "Count": df.count(),
-            "N Unique": nunique(df),
-            "Mean": df.mean(numeric_only=True),
-            "StdDev": df.std(numeric_only=True),
-            "Min": df.min(numeric_only=True),
-            "Max": df.max(numeric_only=True),
-        }, index=df.columns
-        )
-
-        df = self.df.transpose()
-        df_numeric = self.df.select_dtypes('number').transpose()
-        self.row_statistics = pd.DataFrame({
-            # "Type": df.dtypes.astype(str),
-            # "Count": df.count(),
-            # "N Unique": nunique(df),
-            # "Mean": df_numeric.mean(numeric_only=True),
-            # "StdDev": df_numeric.std(numeric_only=True),
-            # "Min": df_numeric.min(numeric_only=True),
-            "Max": df_numeric.max(numeric_only=True),
-        }, index=df.columns
-        )
+            df = self.df.transpose()
+            df_numeric = self.df.select_dtypes('number').transpose()
+            self.row_statistics = pd.DataFrame({
+                # "Type": df.dtypes.astype(str),
+                # "Count": df.count(),
+                # "N Unique": nunique(df),
+                # "Mean": df_numeric.mean(numeric_only=True),
+                # "StdDev": df_numeric.std(numeric_only=True),
+                # "Min": df_numeric.min(numeric_only=True),
+                "Max": df_numeric.max(numeric_only=True),
+            }, index=df.columns
+            )
 
     ###################################
     # Code history
