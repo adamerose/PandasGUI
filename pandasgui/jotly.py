@@ -286,13 +286,11 @@ def pie(data_frame: DataFrame,
 
 
 def scatter_matrix(data_frame: DataFrame,
-                   # TODO convert dimensions to ColumnNameList
-                   dimensions: ColumnName = None,
+                   dimensions: ColumnNameList = None,
                    color: ColumnName = None,
                    # Args that won't appear in Grapher UI
                    title_format: HiddenArg = None,
                    **kwargs) -> Figure:
-    dimensions = [dimensions]
     fig = px.scatter_matrix(data_frame=data_frame,
                             dimensions=dimensions,
                             color=color,
@@ -331,8 +329,7 @@ def scatter_3d(data_frame: DataFrame,
 
 
 def word_cloud(data_frame: DataFrame,
-               # TODO convert words to ColumnNameList
-               words: ColumnName = None,
+               words: ColumnNameList = None,
                # Args that won't appear in Grapher UI
                title_format: HiddenArg = None,
                **kwargs) -> Figure:

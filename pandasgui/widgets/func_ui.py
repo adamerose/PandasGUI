@@ -6,6 +6,8 @@ import typing
 import os
 import inspect
 import pprint
+
+from pandasgui.jotly import ColumnName, ColumnNameList
 from pandasgui.utility import nunique
 from pandasgui.store import SETTINGS_STORE
 import pandasgui
@@ -29,6 +31,19 @@ class ColumnArg:
     def __init__(self, arg_name, default_value=None):
         if default_value is None:
             default_value = ""
+
+        self.arg_name = arg_name
+        self.default_value = default_value
+
+
+@dataclass
+class ColumnListArg:
+    arg_name: str
+    default_value: List[str]
+
+    def __init__(self, arg_name, default_value=None):
+        if default_value is None:
+            default_value = []
 
         self.arg_name = arg_name
         self.default_value = default_value
@@ -88,8 +103,11 @@ class Schema:
                         values = get_args(arg_type)
                         args.append(OptionListArg(arg_name, values, default_value=arg_default))
 
-                    elif issubclass(arg_type, str):
+                    elif arg_type == ColumnName:
                         args.append(ColumnArg(arg_name, default_value=arg_default or ''))
+
+                    elif arg_type == ColumnNameList:
+                        args.append(ColumnListArg(arg_name, default_value=arg_default or []))
 
                     elif arg_type == bool:
                         args.append(BooleanArg(arg_name, default_value=arg_default))
@@ -101,7 +119,7 @@ class Schema:
         self.icon_path = icon_path
 
     name: str
-    args: List[Union[ColumnArg, OptionListArg, BooleanArg]]
+    args: List[Union[ColumnArg, ColumnListArg, OptionListArg, BooleanArg]]
     label: str
     function: Callable
     icon_path: str
@@ -266,16 +284,7 @@ class FuncUi(QtWidgets.QWidget):
         for i in range(root.childCount()):
             item = root.child(i)
             section = item.text(0)
-
-            arg = next(arg for arg in self.schema.args if arg.arg_name == item.text(0))
-
-            if type(arg) == ColumnArg:
-                val = item.data(1, Qt.UserRole)
-                data[section] = None if val == "" else val
-            elif type(arg) == BooleanArg:
-                data[section] = item.data(1, Qt.UserRole)
-            else:
-                data[section] = item.data(1, Qt.UserRole)
+            data[section] = item.data(1, Qt.UserRole)
 
         # Add custom kwargs
         root = self.kwargs_dialog.tree_widget.invisibleRootItem()
@@ -294,24 +303,17 @@ class FuncUi(QtWidgets.QWidget):
 
     def set_data(self, dct: dict):
         for dct_key in list(dct.keys()):
+            # Set tree values
             root = self.dest_tree.invisibleRootItem()
             for i in range(root.childCount()):
                 item = root.child(i)
                 arg = next(arg for arg in self.schema.args if arg.arg_name == item.text(0))
                 if arg.arg_name == dct_key:
-                    if type(arg) == ColumnArg:
-                        val = dct.pop(dct_key)
-                        item.setData(1, Qt.UserRole, val)
-                        self.remembered_values[dct_key] = val
-                    elif type(arg) == BooleanArg:
-                        val = dct.pop(dct_key)
-                        item.setData(1, Qt.UserRole, val)
-                        self.remembered_values[dct_key] = val
-                    else:
-                        val = dct.pop(dct_key)
-                        item.setData(1, Qt.UserRole, val)
-                        self.remembered_values[dct_key] = val
+                    val = dct.pop(dct_key)
+                    item.setData(1, Qt.UserRole, val)
+                    self.remembered_values[dct_key] = val
 
+            # Set kwargs_dialog values
             root = self.kwargs_dialog.tree_widget.invisibleRootItem()
             for i in range(root.childCount()):
                 item = root.child(i)
@@ -351,7 +353,8 @@ class FuncUi(QtWidgets.QWidget):
 
                 cdz = ColumnDropZone()
                 item.treeWidget().setItemWidget(item, 1, cdz)
-                cdz.valueChanged.connect(lambda text, item=item: item.setData(1, Qt.UserRole, text))
+                cdz.valueChanged.connect(
+                    lambda text, item=item: item.setData(1, Qt.UserRole, text if text != "" else None))
 
                 if arg.arg_name in self.remembered_values.keys():
                     val = self.remembered_values[arg.arg_name]
@@ -362,6 +365,24 @@ class FuncUi(QtWidgets.QWidget):
                 cdz.setText(val)
                 cdz.valueChanged.emit(val)  # Need this incase value was same
                 cdz.valueChanged.connect(lambda: self.valuesChanged.emit())
+
+            elif type(arg) == ColumnListArg:
+
+                cldz = ColumnListDropZone()
+                item.treeWidget().setItemWidget(item, 1, cldz)
+                cldz.valueChanged.connect(
+                    lambda name_list, item=item: item.setData(1, Qt.UserRole, name_list))
+
+                if arg.arg_name in self.remembered_values.keys():
+                    val = self.remembered_values[arg.arg_name]
+                elif arg.arg_name in asdict(SETTINGS_STORE).keys():
+                    val = SETTINGS_STORE[arg.arg_name].value
+                else:
+                    val = arg.default_value
+
+                cldz.set_names(val)
+                cldz.valueChanged.emit(val)  # Need this incase value was same
+                cldz.valueChanged.connect(lambda: self.valuesChanged.emit())
 
             elif type(arg) == BooleanArg:
                 checkbox = QtWidgets.QCheckBox()
@@ -456,6 +477,85 @@ class ColumnDropZone(QtWidgets.QLabel):
         self.setText("")
         self.valueChanged.emit("")
         super().mouseDoubleClickEvent(e)
+
+
+class ColumnListDropZone(QtWidgets.QListWidget):
+    valueChanged = QtCore.pyqtSignal(list)  # List of strings
+
+    def __init__(self):
+        super().__init__()
+        self.setAcceptDrops(True)
+        self.setMaximumHeight(80)
+
+    def set_names(self, names: List[str]):
+        self.clear()
+        self.addItems(names)
+        self.valueChanged.emit(self.get_items())
+
+    def get_items(self):
+        return [self.item(ix).text() for ix in range(self.count())]
+
+    # def mousePressEvent(self, event):
+    #     if event.button() == Qt.LeftButton:
+    #         self.drag_start_position = event.pos()
+    #
+    # def mouseMoveEvent(self, event):
+    #     if not (event.buttons() & Qt.LeftButton):
+    #         return
+    #     if (event.pos() - self.drag_start_position).manhattanLength() < QtWidgets.QApplication.startDragDistance():
+    #         return
+    #     drag = QtGui.QDrag(self)
+    #     mimedata = QtCore.QMimeData()
+    #     mimedata.setText(self.text())
+    #     drag.setMimeData(mimedata)
+    #     pixmap = QtGui.QPixmap(self.size())
+    #     painter = QtGui.QPainter(pixmap)
+    #     painter.drawPixmap(self.rect(), self.grab())
+    #     painter.end()
+    #     drag.setPixmap(pixmap)
+    #     drag.setHotSpot(event.pos())
+    #     drag.exec_(Qt.MoveAction)
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasText():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        src_widget = event.source()
+        if issubclass(type(src_widget), QtWidgets.QTreeWidget):
+            items = [item.text(0) for item in src_widget.selectedItems()]
+            self.addItems(items)
+            self.valueChanged.emit(self.get_items())
+
+        event.acceptProposedAction()
+
+    def mouseDoubleClickEvent(self, e: QtGui.QMouseEvent) -> None:
+        ix = self.indexAt(e.pos())
+        sip.delete(self.itemAt(e.pos()))
+        self.valueChanged.emit([self.item(ix).text() for ix in range(self.count())])
+        super().mouseDoubleClickEvent(e)
+
+
+def decode_data(bytearray):
+    data = []
+    item = {}
+
+    ds = QtCore.QDataStream(bytearray)
+    while not ds.atEnd():
+
+        row = ds.readInt32()
+        column = ds.readInt32()
+
+        map_items = ds.readInt32()
+        for i in range(map_items):
+            key = ds.readInt32()
+
+            value = QtCore.QVariant()
+            ds >> value
+            item[Qt.ItemDataRole(key)] = value
+
+        data.append(item)
+    return data
 
 
 class DestinationTree(base_widgets.QTreeWidget):
