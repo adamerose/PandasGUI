@@ -32,7 +32,7 @@ def histogram(data_frame: DataFrame,
               color: ColumnName = None,
               facet_row: ColumnName = None,
               facet_col: ColumnName = None,
-              marginal: Literal['none', 'rug', 'box', 'violin'] = 'none',
+              marginal: Literal[None, 'rug', 'box', 'violin'] = None,
               cumulative: bool = False,
               # Args that won't appear in Grapher UI
               title_format: HiddenArg = None,
@@ -42,7 +42,7 @@ def histogram(data_frame: DataFrame,
                        color=color,
                        facet_row=facet_row,
                        facet_col=facet_col,
-                       marginal=marginal if marginal != 'none' else None,
+                       marginal=marginal,
                        cumulative=cumulative,
                        **kwargs)
 
@@ -61,8 +61,8 @@ def scatter(data_frame: DataFrame,
             facet_col: ColumnName = None,
             symbol: ColumnName = None,
             size: ColumnName = None,
-            trendline: Literal['none', 'ols', 'lowess'] = 'none',
-            marginal: Literal['none', 'histogram', 'rug', 'box', 'violin'] = 'none',
+            trendline: Literal[None, 'ols', 'lowess'] = None,
+            marginal: Literal[None, 'histogram', 'rug', 'box', 'violin'] = None,
             # Args that won't appear in Grapher UI
             title_format: HiddenArg = None,
             **kwargs) -> Figure:
@@ -72,9 +72,9 @@ def scatter(data_frame: DataFrame,
                      color=color,
                      symbol=symbol,
                      size=size,
-                     trendline=trendline if trendline != 'none' else None,
-                     marginal_x=marginal if marginal != 'none' else None,
-                     marginal_y=marginal if marginal != 'none' else None,
+                     trendline=trendline,
+                     marginal_x=marginal,
+                     marginal_y=marginal,
                      facet_row=facet_row,
                      facet_col=facet_col,
 
@@ -96,14 +96,14 @@ def line(data_frame: DataFrame,
          facet_row: ColumnName = None,
          facet_col: ColumnName = None,
          # Custom args
-         aggregation: Literal['mean', 'median', 'min', 'max', 'sum', 'none'] = 'mean',
+         aggregation: Literal['mean', 'median', 'min', 'max', 'sum', None] = 'mean',
          # Args that won't appear in Grapher UI
          title_format: HiddenArg = None,
          **kwargs) -> Figure:
     # Create list of key columns
     key_cols = [val for val in [x, color, facet_row, facet_col] if val is not None]
     if key_cols != []:
-        if aggregation != 'none':
+        if aggregation is not None:
             data_frame = data_frame.groupby(key_cols).agg(aggregation).reset_index()
         else:
             # Only need to sort here because aggregation already sorts
@@ -136,14 +136,14 @@ def bar(data_frame: DataFrame,
         facet_row: ColumnName = None,
         facet_col: ColumnName = None,
         # Custom args
-        aggregation: Literal['mean', 'median', 'min', 'max', 'sum', 'none'] = 'mean',
+        aggregation: Literal['mean', 'median', 'min', 'max', 'sum', None] = 'mean',
         # Args that won't appear in Grapher UI
         title_format: HiddenArg = None,
         **kwargs) -> Figure:
     # Create list of key columns
     key_cols = [val for val in [x, color, facet_row, facet_col] if val is not None]
     if key_cols != []:
-        if aggregation != 'none':
+        if aggregation is not None:
             data_frame = data_frame.groupby(key_cols).agg(aggregation).reset_index()
         else:
             # Only need to sort here because aggregation already sorts

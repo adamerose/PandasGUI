@@ -338,6 +338,26 @@ def kwargs_string(kwargs_dict):
     return ', '.join([f'{key}={repr(val)}' for key, val in kwargs_dict.items()])
 
 
+def get_function_body(func):
+    import inspect
+    from itertools import dropwhile
+    source_lines = inspect.getsourcelines(func)[0]
+    source_lines = dropwhile(lambda x: x.startswith('@'), source_lines)
+    line = next(source_lines).strip()
+    if not line.startswith('def '):
+        return line.rsplit(':')[-1].strip()
+    elif not line.endswith(':'):
+        for line in source_lines:
+            line = line.strip()
+            if line.endswith(':'):
+                break
+    # Handle functions that are not one-liners
+    first_line = next(source_lines)
+    # Find the indentation of the first line
+    indentation = len(first_line) - len(first_line.lstrip())
+    return ''.join([first_line[indentation:]] + [line[indentation:] for line in source_lines])
+
+
 # In North America, Week 1 of any given year is the week which contains January 1st. Weeks span Sunday to Saturday.
 def get_week(timestamp):
     from datetime import datetime

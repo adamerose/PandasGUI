@@ -1,4 +1,6 @@
 import re
+from collections import OrderedDict
+
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5.QtCore import Qt
 from typing import List, Callable
@@ -8,7 +10,7 @@ import inspect
 import pprint
 
 from pandasgui.jotly import ColumnName, ColumnNameList
-from pandasgui.utility import nunique
+from pandasgui.utility import nunique, get_function_body, refactor_variable, kwargs_string
 from pandasgui.store import SETTINGS_STORE
 import pandasgui
 import ast
@@ -157,6 +159,15 @@ class FuncUi(QtWidgets.QWidget):
         self.preview_dialog.layout().addWidget(self.preview_dialog_text)
         self.valuesChanged.connect(lambda: self.preview_dialog_text.setText(
             pprint.pformat(self.get_data(), width=40)))
+
+        # Code export dialog
+        self.code_export_dialog = QtWidgets.QDialog(self)
+        self.code_export_dialog_text = QtWidgets.QTextEdit()
+        self.code_export_dialog.setLayout(QtWidgets.QVBoxLayout())
+        self.code_export_dialog.layout().addWidget(self.code_export_dialog_text)
+        self.valuesChanged.connect(lambda: self.code_export_dialog_text.setText(
+            pprint.pformat(self.get_data(), width=40)))
+
         # Search box
         self.search_bar = QtWidgets.QLineEdit()
         self.search_bar.textChanged.connect(self.filter)
@@ -191,6 +202,7 @@ class FuncUi(QtWidgets.QWidget):
         # Buttons
         self.kwargs_button = QtWidgets.QPushButton("Custom Kwargs")
         self.save_html_button = QtWidgets.QPushButton("Save HTML")
+        self.code_export_button = QtWidgets.QPushButton("Code Export")
         self.reset_button = QtWidgets.QPushButton("Reset")
         self.preview_button = QtWidgets.QPushButton("Preview Kwargs")
         self.finish_button = QtWidgets.QPushButton("Finish")
@@ -202,6 +214,7 @@ class FuncUi(QtWidgets.QWidget):
         self.kwargs_button.clicked.connect(self.custom_kwargs)
         self.reset_button.clicked.connect(self.reset)
         self.save_html_button.clicked.connect(self.save_html)
+        self.code_export_button.clicked.connect(self.code_export)
         self.preview_button.clicked.connect(self.preview)
         self.finish_button.clicked.connect(self.finish)
 
@@ -214,6 +227,7 @@ class FuncUi(QtWidgets.QWidget):
         self.button_layout.addWidget(self.kwargs_button)
         self.button_layout.addWidget(self.save_html_button)
         self.button_layout.addWidget(self.reset_button)
+        self.button_layout.addWidget(self.code_export_button)
         self.button_layout.addWidget(self.preview_button)
         self.button_layout.addWidget(self.finish_button)
 
@@ -244,28 +258,45 @@ class FuncUi(QtWidgets.QWidget):
         for item in items:
             item.setHidden(False)
 
-    # Clear tree items under each sections
-    def clear_tree(self):
-        root = self.dest_tree.invisibleRootItem()
-        to_delete = []
-        for i in range(root.childCount()):
-            child = root.child(i)
-            for j in range(child.childCount()):
-                sub_child = child.child(j)
-                to_delete.append(sub_child)
-
-        for item in to_delete:
-            sip.delete(item)
-
     def custom_kwargs(self):
         self.kwargs_dialog.setVisible(not self.kwargs_dialog.isVisible())
 
     def preview(self):
         self.preview_dialog.setVisible(not self.preview_dialog.isVisible())
 
+    def code_export(self):
+        func = self.schema.function
+        func_body = get_function_body(func)
+        kwargs = self.get_data()
+        text = func_body
+
+        # Replace variable names with values
+        for key, val in kwargs.items():
+            text = refactor_variable(text, key, repr(val))
+
+        # Plug in settings values
+        for setting_name, setting in SETTINGS_STORE.__dict__.items():
+            text = text.replace(f"SETTINGS_STORE.{setting_name}.value", repr(setting.value))
+
+        # Do other replacements
+        text = refactor_variable(text, "data_frame", "pokemon")
+        text = text.replace("return fig", "show(fig)")
+
+        # Get kwargs not absorbed by jotly function
+        extra_kwargs = {k: v for k, v in kwargs.items() if k not in inspect.getfullargspec(func).args}
+        text = text.replace("**kwargs", kwargs_string(extra_kwargs))
+
+        # Add imports
+        text = ("import plotly.express as px\n" +
+                "from pandasgui.jotly import generate_title\n" +
+                "from pandasgui import show\n\n" + text)
+
+        self.code_export_dialog_text.setText(text)
+        self.code_export_dialog.setVisible(not self.code_export_dialog.isVisible())
+
     def reset(self):
         self.remembered_values = {}
-        self.clear_tree()
+        self.set_schema(self.schema)
 
     def finish(self):
         self.finished.emit()
@@ -410,7 +441,7 @@ class FuncUi(QtWidgets.QWidget):
                     lambda ix, values=arg.values, item=item: item.setData(1, Qt.UserRole, values[ix]))
                 combo_box.currentIndexChanged.connect(lambda: self.valuesChanged.emit())
 
-                if arg.arg_name in self.remembered_values.keys():
+                if arg.arg_name in self.remembered_values.keys() and arg.arg_name in arg.values:
                     val = self.remembered_values[arg.arg_name]
                 elif arg.arg_name in asdict(SETTINGS_STORE).keys():
                     val = SETTINGS_STORE[arg.arg_name].value
@@ -421,6 +452,7 @@ class FuncUi(QtWidgets.QWidget):
                 combo_box.currentIndexChanged.emit(ix)  # Need this incase value was same
 
         self.valuesChanged.emit()
+        self.dest_tree.autosize_columns()
 
 
 class ColumnDropZone(QtWidgets.QLabel):
@@ -485,7 +517,22 @@ class ColumnListDropZone(QtWidgets.QListWidget):
     def __init__(self):
         super().__init__()
         self.setAcceptDrops(True)
-        self.setMaximumHeight(80)
+
+        self.setDragDropMode(self.DragDrop)
+        self.setSelectionMode(self.ExtendedSelection)
+        self.setDefaultDropAction(QtCore.Qt.MoveAction)
+
+    def sizeHint(self):
+        width = super().sizeHint().width()
+        height = sum([self.sizeHintForRow(i) for i in range(self.count())]) + 5
+        if self.count() == 0:
+            height += 30
+        elif self.count() == 1:
+            height += (30 - self.sizeHintForRow(0))
+        return QtCore.QSize(width, height)
+
+    def remove_duplicates(self):
+        self.set_names(list(OrderedDict.fromkeys(self.get_items())))
 
     def set_names(self, names: List[str]):
         self.clear()
@@ -495,28 +542,12 @@ class ColumnListDropZone(QtWidgets.QListWidget):
     def get_items(self):
         return [self.item(ix).text() for ix in range(self.count())]
 
-    # def mousePressEvent(self, event):
-    #     if event.button() == Qt.LeftButton:
-    #         self.drag_start_position = event.pos()
-    #
-    # def mouseMoveEvent(self, event):
-    #     if not (event.buttons() & Qt.LeftButton):
-    #         return
-    #     if (event.pos() - self.drag_start_position).manhattanLength() < QtWidgets.QApplication.startDragDistance():
-    #         return
-    #     drag = QtGui.QDrag(self)
-    #     mimedata = QtCore.QMimeData()
-    #     mimedata.setText(self.text())
-    #     drag.setMimeData(mimedata)
-    #     pixmap = QtGui.QPixmap(self.size())
-    #     painter = QtGui.QPainter(pixmap)
-    #     painter.drawPixmap(self.rect(), self.grab())
-    #     painter.end()
-    #     drag.setPixmap(pixmap)
-    #     drag.setHotSpot(event.pos())
-    #     drag.exec_(Qt.MoveAction)
-
     def dragEnterEvent(self, event):
+        if event.mimeData().hasText():
+            event.acceptProposedAction()
+
+    # https://stackoverflow.com/a/12178903/3620725
+    def dragMoveEvent(self, event):
         if event.mimeData().hasText():
             event.acceptProposedAction()
 
@@ -525,15 +556,32 @@ class ColumnListDropZone(QtWidgets.QListWidget):
         if issubclass(type(src_widget), QtWidgets.QTreeWidget):
             items = [item.text(0) for item in src_widget.selectedItems()]
             self.addItems(items)
+            self.remove_duplicates()
             self.valueChanged.emit(self.get_items())
+            event.acceptProposedAction()
+        elif issubclass(type(src_widget), ColumnDropZone):
+            source = event.source()
+            source.setText('')
+            source.valueChanged.emit('')
 
-        event.acceptProposedAction()
+            dropped_text = event.mimeData().text()
+            self.addItems([dropped_text])
+            self.remove_duplicates()
+            self.valueChanged.emit(self.get_items())
+        else:
+            super().dropEvent(event)
 
     def mouseDoubleClickEvent(self, e: QtGui.QMouseEvent) -> None:
         ix = self.indexAt(e.pos())
         sip.delete(self.itemAt(e.pos()))
         self.valueChanged.emit([self.item(ix).text() for ix in range(self.count())])
         super().mouseDoubleClickEvent(e)
+
+    def mimeData(self, indexes):
+        mimedata = super().mimeData(indexes)
+        if indexes:
+            mimedata.setText(indexes[0].text())
+        return mimedata
 
 
 def decode_data(bytearray):
@@ -564,8 +612,24 @@ class DestinationTree(base_widgets.QTreeWidget):
         self.setItemsExpandable(False)
         self.setRootIsDecorated(False)
         self.setAcceptDrops(False)
+        self.setColumnWidth(0, 90)
         root = self.invisibleRootItem()
         root.setFlags(root.flags() & Qt.ItemIsEnabled & ~Qt.ItemIsDropEnabled & ~Qt.ItemIsDragEnabled)
+
+    # https://stackoverflow.com/a/67213574/3620725
+    def setItemWidget(self, item, column, widget):
+        super().setItemWidget(item, column, widget)
+        if isinstance(widget, QtWidgets.QListWidget):
+            widget.model().rowsInserted.connect(
+                lambda: self.updateItemWidget(item, column))
+            widget.model().rowsRemoved.connect(
+                lambda: self.updateItemWidget(item, column))
+
+    # https://stackoverflow.com/a/67213574/3620725
+    def updateItemWidget(self, item, column):
+        widget = self.itemWidget(item, column)
+        item.setSizeHint(column, widget.sizeHint())
+        self.updateGeometries()
 
     # def dropEvent(self, e: QtGui.QDropEvent):
     #     mime_type = 'application/x-qabstractitemmodeldatalist'
