@@ -36,18 +36,22 @@ logger = logging.getLogger(__name__)
 
 # JSON file that stores persistent user preferences
 preferences_path = os.path.join(LOCAL_DATA_DIR, 'preferences.json')
-if not os.path.exists(preferences_path):
-    with open(preferences_path, 'w') as f:
-        json.dump({}, f)
 
 
 def read_saved_settings():
     if not os.path.exists(preferences_path):
+        write_saved_settings({})
         return {}
     else:
-        with open(preferences_path, 'r') as f:
-            saved_settings = json.load(f)
-        return saved_settings
+        try:
+            with open(preferences_path, 'r') as f:
+                saved_settings = json.load(f)
+            return saved_settings
+        except Exception as e:
+
+            logger.warning("Error occurred reading preferences. Resetting to defaults\n" + traceback.format_exc())
+            write_saved_settings({})
+            return {}
 
 
 def write_saved_settings(settings):
