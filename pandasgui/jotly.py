@@ -3,7 +3,7 @@ from collections import defaultdict
 
 import plotly.express as px
 from pandas import DataFrame
-from typing import Literal
+from typing_extensions import Literal
 from plotly.graph_objs import Figure
 import typing
 from typing import List

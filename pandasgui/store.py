@@ -11,7 +11,8 @@ if typing.TYPE_CHECKING:
 import textwrap
 import time
 from dataclasses import dataclass, field, asdict
-from typing import Dict, List, Union, Iterable, Literal
+from typing import Dict, List, Union, Iterable
+from typing_extensions import Literal
 import pandas as pd
 from pandas import DataFrame
 from PyQt5 import QtCore, QtGui, QtWidgets, sip

@@ -14,7 +14,8 @@ from pandasgui.utility import nunique, get_function_body, refactor_variable, kwa
 from pandasgui.store import SETTINGS_STORE
 import pandasgui
 import ast
-from typing import Union, List, Iterable, Literal, get_args
+from typing import Union, List, Iterable, get_args
+from typing_extensions import Literal
 from dataclasses import dataclass, field, asdict
 
 from pandasgui.widgets import base_widgets
@@ -101,7 +102,7 @@ class Schema:
                     arg_default = param.default
                     arg_type = param.annotation
 
-                    if typing.get_origin(arg_type) == typing.Literal:
+                    if typing.get_origin(arg_type) == Literal:
                         values = get_args(arg_type)
                         args.append(OptionListArg(arg_name, values, default_value=arg_default))
 

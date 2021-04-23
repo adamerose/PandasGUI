@@ -11,6 +11,7 @@ from enum import EnumMeta
 from pandasgui.store import SETTINGS_STORE, SettingsStore, Setting
 from pandasgui.utility import traverse_tree_widget, resize_widget
 from pandasgui.widgets import base_widgets
+from typing_extensions import Literal
 
 
 class SettingsEditor(QtWidgets.QWidget):
@@ -83,7 +84,7 @@ class SettingsEditor(QtWidgets.QWidget):
                 widget.setCheckState(Qt.Checked if setting.value else Qt.Unchecked)
                 widget.stateChanged.connect(setter)
 
-            elif typing.get_origin(setting.dtype) == typing.Literal:
+            elif typing.get_origin(setting.dtype) == Literal:
 
                 def setter(new_val, item=item):
                     try:
