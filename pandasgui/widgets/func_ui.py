@@ -14,8 +14,8 @@ from pandasgui.utility import nunique, get_function_body, refactor_variable, kwa
 from pandasgui.store import SETTINGS_STORE
 import pandasgui
 import ast
-from typing import Union, List, Iterable, get_args
-from typing_extensions import Literal
+from typing import Union, List, Iterable
+from typing_extensions import Literal, get_args
 from dataclasses import dataclass, field, asdict
 
 from pandasgui.widgets import base_widgets

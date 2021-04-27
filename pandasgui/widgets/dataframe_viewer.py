@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
-from typing import Literal
+from typing_extensions import Literal
 from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore
 import pandasgui
 
