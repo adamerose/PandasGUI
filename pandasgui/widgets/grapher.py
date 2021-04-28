@@ -25,13 +25,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-import plotly.graph_objs as go
-from plotly.validators.scatter.marker import SymbolValidator
-
-# Available symbol names for a given version of Plotly
-_extended_symbols = SymbolValidator().values[0::2][1::3]
-plotly_markers = [symbol for symbol in _extended_symbols if symbol[-3:] != "dot"]
-
 
 class TypePicker(QtWidgets.QListWidget):
     def __init__(self, orientation=Qt.Horizontal):
