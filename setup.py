@@ -31,5 +31,6 @@ setup(
         "IPython",
         "pyarrow",
         "astor",
+        "typing-extensions",
     ],
 )

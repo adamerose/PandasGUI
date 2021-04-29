@@ -10,3 +10,4 @@ pynput
 IPython
 pyarrow
 astor
+typing-extensions
