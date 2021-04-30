@@ -806,6 +806,8 @@ class HeaderView(QtWidgets.QTableView):
                             self.setSpan(match_start, level, span_size, 1)
                             match_start = None
 
+    # For the horizontal header, return the column edge the mouse is over
+    # For the vertical header, return the row edge the mouse is over
     def over_header_edge(self, mouse_position, margin=3):
 
         # Return the index of the column this x position is on the right edge of

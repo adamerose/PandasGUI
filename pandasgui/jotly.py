@@ -25,7 +25,7 @@ class ColumnNameList(List[str]):
 
 
 # ============================================================================ #
-# Standard plots
+# Graphing
 
 def histogram(data_frame: DataFrame,
               x: ColumnName = None,
@@ -303,10 +303,6 @@ def scatter_matrix(data_frame: DataFrame,
     return fig
 
 
-# ============================================================================ #
-# Special
-
-
 def scatter_3d(data_frame: DataFrame,
                y: ColumnName = None,
                x: ColumnName = None,
@@ -347,6 +343,50 @@ def word_cloud(data_frame: DataFrame,
     fig.update_layout(title=generate_title(data_frame, "word_cloud", locals()))
 
     return fig
+
+
+# ============================================================================ #
+# Reshaping
+
+
+def pivot(data_frame: DataFrame,
+          index: ColumnName = None,
+          columns: ColumnName = None,
+          values: ColumnName = None,
+          # https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html#groupby-aggregate-named
+          aggfunc: Literal['count',
+                           'mean',
+                           'median',
+                           'mode',
+                           'min',
+                           'max',
+                           'sum',
+                           'nunique'] = 'mean'
+          ):
+    df = data_frame.pivot_table(index=index,
+                                columns=columns,
+                                values=values,
+                                aggfunc=aggfunc)
+    return df
+
+
+def melt(data_frame: DataFrame,
+         id_vars: ColumnName = None,
+         value_vars: ColumnName = None,
+         ):
+    df = data_frame.melt(id_vars=id_vars,
+                         value_vars=value_vars)
+    return df
+
+
+def join(data_frame: DataFrame,
+         other_data_frame: DataFrame,
+         id_vars: ColumnName = None,
+         value_vars: ColumnName = None,
+         ):
+    df = data_frame.join(id_vars=id_vars,
+                         value_vars=value_vars)
+    return df
 
 
 # ============================================================================ #
