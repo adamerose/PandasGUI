@@ -98,6 +98,10 @@ class DataFrameViewer(QtWidgets.QWidget):
         self.indexHeader.verticalHeader().setDefaultSectionSize(default_row_height)
         self.dataView.verticalHeader().setDefaultSectionSize(default_row_height)
 
+        # Set column widths
+        for column_index in range(self.columnHeader.model().columnCount()):
+            self.auto_size_column(column_index)
+
     def set_styles(self):
         for item in [self.dataView, self.columnHeader, self.indexHeader, self.indexHeaderNames, self.columnHeaderNames]:
             item.setContentsMargins(0, 0, 0, 0)
@@ -106,18 +110,6 @@ class DataFrameViewer(QtWidgets.QWidget):
     def __reduce__(self):
         # This is so dataclasses.asdict doesn't complain about this being unpicklable
         return "DataFrameViewer"
-
-    def showEvent(self, event: QtGui.QShowEvent):
-        """
-        Initialize column and row sizes on the first time the widget is shown
-        """
-        if not hasattr(self, 'showEvent_first_call'):
-            self.showEvent_first_call = True
-            # Set column widths
-            for column_index in range(self.columnHeader.model().columnCount()):
-                self.auto_size_column(column_index)
-
-        event.accept()
 
     def auto_size_column(self, column_index):
         """

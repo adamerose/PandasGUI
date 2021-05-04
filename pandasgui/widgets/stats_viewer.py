@@ -4,7 +4,7 @@ import pandas as pd
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
-from pandasgui.utility import nunique
+from pandasgui.utility import nunique, clear_layout
 from pandasgui.widgets.dataframe_viewer import DataFrameViewer
 from pandasgui.widgets.grapher import Grapher
 from pandasgui.widgets.reshaper import Reshaper
@@ -13,7 +13,9 @@ from pandasgui.widgets.dock_widget import DockWidget
 from pandasgui.store import PandasGuiDataFrameStore
 
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 class StatisticsViewer(QtWidgets.QWidget):
     def __init__(self, pgdf: PandasGuiDataFrameStore):
@@ -22,12 +24,14 @@ class StatisticsViewer(QtWidgets.QWidget):
         pgdf = PandasGuiDataFrameStore.cast(pgdf)
         pgdf.dataframe_explorer = self
         self.pgdf = pgdf
-
-        self.dataframe_viewer = DataFrameViewer(pgdf.column_statistics)
-
         self.layout = QtWidgets.QVBoxLayout()
         self.setLayout(self.layout)
+        self.dataframe_viewer = DataFrameViewer(self.pgdf.column_statistics)
         self.layout.addWidget(self.dataframe_viewer)
+
+    # Replace the data in self.dataframe_viewer pgdf with the current statistics of the main pgdf
+    def refresh_statistics(self):
+        self.dataframe_viewer.pgdf.paste_data(0, 0, self.pgdf.column_statistics)
 
 
 if __name__ == "__main__":

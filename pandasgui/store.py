@@ -331,6 +331,9 @@ class PandasGuiDataFrameStore:
             }, index=df.columns
             )
 
+            if self.dataframe_explorer is not None:
+                self.dataframe_explorer.statistics_viewer.refresh_statistics()
+
     ###################################
     # Code history
 
