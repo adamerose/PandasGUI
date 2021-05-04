@@ -394,8 +394,22 @@ class FuncUi(QtWidgets.QWidget):
                     val = SETTINGS_STORE[arg.arg_name].value
                 else:
                     val = arg.default_value
-                cdz.setText(val)
-                cdz.valueChanged.emit(val)  # Need this incase value was same
+
+                # Logic to show value in widget and support converting from ColumnListArg to ColumnArg
+                if val is None:
+                    val_repr = ''
+                elif type(val) == str:
+                    val_repr = val
+                elif type(val) == list:
+                    if len(val) == 0:
+                        val_repr = ''
+                    else:
+                        val_repr = val[0]
+                else:
+                    raise ValueError
+
+                cdz.setText(val_repr)
+                cdz.valueChanged.emit(val_repr)  # Need this incase value was same
                 cdz.valueChanged.connect(lambda: self.valuesChanged.emit())
 
             elif type(arg) == ColumnListArg:
@@ -412,8 +426,18 @@ class FuncUi(QtWidgets.QWidget):
                 else:
                     val = arg.default_value
 
-                cldz.set_names(val)
-                cldz.valueChanged.emit(val)  # Need this incase value was same
+                # Logic to show value in widget and support converting from ColumnArg to ColumnListArg
+                if val is None:
+                    val_repr = []
+                elif type(val) == str:
+                    val_repr = [val]
+                elif type(val) == list:
+                    val_repr = val
+                else:
+                    raise ValueError
+
+                cldz.set_names(val_repr)
+                cldz.valueChanged.emit(val_repr)  # Need this incase value was same
                 cldz.valueChanged.connect(lambda: self.valuesChanged.emit())
 
             elif type(arg) == BooleanArg:
