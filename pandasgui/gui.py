@@ -260,13 +260,13 @@ class PandasGui(QtWidgets.QMainWindow):
         if self.store.selected_pgdf.dataframe_explorer.active_tab == "DataFrame":
             self.store.selected_pgdf.dataframe_explorer.dataframe_viewer.copy()
         elif self.store.selected_pgdf.dataframe_explorer.active_tab == "Statistics":
-            self.store.selected_pgdf.dataframe_explorer.statistics_viewer.copy()
+            self.store.selected_pgdf.dataframe_explorer.statistics_viewer.dataframe_viewer.copy()
 
     def copy_with_headers(self):
         if self.store.selected_pgdf.dataframe_explorer.active_tab == "DataFrame":
             self.store.selected_pgdf.dataframe_viewer.copy(header=True)
         elif self.store.selected_pgdf.dataframe_explorer.active_tab == "Statistics":
-            self.store.selected_pgdf.dataframe_explorer.statistics_viewer.copy(header=True)
+            self.store.selected_pgdf.dataframe_explorer.statistics_viewer.dataframe_viewer.copy(header=True)
 
     def paste(self):
         if self.store.selected_pgdf.dataframe_explorer.active_tab == "DataFrame":
