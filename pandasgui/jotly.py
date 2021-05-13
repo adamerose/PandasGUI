@@ -5,6 +5,8 @@ import plotly.express as px
 from pandas import DataFrame
 from typing_extensions import Literal
 from plotly.graph_objs import Figure
+import plotly.graph_objects as go
+
 import typing
 from typing import List
 import pandas as pd
@@ -324,6 +326,26 @@ def scatter_3d(data_frame: DataFrame,
 
     # Settings and config
     fig.update_layout(title=generate_title(data_frame, "scatter_3d", locals()))
+
+    return fig
+
+
+def candlestick(data_frame: DataFrame,
+                x: ColumnName = None,
+                open: ColumnName = None,
+                high: ColumnName = None,
+                low: ColumnName = None,
+                close: ColumnName = None,
+                **kwargs) -> Figure:
+    fig = go.Figure(data=[go.Candlestick(x=data_frame[x],
+                                         open=data_frame[open],
+                                         high=data_frame[high],
+                                         low=data_frame[low],
+                                         close=data_frame[close],
+                                         )])
+
+    # Settings and config
+    fig.update_layout(title=generate_title(data_frame, "candlestick", locals()))
 
     return fig
 
