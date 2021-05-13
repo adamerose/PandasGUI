@@ -340,7 +340,7 @@ class PandasGuiDataFrameStore:
     @status_message_decorator("Generating code export...")
     def code_export(self):
 
-        if len(self.history) == 0:
+        if len(self.history) == 0 and not any([filt.enabled for filt in self.filters]):
             return f"# No actions have been recorded yet on this DataFrame ({self.name})"
 
         code_history = "# 'df' refers to the DataFrame passed into 'pandasgui.show'\n\n"
