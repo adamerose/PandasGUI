@@ -458,12 +458,13 @@ class FuncUi(QtWidgets.QWidget):
                 names = list(self.pgdf.store.get_dataframes().keys())
                 other_names = [n for n in names if n != self.pgdf.name]
                 dataframes = list(self.pgdf.store.get_dataframes().values())
+                other_dataframes = [d for d in dataframes if d is not self.pgdf.df]
                 combo_box = QtWidgets.QComboBox()
                 combo_box.addItems([str(x) for x in other_names])
                 item.treeWidget().setItemWidget(item, 1, combo_box)
 
                 combo_box.currentIndexChanged.connect(
-                    lambda ix, values=dataframes, item=item: [
+                    lambda ix, values=other_dataframes, item=item: [
                         item.setData(1, Qt.UserRole, values[ix]),
                         self.source_tree2.set_df(values[ix])
                     ])
