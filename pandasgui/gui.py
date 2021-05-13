@@ -10,6 +10,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 import plotly.basedatatypes
 
+import pandasgui
 from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore
 from pandasgui.utility import fix_ipython, fix_pyqt, as_dict, delete_datasets, resize_widget, get_figure_type
 from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
@@ -368,7 +369,7 @@ class PandasGui(QtWidgets.QMainWindow):
 
         key = winreg.HKEY_CURRENT_USER
         value = rf'{sys.executable} -m pandasgui.run_with_args "%V"'
-        icon_value = r"C:\_MyFiles\Programming\pandasgui\pandasgui\resources\images\icon.ico"
+        icon_value = fr"{os.path.dirname(pandasgui.__file__)}\resources\images\icon.ico"
 
         handle = winreg.CreateKeyEx(key, "Software\Classes\*\shell\Open with PandasGUI\command", 0,
                                     winreg.KEY_SET_VALUE)
@@ -487,6 +488,6 @@ def show(*args,
 
 
 if __name__ == "__main__":
-    from pandasgui.datasets import all_datasets, pokemon, mi_manufacturing
+    from pandasgui.datasets import all_datasets, pokemon, titanic, mi_manufacturing
 
-    gui = show(pokemon)
+    gui = show(pokemon, titanic, mi_manufacturing)
