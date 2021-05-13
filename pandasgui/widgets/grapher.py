@@ -19,7 +19,7 @@ from pandasgui.widgets.collapsible_panel import CollapsiblePanel
 
 from pandasgui.widgets.figure_viewer import FigureViewer
 from pandasgui.utility import flatten_df, flatten_iter, kwargs_string, nunique, unique
-from pandasgui.widgets.func_ui import FuncUi, ColumnArg, Schema, BooleanArg
+from pandasgui.widgets.func_ui import FuncUi, ColumnNameArg, Schema, BooleanArg
 
 import logging
 
@@ -101,9 +101,7 @@ class Grapher(QtWidgets.QWidget):
         self.figure_viewer.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
                                          QtWidgets.QSizePolicy.Expanding)
 
-        df = flatten_df(self.pgdf.df)
-
-        self.func_ui = FuncUi(df=df, schema=Schema())
+        self.func_ui = FuncUi(pgdf, schema=Schema())
 
         # Layouts
         self.plot_splitter = QtWidgets.QSplitter(Qt.Horizontal)

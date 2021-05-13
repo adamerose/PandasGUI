@@ -18,7 +18,7 @@ from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore, HistoryItem
 from pandasgui.widgets.collapsible_panel import CollapsiblePanel
 
 from pandasgui.utility import flatten_df, flatten_iter, kwargs_string, nunique, unique
-from pandasgui.widgets.func_ui import FuncUi, ColumnArg, Schema, BooleanArg
+from pandasgui.widgets.func_ui import FuncUi, ColumnNameArg, Schema, BooleanArg
 
 import logging
 
@@ -95,9 +95,7 @@ class Reshaper(QtWidgets.QWidget):
             item = QtWidgets.QListWidgetItem(icon, text)
             self.type_picker.addItem(item)
 
-        df = flatten_df(self.pgdf.df)
-
-        self.func_ui = FuncUi(df=df, schema=Schema())
+        self.func_ui = FuncUi(pgdf=pgdf, schema=Schema())
 
         # Layouts
         self.plot_splitter = QtWidgets.QSplitter(Qt.Horizontal)
@@ -190,8 +188,19 @@ schemas = [Schema(name="pivot",
            Schema(name="melt",
                   label="Melt",
                   function=jotly.melt,
-                  icon_path=os.path.join(pandasgui.__path__[0], "resources/images/draggers/stack.svg"),
-                  ), ]
+                  icon_path=os.path.join(pandasgui.__path__[0], "resources/images/draggers/unpivot.svg"),
+                  ),
+           Schema(name="merge",
+                  label="Merge",
+                  function=jotly.merge,
+                  icon_path=os.path.join(pandasgui.__path__[0], "resources/images/draggers/join.svg"),
+                  ),
+           Schema(name="concat",
+                  label="Concat",
+                  function=jotly.concat,
+                  icon_path=os.path.join(pandasgui.__path__[0], "resources/images/draggers/concat.svg"),
+                  ),
+           ]
 
 if __name__ == "__main__":
     from pandasgui.utility import fix_ipython, fix_pyqt

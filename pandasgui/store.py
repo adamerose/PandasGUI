@@ -523,6 +523,9 @@ class PandasGuiDataFrameStore:
     def data_changed(self):
         self.refresh_ui()
         self.refresh_statistics()
+        # Remake Grapher plot
+        if self.dataframe_explorer is not None:
+            self.dataframe_explorer.grapher.on_dragger_finished()
 
     # Refresh PyQt models when the underlying pgdf is changed in anyway that needs to be reflected in the GUI
     def refresh_ui(self):
@@ -557,7 +560,7 @@ class PandasGuiDataFrameStore:
 @dataclass
 class PandasGuiStore:
     settings: Union[SettingsStore, None] = None
-    data: Dict[str, PandasGuiDataFrameStore] = field(default_factory=dict)
+    data: typing.OrderedDict[str, PandasGuiDataFrameStore] = field(default_factory=dict)
     gui: Union[PandasGui, None] = None
     navigator: Union[Navigator, None] = None
     selected_pgdf: Union[PandasGuiDataFrameStore, None] = None
@@ -649,9 +652,11 @@ class PandasGuiStore:
     def get_pgdf(self, name):
         return self.data[name]
 
-    def get_dataframes(self, names: Union[None, str, list] = None):
+    def get_dataframes(self, names: Union[None, str, list, int] = None):
         if type(names) == str:
             return self.data[names].df
+        elif type(names) == int:
+            return self.data.items()[names]
 
         df_dict = {}
         for pgdf in self.data.values():

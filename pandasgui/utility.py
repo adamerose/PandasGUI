@@ -346,7 +346,14 @@ def flatten_iter(item):
 # Make a string from a kwargs dict as they would be displayed when passed to a function
 # eg. {'a': 5, 'b': 6} -> a=5, b=6
 def kwargs_string(kwargs_dict):
-    return ', '.join([f'{key}={repr(val)}' for key, val in kwargs_dict.items()])
+    chunks = []
+    for key, val in kwargs_dict.items():
+        if isinstance(val, pd.DataFrame):
+            chunk = f'{key}={val._pgdf.name}'
+        else:
+            chunk = f'{key}={repr(val)}'
+        chunks.append(chunk)
+    return ', '.join(chunks)
 
 
 def get_function_body(func):

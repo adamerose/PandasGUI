@@ -8,10 +8,11 @@ import typing
 import os
 import inspect
 import pprint
+import pandas as pd
 
-from pandasgui.jotly import ColumnName, ColumnNameList
-from pandasgui.utility import nunique, get_function_body, refactor_variable, kwargs_string
-from pandasgui.store import SETTINGS_STORE
+from pandasgui.jotly import ColumnName, ColumnNameList, OtherDataFrame
+from pandasgui.utility import nunique, get_function_body, refactor_variable, kwargs_string, flatten_df
+from pandasgui.store import SETTINGS_STORE, PandasGuiDataFrameStore
 import pandasgui
 import ast
 from typing import Union, List, Iterable
@@ -27,20 +28,17 @@ class HiddenArg:
 
 
 @dataclass
-class ColumnArg:
+class ColumnNameArg:
     arg_name: str
     default_value: str
 
     def __init__(self, arg_name, default_value=None):
-        if default_value is None:
-            default_value = ""
-
         self.arg_name = arg_name
         self.default_value = default_value
 
 
 @dataclass
-class ColumnListArg:
+class ColumnNameListArg:
     arg_name: str
     default_value: List[str]
 
@@ -53,7 +51,7 @@ class ColumnListArg:
 
 
 @dataclass
-class OptionListArg:
+class LiteralArg:
     arg_name: str
     values: List[str]
     default_value: List[str]
@@ -80,6 +78,17 @@ class BooleanArg:
         self.default_value = default_value
 
 
+# Display a dropdown to pick a DataFrame name from the list of DataFrames in the GUI
+@dataclass
+class OtherDataFrameArg:
+    arg_name: str
+    default_value: str
+
+    def __init__(self, arg_name, default_value=None):
+        self.arg_name = arg_name
+        self.default_value = default_value
+
+
 # This schema is made up of multiple args, this defines all the drop zones available in the Dragger
 @dataclass
 class Schema:
@@ -99,21 +108,24 @@ class Schema:
                 sig = inspect.signature(function)
                 for _, param in sig.parameters.items():
                     arg_name = param.name
-                    arg_default = param.default
+                    arg_default = param.default if param.default != inspect._empty else None
                     arg_type = param.annotation
 
                     if get_origin(arg_type) == Literal:
                         values = get_args(arg_type)
-                        args.append(OptionListArg(arg_name, values, default_value=arg_default))
+                        args.append(LiteralArg(arg_name, values, default_value=arg_default))
 
                     elif arg_type == ColumnName:
-                        args.append(ColumnArg(arg_name, default_value=arg_default or ''))
+                        args.append(ColumnNameArg(arg_name, default_value=arg_default or ''))
 
                     elif arg_type == ColumnNameList:
-                        args.append(ColumnListArg(arg_name, default_value=arg_default or []))
+                        args.append(ColumnNameListArg(arg_name, default_value=arg_default or []))
 
                     elif arg_type == bool:
                         args.append(BooleanArg(arg_name, default_value=arg_default))
+
+                    elif arg_type == OtherDataFrame:
+                        args.append(OtherDataFrameArg(arg_name, default_value=arg_default))
 
         self.name = name
         self.args = args
@@ -122,10 +134,17 @@ class Schema:
         self.icon_path = icon_path
 
     name: str
-    args: List[Union[ColumnArg, ColumnListArg, OptionListArg, BooleanArg]]
+    args: List[Union[ColumnNameArg, ColumnNameListArg, LiteralArg, BooleanArg]]
     label: str
     function: Callable
     icon_path: str
+
+
+def format_kwargs(kwargs):
+    for k, v in kwargs.items():
+        if isinstance(v, pd.DataFrame):
+            kwargs[k] = '*DataFrame Object*'
+    return pprint.pformat(kwargs, width=40)
 
 
 class FuncUi(QtWidgets.QWidget):
@@ -134,21 +153,13 @@ class FuncUi(QtWidgets.QWidget):
     finished = QtCore.pyqtSignal()
     saving = QtCore.pyqtSignal()
 
-    def __init__(self, df=None, schema: Schema = None):
+    def __init__(self, pgdf, schema: Schema = None):
         super().__init__()
         self.remembered_values = {}
-        self.source_tree_unfiltered = []
-
-        sources = df.columns
-        source_nunique = nunique(df)
-        source_types = df.dtypes.values.astype(str)
-
-        # Ensure no duplicates
-        assert (len(sources) == len(set(sources)))
-        assert (len(sources) == len(source_nunique))
-        assert (len(sources) == len(source_types))
 
         self.schema = schema
+        self.pgdf: PandasGuiDataFrameStore = pgdf
+        self.df = flatten_df(pgdf.df)
 
         # Custom kwargs dialog
         self.kwargs_dialog = CustomKwargsEditor(self)
@@ -159,28 +170,20 @@ class FuncUi(QtWidgets.QWidget):
         self.preview_dialog.setLayout(QtWidgets.QVBoxLayout())
         self.preview_dialog.layout().addWidget(self.preview_dialog_text)
         self.valuesChanged.connect(lambda: self.preview_dialog_text.setText(
-            pprint.pformat(self.get_data(), width=40)))
+            format_kwargs(self.get_data())))
 
         # Code export dialog
         self.code_export_dialog = QtWidgets.QDialog(self)
         self.code_export_dialog_text = QtWidgets.QTextEdit()
         self.code_export_dialog.setLayout(QtWidgets.QVBoxLayout())
         self.code_export_dialog.layout().addWidget(self.code_export_dialog_text)
-        self.valuesChanged.connect(lambda: self.code_export_dialog_text.setText(
-            pprint.pformat(self.get_data(), width=40)))
 
-        # Search box
-        self.search_bar = QtWidgets.QLineEdit()
-        self.search_bar.textChanged.connect(self.filter)
+        self.valuesChanged.connect(lambda: self.code_export_dialog_text.setText(
+            format_kwargs(self.get_data())))
 
         # Sources list
-        self.source_tree = SourceTree(self)
-        self.source_tree.setHeaderLabels(['Name', '#Unique', 'Type'])
-        self.set_sources(sources, source_nunique, source_types)
-        self.source_tree.setSortingEnabled(True)
-
-        # Depends on Search Box and Source list
-        self.filter()
+        self.source_tree = SourceTree(self.df)
+        self.source_tree2 = SourceTree(self.df)
 
         # Destinations tree
         self.dest_tree = DestinationTree(self)
@@ -188,17 +191,6 @@ class FuncUi(QtWidgets.QWidget):
 
         # Set schema
         self.set_schema(self.schema)
-
-        # Configure drag n drop
-        sorc = self.source_tree
-        dest = self.dest_tree
-
-        sorc.setDragDropMode(sorc.DragOnly)
-        sorc.setSelectionMode(sorc.ExtendedSelection)
-        sorc.setDefaultDropAction(QtCore.Qt.CopyAction)
-        dest.setDragDropMode(dest.DragDrop)
-        dest.setSelectionMode(dest.ExtendedSelection)
-        dest.setDefaultDropAction(QtCore.Qt.MoveAction)
 
         # Buttons
         self.kwargs_button = QtWidgets.QPushButton("Custom Kwargs")
@@ -220,9 +212,6 @@ class FuncUi(QtWidgets.QWidget):
         self.finish_button.clicked.connect(self.finish)
 
         # Layout
-        self.source_tree_layout = QtWidgets.QVBoxLayout()
-        self.source_tree_layout.addWidget(self.search_bar)
-        self.source_tree_layout.addWidget(self.source_tree)
 
         self.button_layout = QtWidgets.QHBoxLayout()
         self.button_layout.addWidget(self.kwargs_button)
@@ -233,9 +222,10 @@ class FuncUi(QtWidgets.QWidget):
         self.button_layout.addWidget(self.finish_button)
 
         self.main_layout = QtWidgets.QGridLayout()
-        self.main_layout.addLayout(self.source_tree_layout, 0, 0)
-        self.main_layout.addWidget(self.dest_tree, 0, 1)
-        self.main_layout.addLayout(self.button_layout, 1, 0, 1, 2)
+        self.main_layout.addWidget(self.source_tree, 0, 0)
+        self.main_layout.addWidget(self.source_tree2, 1, 0)
+        self.main_layout.addWidget(self.dest_tree, 0, 1, 2, 1)
+        self.main_layout.addLayout(self.button_layout, 2, 0, 1, 2)
 
         self.setLayout(self.main_layout)
 
@@ -247,17 +237,6 @@ class FuncUi(QtWidgets.QWidget):
         # Delete if not section
         else:
             sip.delete(item)
-
-    def filter(self):
-        root = self.source_tree.invisibleRootItem()
-        for i in range(root.childCount()):
-            child = root.child(i)
-            child.setHidden(True)
-
-        items = self.source_tree.findItems(f".*{self.search_bar.text()}.*",
-                                           Qt.MatchRegExp | Qt.MatchRecursive)
-        for item in items:
-            item.setHidden(False)
 
     def custom_kwargs(self):
         self.kwargs_dialog.setVisible(not self.kwargs_dialog.isVisible())
@@ -273,14 +252,20 @@ class FuncUi(QtWidgets.QWidget):
 
         # Replace variable names with values
         for key, val in kwargs.items():
-            text = refactor_variable(text, key, repr(val))
+            if isinstance(val, pd.DataFrame):
+                df_dict = self.pgdf.store.get_dataframes()
+                df_name = next((k for k in df_dict if df_dict[k] is val), None)
+
+                text = refactor_variable(text, key, df_name)
+            else:
+                text = refactor_variable(text, key, repr(val))
 
         # Plug in settings values
         for setting_name, setting in SETTINGS_STORE.__dict__.items():
             text = text.replace(f"SETTINGS_STORE.{setting_name}.value", repr(setting.value))
 
         # Do other replacements
-        text = refactor_variable(text, "data_frame", "pokemon")
+        text = refactor_variable(text, "data_frame", "df")
         text = text.replace("return fig", "show(fig)")
 
         # Get kwargs not absorbed by jotly function
@@ -360,14 +345,6 @@ class FuncUi(QtWidgets.QWidget):
 
         self.set_schema(self.schema)
 
-    def set_sources(self, sources: List[str], source_nunique: List[str], source_types: List[str]):
-
-        for i in range(len(sources)):
-            item = base_widgets.QTreeWidgetItem(self.source_tree,
-                                                [str(sources[i]), str(source_nunique[i]), str(source_types[i])])
-
-        self.filter()
-
     def set_schema(self, schema: Schema):
         self.schema = schema
 
@@ -381,7 +358,7 @@ class FuncUi(QtWidgets.QWidget):
             item = base_widgets.QTreeWidgetItem(self.dest_tree, [arg.arg_name])
             item.setFlags(item.flags() & Qt.ItemIsEnabled & ~Qt.ItemIsDropEnabled & ~Qt.ItemIsDragEnabled)
 
-            if type(arg) == ColumnArg:
+            if type(arg) == ColumnNameArg:
 
                 cdz = ColumnDropZone()
                 item.treeWidget().setItemWidget(item, 1, cdz)
@@ -412,7 +389,7 @@ class FuncUi(QtWidgets.QWidget):
                 cdz.valueChanged.emit(val_repr)  # Need this incase value was same
                 cdz.valueChanged.connect(lambda: self.valuesChanged.emit())
 
-            elif type(arg) == ColumnListArg:
+            elif type(arg) == ColumnNameListArg:
 
                 cldz = ColumnListDropZone()
                 item.treeWidget().setItemWidget(item, 1, cldz)
@@ -457,7 +434,7 @@ class FuncUi(QtWidgets.QWidget):
                 checkbox.stateChanged.emit(Qt.Checked if val else Qt.Unchecked)
                 checkbox.stateChanged.connect(lambda: self.valuesChanged.emit())
 
-            elif type(arg) == OptionListArg:
+            elif type(arg) == LiteralArg:
                 combo_box = QtWidgets.QComboBox()
                 combo_box.addItems([str(x) for x in arg.values])
                 item.treeWidget().setItemWidget(item, 1, combo_box)
@@ -476,7 +453,42 @@ class FuncUi(QtWidgets.QWidget):
                 combo_box.setCurrentIndex(ix)
                 combo_box.currentIndexChanged.emit(ix)  # Need this incase value was same
 
+            elif type(arg) == OtherDataFrameArg:
+
+                names = list(self.pgdf.store.get_dataframes().keys())
+                other_names = [n for n in names if n != self.pgdf.name]
+                dataframes = list(self.pgdf.store.get_dataframes().values())
+                combo_box = QtWidgets.QComboBox()
+                combo_box.addItems([str(x) for x in other_names])
+                item.treeWidget().setItemWidget(item, 1, combo_box)
+
+                combo_box.currentIndexChanged.connect(
+                    lambda ix, values=dataframes, item=item: [
+                        item.setData(1, Qt.UserRole, values[ix]),
+                        self.source_tree2.set_df(values[ix])
+                    ])
+                combo_box.currentIndexChanged.connect(lambda: self.valuesChanged.emit())
+
+                if arg.arg_name in self.remembered_values.keys() and arg.arg_name in names:
+                    val = self.remembered_values[arg.arg_name]
+                elif arg.arg_name in asdict(SETTINGS_STORE).keys():
+                    val = SETTINGS_STORE[arg.arg_name].value
+                else:
+                    if arg.default_value is None:
+                        val = other_names[0]
+                    else:
+                        val = arg.default_value
+                ix = other_names.index(val)
+                combo_box.setCurrentIndex(ix)
+                combo_box.currentIndexChanged.emit(ix)  # Need this incase value was same
+
         self.valuesChanged.emit()
+
+        if any([type(arg) == OtherDataFrameArg for arg in schema.args]):
+            self.source_tree2.show()
+        else:
+            self.source_tree2.hide()
+
         self.dest_tree.autosize_columns()
 
 
@@ -578,13 +590,13 @@ class ColumnListDropZone(QtWidgets.QListWidget):
 
     def dropEvent(self, event):
         src_widget = event.source()
-        if issubclass(type(src_widget), QtWidgets.QTreeWidget):
+        if isinstance(src_widget, QtWidgets.QTreeWidget):
             items = [item.text(0) for item in src_widget.selectedItems()]
             self.addItems(items)
             self.remove_duplicates()
             self.valueChanged.emit(self.get_items())
             event.acceptProposedAction()
-        elif issubclass(type(src_widget), ColumnDropZone):
+        elif isinstance(src_widget, ColumnDropZone):
             source = event.source()
             source.setText('')
             source.valueChanged.emit('')
@@ -632,6 +644,7 @@ def decode_data(bytearray):
 
 
 class DestinationTree(base_widgets.QTreeWidget):
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setItemsExpandable(False)
@@ -640,6 +653,10 @@ class DestinationTree(base_widgets.QTreeWidget):
         self.setColumnWidth(0, 90)
         root = self.invisibleRootItem()
         root.setFlags(root.flags() & Qt.ItemIsEnabled & ~Qt.ItemIsDropEnabled & ~Qt.ItemIsDragEnabled)
+
+        self.setDragDropMode(self.DragDrop)
+        self.setSelectionMode(self.ExtendedSelection)
+        self.setDefaultDropAction(QtCore.Qt.MoveAction)
 
     # https://stackoverflow.com/a/67213574/3620725
     def setItemWidget(self, item, column, widget):
@@ -656,21 +673,9 @@ class DestinationTree(base_widgets.QTreeWidget):
         item.setSizeHint(column, widget.sizeHint())
         self.updateGeometries()
 
-    # def dropEvent(self, e: QtGui.QDropEvent):
-    #     mime_type = 'application/x-qabstractitemmodeldatalist'
-    #     target = self.itemAt(e.pos())
-    #     if e.mimeData().hasFormat(mime_type):
-    #         # Extract the value in the first column from the drag source
-    #         data = e.mimeData().data(mime_type)
-    #         source_item = QtGui.QStandardItemModel()
-    #         source_item.dropMimeData(e.mimeData(), Qt.CopyAction, 0, 0, QtCore.QModelIndex())
-    #         name = source_item.item(0, 0).text()
-    #         target.setText(1, name)
-    #     else:
-    #         self.parent().itemDropped.emit()
 
+class DraggableTree(base_widgets.QTreeWidget):
 
-class SourceTree(base_widgets.QTreeWidget):
     def dropEvent(self, e: QtGui.QDropEvent):
         super().dropEvent(e)
         self.parent().itemDropped.emit()
@@ -680,6 +685,67 @@ class SourceTree(base_widgets.QTreeWidget):
         if indexes:
             mimedata.setText(indexes[0].text(0))
         return mimedata
+
+
+class SourceTree(QtWidgets.QWidget):
+    def __init__(self, df):
+        super().__init__()
+
+        self.tree = DraggableTree()
+
+        # Search box
+        self.search_bar = QtWidgets.QLineEdit()
+        self.search_bar.textChanged.connect(self.filter)
+
+        self.tree.setHeaderLabels(['Name', '#Unique', 'Type'])
+
+        self.tree.setSortingEnabled(True)
+
+        self.source_tree_layout = QtWidgets.QVBoxLayout()
+        self.source_tree_layout.addWidget(self.search_bar)
+        self.source_tree_layout.addWidget(self.tree)
+        self.setLayout(self.source_tree_layout)
+
+        # Configure drag n drop
+        self.tree.setDragDropMode(self.tree.DragOnly)
+        self.tree.setSelectionMode(self.tree.ExtendedSelection)
+        self.tree.setDefaultDropAction(QtCore.Qt.CopyAction)
+
+        self.set_df(df)
+
+    def set_df(self, df):
+        sources = df.columns
+        source_nunique = nunique(df)
+        source_types = df.dtypes.values.astype(str)
+
+        # Ensure no duplicates
+        assert (len(sources) == len(set(sources)))
+        assert (len(sources) == len(source_nunique))
+        assert (len(sources) == len(source_types))
+
+        self.set_sources(sources, source_nunique, source_types)
+
+        # Depends on Search Box and Source list
+        self.filter()
+
+    def set_sources(self, sources: List[str], source_nunique: List[str], source_types: List[str]):
+        self.tree.clear()
+        for i in range(len(sources)):
+            item = base_widgets.QTreeWidgetItem(self.tree,
+                                                [str(sources[i]), str(source_nunique[i]), str(source_types[i])])
+
+        self.filter()
+
+    def filter(self):
+        root = self.tree.invisibleRootItem()
+        for i in range(root.childCount()):
+            child = root.child(i)
+            child.setHidden(True)
+
+        items = self.tree.findItems(f".*{self.search_bar.text()}.*",
+                                    Qt.MatchRegExp | Qt.MatchRecursive)
+        for item in items:
+            item.setHidden(False)
 
 
 class CustomKwargsEditor(QtWidgets.QDialog):
@@ -727,61 +793,6 @@ class CustomKwargsEditor(QtWidgets.QDialog):
     def delete(self):
         for item in self.tree_widget.selectedItems():
             sip.delete(item)
-
-
-class SearchableListWidget(QtWidgets.QWidget):
-    def __init__(self, items, parent=None):
-        super().__init__(parent)
-
-        self.search_bar = QtWidgets.QLineEdit()
-        self.search_bar.textChanged.connect(self.filter)
-
-        self.list_widget = QtWidgets.QListWidget()
-
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.addWidget(self.search_bar)
-        layout.addWidget(self.list_widget)
-        self.setLayout(layout)
-
-        self.initial_items = items
-        self.set_items(items)
-
-    def filter(self):
-        filtered_items = [
-            item
-            for item in self.initial_items
-            if re.search(self.search_bar.text().lower(), item.lower())
-        ]
-
-        self.set_items(filtered_items)
-
-    def get_items(self):
-        return [
-            str(self.list_widget.item(i).text())
-            for i in range(self.list_widget.count())
-        ]
-
-    def set_items(self, items):
-        self.list_widget.clear()
-        for name in items:
-            self.list_widget.addItem(name)
-
-
-class SourceList(QtWidgets.QListWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        # Settings
-        self.setDragDropMode(self.DragDrop)
-        self.setSelectionMode(self.ExtendedSelection)
-        self.setDefaultDropAction(QtCore.Qt.CopyAction)
-        self.setAcceptDrops(True)
-
-    def dropEvent(self, event):
-        itemsTextList = self.getItems()
-
-        # Default action
-        QtWidgets.QListWidget.dropEvent(self, event)
 
 
 if __name__ == "__main__":

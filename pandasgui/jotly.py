@@ -24,6 +24,10 @@ class ColumnNameList(List[str]):
     pass
 
 
+class OtherDataFrame(DataFrame):
+    pass
+
+
 # ============================================================================ #
 # Graphing
 
@@ -370,22 +374,38 @@ def pivot(data_frame: DataFrame,
     return df
 
 
-def melt(data_frame: DataFrame,
+def melt(df: DataFrame,
          id_vars: ColumnName = None,
          value_vars: ColumnName = None,
          ):
-    df = data_frame.melt(id_vars=id_vars,
-                         value_vars=value_vars)
+    df = df.melt(id_vars=id_vars,
+                 value_vars=value_vars)
     return df
 
 
-def join(data_frame: DataFrame,
-         other_data_frame: DataFrame,
-         id_vars: ColumnName = None,
-         value_vars: ColumnName = None,
-         ):
-    df = data_frame.join(id_vars=id_vars,
-                         value_vars=value_vars)
+def merge(data_frame: DataFrame,
+          other_dataframe: OtherDataFrame,
+          how: Literal['left', 'right', 'outer', 'inner'] = 'inner',
+          left_on: ColumnNameList = None,
+          right_on: ColumnNameList = None,
+
+          validate: Literal['one_to_one', 'one_to_many', 'many_to_one', 'many_to_many'] = None,
+          ):
+    df = data_frame.merge(right=other_dataframe,
+                          how=how,
+                          left_on=left_on,
+                          right_on=right_on,
+                          validate=validate, )
+    return df
+
+
+def concat(data_frame: DataFrame,
+           other_dataframe: OtherDataFrame,
+           axis: Literal['0 (rows)', '1 (columns)'] = '0 (rows)',
+           ):
+    df = pd.concat([data_frame, other_dataframe],
+                   axis=int(axis[0])
+                   )
     return df
 
 
