@@ -91,6 +91,7 @@ class Setting(DictLike):
 DEFAULT_SETTINGS = {'editable': True,
                     'block': None,
                     'theme': 'light',
+                    'auto_finish': True,
                     'refresh_statistics': False,
                     'render_mode': 'auto',
                     'aggregation': 'mean',
@@ -107,6 +108,7 @@ class SettingsStore(DictLike, QtCore.QObject):
     block: Setting
     editable: Setting
     theme: Setting
+    auto_finish: Setting
     render_mode: Setting
     aggregation: Setting
     title_format: Setting
@@ -156,6 +158,12 @@ class SettingsStore(DictLike, QtCore.QObject):
                                           persist=True)
 
         # Settings related to Grapher
+
+        self.auto_finish = Setting(label="auto_finish",
+                                   value=settings['auto_finish'],
+                                   description="Automatically renders plot after each drag and drop",
+                                   dtype=bool,
+                                   persist=True)
 
         self.render_mode = Setting(label="render_mode",
                                    value=settings['render_mode'],
