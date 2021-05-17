@@ -134,7 +134,8 @@ class Grapher(QtWidgets.QWidget):
         # Signals
         self.type_picker.itemSelectionChanged.connect(self.on_type_changed)
         self.func_ui.finished.connect(self.on_dragger_finished)
-        self.func_ui.valuesChanged.connect(self.on_dragger_finished)
+        if pgdf.store.settings.auto_finish.value:
+            self.func_ui.valuesChanged.connect(self.on_dragger_finished)
         self.func_ui.saving.connect(self.on_dragger_saving)
 
     def on_type_changed(self):
@@ -251,7 +252,8 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
 
-    gb = Grapher(pokemon)
+    pgdf = PandasGuiDataFrameStore(pokemon)
+    gb = Grapher(pgdf)
     gb.show()
 
     gb.set_state('scatter', {'y': 'Attack', 'x': 'Defense'})
