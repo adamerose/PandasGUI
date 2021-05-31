@@ -628,9 +628,21 @@ class PandasGuiStore:
         self.navigator.setCurrentItem(item)
         self.navigator.apply_tree_settings()
 
-    def remove_dataframe(self, name):
+    def remove_dataframe(self, name_or_index):
+        if type(name_or_index) == int:
+            ix = name_or_index
+            name = list(self.data.keys())[ix]
+        elif type(name_or_index) == str:
+            name = name_or_index
+        else:
+            raise ValueError
+
+        pgdf = self.data[name]
+        dfe = pgdf.dataframe_explorer
+
         self.data.pop(name)
         self.gui.navigator.remove_item(name)
+        self.gui.stacked_widget.removeWidget(dfe)
 
     def rename_dataframe(self, name, new_name):
         pass

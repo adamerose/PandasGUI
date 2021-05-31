@@ -1,5 +1,7 @@
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5.QtCore import Qt
+
+from pandasgui.store import PandasGuiDataFrameStore
 from pandasgui.widgets import base_widgets
 
 import tempfile
@@ -45,7 +47,7 @@ class DelayedMimeData(QtCore.QMimeData):
 class Navigator(base_widgets.QTreeWidget):
     def __init__(self, store):
         super().__init__()
-        self.store = store
+        self.store: PandasGuiStore = store
         store.navigator = self
 
         self.expandAll()
@@ -59,6 +61,25 @@ class Navigator(base_widgets.QTreeWidget):
         self.setSelectionMode(self.ExtendedSelection)
         self.setSelectionBehavior(self.SelectRows)
         self.apply_tree_settings()
+
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.RightButton:
+            pos = event.pos()
+            item = self.itemAt(pos)
+            ix = self.indexAt(pos)
+            if item:
+                menu = QtWidgets.QMenu(self)
+
+                action1 = QtWidgets.QAction("Delete DataFrame")
+                action1.triggered.connect(lambda: self.store.remove_dataframe(ix.row()))
+
+
+                for action in [action1]:
+                    menu.addAction(action)
+
+                menu.exec_(QtGui.QCursor().pos())
 
     def showEvent(self, event: QtGui.QShowEvent):
         for i in range(self.columnCount()):

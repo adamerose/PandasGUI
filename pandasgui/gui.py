@@ -58,7 +58,7 @@ class PandasGui(QtWidgets.QMainWindow):
 
         self.caller_stack = inspect.currentframe().f_back
 
-        self.stacked_widget = None
+        self.stacked_widget: QtWidgets.QStackedWidget = None
         self.navigator = None
         self.splitter = None
         self.find_bar = None
