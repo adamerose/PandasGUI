@@ -137,7 +137,7 @@ class Navigator(base_widgets.QTreeWidget):
         for name in names:
             path = os.path.join(tempfile.gettempdir(), 'DragTest', name + ".csv")
             os.makedirs(os.path.dirname(path), exist_ok=True)
-            df = self.store.get_pgdf(name).df
+            df = self.store.data[name].df
 
             def write_to_file(path=path, df=df, widget=self):
                 if widget.underMouse():

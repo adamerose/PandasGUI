@@ -669,9 +669,6 @@ class PandasGuiStore:
         else:
             logger.warning("Can only import csv / xlsx / parquet. Invalid file: " + path)
 
-    def get_pgdf(self, name):
-        return self.data[name]
-
     def get_dataframes(self, names: Union[None, str, list, int] = None):
         if type(names) == str:
             return self.data[names].df
@@ -686,7 +683,7 @@ class PandasGuiStore:
         return df_dict
 
     def select_pgdf(self, name):
-        pgdf = self.get_pgdf(name)
+        pgdf = self.data[name]
         dfe = pgdf.dataframe_explorer
         self.gui.stacked_widget.setCurrentWidget(dfe)
         self.selected_pgdf = pgdf
