@@ -90,16 +90,14 @@ class PandasGui(QtWidgets.QMainWindow):
         if json_kwargs:
             for name, val in json_kwargs.items():
                 jv = JsonViewer(val)
-                jv.show()
-                refs.append(jv)  # TODO clean this up when these widgets are closed
                 jv.setWindowTitle(name)
+                self.store.add_item(jv, name)
 
         if plotly_kwargs:
             for name, fig in plotly_kwargs.items():
                 pv = FigureViewer(fig)
-                pv.show()
-                refs.append(pv)
                 pv.setWindowTitle(name)
+                self.store.add_item(pv, name)
 
         if dataframe_kwargs:
             # Adds DataFrames listed in kwargs to data store.

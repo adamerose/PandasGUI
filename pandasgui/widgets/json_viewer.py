@@ -3,10 +3,12 @@ import json
 import sys
 from typing import Union
 from PyQt5 import QtCore, QtGui, QtWidgets
+
+from pandasgui.store import PandasGuiStoreItem
 from pandasgui.utility import summarize_json
 
 
-class JsonViewer(QtWidgets.QWidget):
+class JsonViewer(QtWidgets.QWidget, PandasGuiStoreItem):
 
     def __init__(self, jdata: Union[list, dict], parent=None):
         super().__init__(parent)
@@ -104,6 +106,8 @@ class JsonViewer(QtWidgets.QWidget):
 
             tree_widget.addChild(row_item)
 
+    def pg_widget(self):
+        return self
 
 if "__main__" == __name__:
     app = QtWidgets.QApplication([])

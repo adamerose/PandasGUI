@@ -1,5 +1,6 @@
 from __future__ import annotations
 import typing
+from abc import abstractmethod
 
 if typing.TYPE_CHECKING:
     from pandasgui.gui import PandasGui
@@ -7,6 +8,8 @@ if typing.TYPE_CHECKING:
     from pandasgui.widgets.dataframe_viewer import DataFrameViewer
     from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
     from pandasgui.widgets.navigator import Navigator
+    from pandasgui.widgets.figure_viewer import FigureViewer
+    from pandasgui.widgets.json_viewer import JsonViewer
 
 import textwrap
 import time
@@ -267,7 +270,17 @@ def status_message_context(self, message):
             QtWidgets.QApplication.instance().processEvents()
 
 
-class PandasGuiDataFrameStore:
+# Objects to display in the PandasGuiStore must inherit this class
+class PandasGuiStoreItem:
+    def __init__(self):
+        self.name = None
+
+    @abstractmethod
+    def pg_widget(self):
+        raise NotImplementedError
+
+
+class PandasGuiDataFrameStore(PandasGuiStoreItem):
     """
     All methods that modify the data should modify self.df_unfiltered, then self.df gets computed from that
     """
@@ -310,6 +323,9 @@ class PandasGuiDataFrameStore:
         if name == 'df':
             value.pgdf = self
         super().__setattr__(name, value)
+
+    def pg_widget(self):
+        return self.dataframe_explorer
 
     @status_message_decorator("Refreshing statistics...")
     def refresh_statistics(self, force=True):
@@ -567,8 +583,19 @@ class PandasGuiDataFrameStore:
 
 @dataclass
 class PandasGuiStore:
+    """This class stores all state data of the PandasGUI main GUI.
+
+    Attributes:
+        settings         Settings as defined in SettingsStore
+        data             A dict of PandasGuiDataFrameStore instances which wrap DataFrames. These show up in left nav
+        data    A dict of other widgets that can show up in the left nav such as JsonViewer and FigureViewer
+        gui              A reference to the PandasGui widget instance
+        navigator        A reference to the Navigator widget instance
+        selected_pgdf    The PandasGuiDataFrameStore currently selected in the nav
+    """
+
     settings: Union[SettingsStore, None] = None
-    data: typing.OrderedDict[str, PandasGuiDataFrameStore] = field(default_factory=dict)
+    data: typing.OrderedDict[str, PandasGuiStoreItem] = field(default_factory=dict)
     gui: Union[PandasGui, None] = None
     navigator: Union[Navigator, None] = None
     selected_pgdf: Union[PandasGuiDataFrameStore, None] = None
@@ -596,6 +623,38 @@ class PandasGuiStore:
 
     ###################################
 
+    def add_item(self, item: PandasGuiStoreItem,
+                 name: str = "Untitled", shape: str = ""):
+
+        # Add it to store and create widgets
+        self.data[name] = item
+        self.gui.stacked_widget.addWidget(item.pg_widget())
+
+        # Add to nav
+        nav_item = QtWidgets.QTreeWidgetItem(self.navigator, [name, shape])
+        self.navigator.itemSelectionChanged.emit()
+        self.navigator.setCurrentItem(nav_item)
+        self.navigator.apply_tree_settings()
+
+    def remove_item(self, name_or_index):
+        if type(name_or_index) == int:
+            ix = name_or_index
+            name = list(self.data.keys())[ix]
+        elif type(name_or_index) == str:
+            name = name_or_index
+        else:
+            raise ValueError
+
+        item = self.data[name]
+        if isinstance(item, PandasGuiDataFrameStore):
+            widget = item.dataframe_explorer
+        else:
+            widget = item
+
+        self.data.pop(name)
+        self.gui.navigator.remove_item(name)
+        self.gui.stacked_widget.removeWidget(widget)
+
     @status_message_decorator("Adding DataFrame...")
     def add_dataframe(self, pgdf: Union[DataFrame, PandasGuiDataFrameStore],
                       name: str = "Untitled"):
@@ -611,41 +670,18 @@ class PandasGuiStore:
         with status_message_context(self, "Adding DataFrame (Cleaning DataFrame)..."):
             pgdf.df = clean_dataframe(pgdf.df, name)
 
-        # Add it to store and create widgets
-        self.data[name] = pgdf
         if pgdf.dataframe_explorer is None:
             from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
             pgdf.dataframe_explorer = DataFrameExplorer(pgdf)
-        dfe = pgdf.dataframe_explorer
-        self.gui.stacked_widget.addWidget(dfe)
 
         # Add to nav
         shape = pgdf.df.shape
         shape = f"{shape[0]:,} x {shape[1]:,}"
 
-        item = QtWidgets.QTreeWidgetItem(self.navigator, [name, shape])
-        self.navigator.itemSelectionChanged.emit()
-        self.navigator.setCurrentItem(item)
-        self.navigator.apply_tree_settings()
+        self.add_item(pgdf, name, shape)
 
     def remove_dataframe(self, name_or_index):
-        if type(name_or_index) == int:
-            ix = name_or_index
-            name = list(self.data.keys())[ix]
-        elif type(name_or_index) == str:
-            name = name_or_index
-        else:
-            raise ValueError
-
-        pgdf = self.data[name]
-        dfe = pgdf.dataframe_explorer
-
-        self.data.pop(name)
-        self.gui.navigator.remove_item(name)
-        self.gui.stacked_widget.removeWidget(dfe)
-
-    def rename_dataframe(self, name, new_name):
-        pass
+        self.remove_item(name_or_index)
 
     @status_message_decorator('Importing file "{path}"...')
     def import_file(self, path):
@@ -676,7 +712,7 @@ class PandasGuiStore:
             return self.data.items()[names]
 
         df_dict = {}
-        for pgdf in self.data.values():
+        for pgdf in [item for item in self.data.values() if isinstance(item, PandasGuiDataFrameStore)]:
             if names is None or pgdf.name in names:
                 df_dict[pgdf.name] = pgdf.df
 
@@ -684,8 +720,7 @@ class PandasGuiStore:
 
     def select_pgdf(self, name):
         pgdf = self.data[name]
-        dfe = pgdf.dataframe_explorer
-        self.gui.stacked_widget.setCurrentWidget(dfe)
+        self.gui.stacked_widget.setCurrentWidget(pgdf.pg_widget())
         self.selected_pgdf = pgdf
 
     def to_dict(self):

@@ -7,6 +7,7 @@ from PyQt5.QtCore import Qt
 import PyQt5
 import logging
 
+from pandasgui.store import PandasGuiStoreItem
 from pandasgui.utility import get_figure_type
 
 logger = logging.getLogger(__name__)
@@ -34,7 +35,7 @@ if "PyQt5.QtWebEngineWidgets" not in sys.modules:
         app.__init__(sys.argv + ["--ignore-gpu-blacklist", "--enable-gpu-rasterization"])
 
 
-class FigureViewer(PyQt5.QtWebEngineWidgets.QWebEngineView):
+class FigureViewer(PyQt5.QtWebEngineWidgets.QWebEngineView, PandasGuiStoreItem):
     def __init__(self, fig=None, store=None):
         super().__init__()
         self.store = store
@@ -118,6 +119,8 @@ class FigureViewer(PyQt5.QtWebEngineWidgets.QWebEngineView):
             download.setPath(path)
             download.accept()
 
+    def pg_widget(self):
+        return self
 
 if __name__ == "__main__":
     # Create a QtWidgets.QApplication instance or use the existing one if it exists
