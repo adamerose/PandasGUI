@@ -425,7 +425,7 @@ class PandasGuiDataFrameStore:
             self.sort_is_ascending = True
 
             self.add_history_item("sort_column",
-                                  f"df = df.sort_values(df.columns[{ix}], ascending=True, kind='mergesort')")
+                                  f"df = df.sort_values({self.df_unfiltered.columns[ix]}, ascending=True, kind='mergesort')")
 
         # Clicked a sorted column
         elif ix == self.column_sorted and self.sort_is_ascending:
@@ -434,7 +434,7 @@ class PandasGuiDataFrameStore:
             self.sort_is_ascending = False
 
             self.add_history_item("sort_column",
-                                  f"df = df.sort_values(df.columns[{ix}], ascending=False, kind='mergesort')")
+                                  f"df = df.sort_values({self.df_unfiltered.columns[ix]}, ascending=False, kind='mergesort')")
 
         # Clicked a reverse sorted column - reset to sorted by index
         elif ix == self.column_sorted:
