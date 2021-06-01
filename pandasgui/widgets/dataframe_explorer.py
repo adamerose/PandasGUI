@@ -31,24 +31,17 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
         self.setDockOptions(self.GroupedDragging | self.AllowTabbedDocks | self.AllowNestedDocks)
         self.setTabPosition(Qt.AllDockWidgetAreas, QtWidgets.QTabWidget.North)
 
-        # DataFrame tab
-        self.dataframe_viewer = DataFrameViewer(pgdf)
-        self.dataframe_dock = self.add_view(self.dataframe_viewer, "DataFrame")
-
-        # Filters tab
+        #
         self.filter_viewer = FilterViewer(pgdf)
-        self.filters_dock = self.add_view(self.filter_viewer, "Filters")
-
-        # Statistics tab
+        self.dataframe_viewer = DataFrameViewer(pgdf)
         self.statistics_viewer = StatisticsViewer(pgdf)
-        self.statistics_dock = self.add_view(self.statistics_viewer, "Statistics")
-
-        # Grapher tab
         self.grapher = Grapher(pgdf)
-        self.grapher_dock = self.add_view(self.grapher, "Grapher")
-
-        # Reshaper tab
         self.reshaper = Reshaper(pgdf)
+
+        self.filters_dock = self.add_view(self.filter_viewer, "Filters")
+        self.dataframe_dock = self.add_view(self.dataframe_viewer, "DataFrame")
+        self.statistics_dock = self.add_view(self.statistics_viewer, "Statistics")
+        self.grapher_dock = self.add_view(self.grapher, "Grapher")
         self.reshaper_dock = self.add_view(self.reshaper, "Reshaper")
 
         def set_active_tab(name):
@@ -62,7 +55,12 @@ class DataFrameExplorer(QtWidgets.QMainWindow):
 
         # Layout
         self.dataframe_viewer.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        # self.addDockWidget(Qt.RightDockWidgetArea, self.filters_dock)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.filters_dock)
+
+        # Filter dock sizing
+        # self.filters_dock.setFixedWidth(self.filter_viewer.sizeHint().width())
+        self.filters_dock.setFixedWidth(self.filter_viewer.sizeHint().width() + 50)
+        self.filters_dock.setFeatures(QtWidgets.QDockWidget.NoDockWidgetFeatures)
 
     def add_view(self, widget: QtWidgets.QWidget, title: str):
         dock = DockWidget(title, self.pgdf.name)
