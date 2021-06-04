@@ -109,6 +109,11 @@ def line(data_frame: DataFrame,
     # Create list of key columns
     key_cols = [val for val in [x, color, facet_row, facet_col] if val is not None]
     if key_cols != []:
+        # need those in locals() for description, because aggregation / sort will destroy those references
+        name = data_frame.pgdf.name
+        filters = data_frame.pgdf.filters
+        df_unfiltered = data_frame.pgdf.df_unfiltered
+        df = data_frame.pgdf.df
         if aggregation is not None:
             data_frame = data_frame.groupby(key_cols).agg(aggregation).reset_index()
         else:
@@ -149,6 +154,11 @@ def bar(data_frame: DataFrame,
     # Create list of key columns
     key_cols = [val for val in [x, color, facet_row, facet_col] if val is not None]
     if key_cols != []:
+        # need those in locals() for description, because aggregation / sort will destroy those references
+        name = data_frame.pgdf.name
+        filters = data_frame.pgdf.filters
+        df_unfiltered = data_frame.pgdf.df_unfiltered
+        df = data_frame.pgdf.df
         if aggregation is not None:
             data_frame = data_frame.groupby(key_cols).agg(aggregation).reset_index()
         else:
@@ -456,184 +466,216 @@ def generate_title(data_frame, chart_type, kwargs):
           selection: ready to use string representing {subset} observations of {total}
           groupings: groupings tied to Legend and not on legend: marker_symbol, line_group, size etc
     """
-    try:
-        def remove_units(label):
-            "we do not want to repeat units in the title. It is assumed they are in parenthesis"
-            if type(label) == list and len(label) == 0:
-                return label
-            elif type(label) == list and len(label) == 1:
-                return remove_units(label[0])
-            elif type(label) == list and len(label) > 1:
-                return [remove_units(val) for val in label]
-            try:
-                return label[:label.rindex("(")] if label[-1] == ")" else label
-            except (AttributeError, IndexError, TypeError, ValueError):
-                return label
+    def remove_units(label):
+        "we do not want to repeat units in the title. It is assumed they are in parenthesis"
+        if type(label) == list and len(label) == 0:
+            return label
+        elif type(label) == list and len(label) == 1:
+            return remove_units(label[0])
+        elif type(label) == list and len(label) > 1:
+            return [remove_units(val) for val in label]
+        try:
+            return label[:label.rindex("(")] if label[-1] == ")" else label
+        except (AttributeError, IndexError, TypeError, ValueError):
+            return label
 
-        def axis_title_labels(kwargs):
-            "handling of x, y, z and dimentsions, columns / orientation and log scales for all charts"
-            orientation = kwargs.get("orientation")
-            log_x = kwargs.get("log_x", False)
-            log_y = kwargs.get("log_y", False)
-            log_z = kwargs.get("log_z", False)
+    def axis_title_labels(kwargs):
+        """axis_title_labels.
 
-            title_log_x = "log " if log_x else ""
-            title_log_y = "log " if log_y else ""
-            title_log_z = "log " if log_z else ""
+        handling of x, y, z and dimensions, columns / orientation and log scales for all charts.
 
-            x = remove_units(kwargs.get("x"))
-            y = remove_units(kwargs.get("y", ""))
-            z = remove_units(kwargs.get("z", ""))
-            dimensions = remove_units(kwargs.get("dimensions", ""))
-            columns = remove_units(kwargs.get("columns", ""))
+        Args:
+            kwargs: PX keywords related to axes and also dimensions and columns facets.
+        """
+        orientation = kwargs.get("orientation")
+        log_x = kwargs.get("log_x", False)
+        log_y = kwargs.get("log_y", False)
+        log_z = kwargs.get("log_z", False)
 
-            if orientation == "h":
-                x, y = y, x
-                title_log_x, title_log_y = title_log_y, title_log_x
-            if x is None:
-                opt_x = x  # wordcloud, pie etc have no x
-            elif type(x) == list:
-                opt_x = [title_log_x + val for val in x]
-            else:
-                opt_x = title_log_x + x
-            if type(y) == list:
-                opt_y = [title_log_y + val for val in y]
-            else:
-                opt_y = title_log_y + y
-            return opt_x, opt_y, title_log_z + z, dimensions, columns
+        title_log_x = "log " if log_x else ""
+        title_log_y = "log " if log_y else ""
+        title_log_z = "log " if log_z else ""
 
-        pgdf = data_frame.pgdf
-        today = datetime.datetime.now()
-        name = pgdf.name
-        x, y, z, dimensions, columns = axis_title_labels(kwargs)
+        x = remove_units(kwargs.get("x"))
+        y = remove_units(kwargs.get("y", ""))
+        z = remove_units(kwargs.get("z", ""))
+        dimensions = remove_units(kwargs.get("dimensions", ""))
+        columns = remove_units(kwargs.get("columns", ""))
 
-        # Histograms default to count for aggregation
-        histfunc = ""
-        over_by = " over "
-        vs = " vs "
-        color = kwargs.get("color")
-        symbol = kwargs.get("symbol")
-        aggregation = kwargs.get("aggregation", None)
-        title_trendline = kwargs.get("trendline", "")
-        if title_trendline != "":
-            title_trendline = f"trend lines are <i>{title_trendline}</i>"
-
-        if chart_type == "histogram":
-            histfunc = kwargs.get("histfunc", "sum" if y else "count")
-            if x is None and y:
-                y = f"{y} {histfunc}"
-        elif chart_type in ("box", "violin"):
-            histfunc = "distribution"
-            over_by = " by "
-            if x is None and y:
-                y = f"{y} {histfunc}"
-        elif chart_type == "bar":
-            over_by = " by "
-            if y == "":
-                y = "count"
-                if color is None and aggregation:
-                    over_by = " of "
-            else:
-                if aggregation:
-                    func = "average"
-                else:
-                    func = "sum"
-                y = f"{func} of {y}"
-        elif chart_type == "density_heatmap":
-            histfunc = kwargs.get("histfunc", "sum")
-            if y and z:
-                y, z = f"binned {histfunc} of {z} for ", y
-            elif y:
-                y = f"binned count of {y}"
-            histfunc = ""
-        elif chart_type == "density_contour":
-            histfunc = kwargs.get("histfunc", "count")
-            estimation = "estimated density "
-            if y and z:
-                y, z = f"estimated {histfunc} density of {z} for ", y
-            elif y:
-                y = f"estimated count density of {y}"
-            histfunc = ""
-        elif chart_type == "scatter_3d":
-            if y and z:
-                # need to separate them
-                z = ", " + z
-        elif chart_type in ("word_cloud", "scatter_matrix", "pie"):
-            x = ""  # else string will evaluate to None
-        elif chart_type == "line":
-            if kwargs.get("aggregation", None):
-                over_by = " by "
-                if y:
-                    y = f"average of {y}"
-
-        # filters
-        filters = ','.join([filter.expr for filter in pgdf.filters if filter.enabled and filter.failed == False])
-        if filters != "":
-            filters = "Filters: " + filters
-        total = pgdf.df_unfiltered.shape[0]
-
-        subset = pgdf.df.shape[0]
-        selection = ""
-        groupings = ""
-        sep = ""
-        showlegend = kwargs.get("showlegend", True)
-
-        # over / by
-        over_by = f" {histfunc}{over_by}" if x else ""
-        vs = f"{vs} {histfunc}" if y else ""
-
-        # Groupings in Legend
-        if color or symbol:
-            if showlegend:
-                groupings += "Legend"
-            else:
-                if color:
-                    groupings += f"{sep}color={color}"
-                    sep = ", "
-                if symbol:
-                    groupings += f"{sep}symbol={symbol}"
-            sep = ", "
-
-        # this one shows on the legend, but is not labeled
-        if kwargs.get("marker_symbol"):
-            groupings += f"{sep}marker={kwargs['marker_symbol']}"
-
-        # next two don't show in the plotly legend, so we need to explicitly add them
-        if "line_group" in kwargs.keys():
-            groupings += f"{sep}line_group={kwargs['line_group']}"
-        if "size" in kwargs.keys():
-            groupings += f"{sep}size={kwargs['size']}"
-        if "text" in kwargs.keys():
-            groupings += f"{sep}text={kwargs['text']}"
-        if groupings != "":
-            groupings = "Grouped by " + groupings
-            if filters != "":
-                groupings += " - "
-
-        if subset != total:
-            selection = f"({subset} obs. of {total}) "
-        elif aggregation:
-            selection = "({groupby_obs} " + f"derived obs. from {total})"
+        if orientation == "h":
+            x, y = y, x
+            title_log_x, title_log_y = title_log_y, title_log_x
+        if x is None:
+            opt_x = x  # wordcloud, pie etc have no x
+        elif type(x) == list:
+            opt_x = [title_log_x + val for val in x]
         else:
-            selection = f"({total} obs.)" if chart_type == "line" else "(all observations)"
+            opt_x = title_log_x + x
+        if type(y) == list:
+            opt_y = [title_log_y + val for val in y]
+        else:
+            opt_y = title_log_y + y
+        if z is None:
+            z = ""
+        return opt_x, opt_y, title_log_z + z, dimensions, columns
 
-        return SETTINGS_STORE['title_format'].value. \
-            format_map(defaultdict(str,
-                                   date=today,
-                                   filters=filters,
-                                   title_x=x,
-                                   title_y=y,
-                                   title_z=z,
-                                   title_dimensions=dimensions,
-                                   title_columns=columns,
-                                   title_trendline=title_trendline,
-                                   vs=vs,
-                                   over_by=over_by,
-                                   name=name,
-                                   total=total,
-                                   subset=subset,
-                                   selection=selection,
-                                   groupings=groupings,
-                                   **kwargs))
-    except:
-        return None
+    try:
+        pgdf = data_frame.pgdf
+        name = pgdf.name
+        pgdf_filters = pgdf.filters
+        df_unfiltered = pgdf.df_unfiltered
+        df = pgdf.df
+    except AttributeError:  # plain dataframe
+        pgdf = data_frame
+        name = kwargs.pop("name", "untitled")
+        pgdf_filters = kwargs.pop("filters")
+        df_unfiltered = kwargs.get("df_unfiltered")
+        df = kwargs.get("df")
+
+    today = datetime.datetime.now()
+    x, y, z, dimensions, columns = axis_title_labels(kwargs)
+    title = kwargs.get("kwargs", {}).get("title", None)  # not explicitly kwargs, from locals()
+
+    # Histograms default to count for aggregation
+    histfunc = ""
+    over_by = " over "
+    vs = " vs "
+    color = kwargs.get("color")
+    symbol = kwargs.get("symbol")
+    aggregation = kwargs.get("aggregation", None)
+    title_trendline = kwargs.get("trendline", None)
+    if title_trendline:
+        title_trendline = f"trend lines are <i>{title_trendline}</i>"
+    else:
+        title_trendline = ""
+
+    if chart_type == "histogram":
+        histfunc = kwargs.get("histfunc", "sum" if y else "count")
+        if x is None and y:
+            y = f"{y} {histfunc}"
+    elif chart_type in ("box", "violin"):
+        histfunc = "distribution"
+        over_by = " by "
+        if x is None and y:
+            y = f"{y} {histfunc}"
+    elif chart_type == "bar":
+        if x is None:
+            x = "index"
+        over_by = " by "
+        if y == "":
+            y = "count"
+            if color is None and aggregation:
+                over_by = " of "
+        else:
+            if aggregation:
+                func = "average"
+            else:
+                func = "sum"
+            y = f"{func} of {y}"
+    elif chart_type == "density_heatmap":
+        histfunc = kwargs.get("histfunc", "sum")
+        if y and z:
+            y, z = f"binned {histfunc} of {z} for ", y
+        elif y:
+            y = f"binned count of {y}"
+        histfunc = ""
+    elif chart_type == "density_contour":
+        histfunc = kwargs.get("histfunc", "count")
+        estimation = "estimated density "
+        if y and z:
+            y, z = f"estimated {histfunc} density of {z} for ", y
+        elif y:
+            y = f"estimated count density of {y}"
+        histfunc = ""
+    elif chart_type == "scatter":
+        if x is None:
+            x = "index"
+    elif chart_type == "scatter_3d":
+        if y and z:
+            # need to separate them
+            z = ", " + z
+    elif chart_type in ("word_cloud", "scatter_matrix", "pie"):
+        x = ""  # else string will evaluate to None
+    elif chart_type == "line":
+        if x is None:
+            x = "index"
+        if kwargs.get("aggregation", None):
+            over_by = " by "
+            if y:
+                y = f"{aggregation} of {y}"
+
+    # filters
+    filters = ','.join([filter.expr for filter in pgdf_filters if filter.enabled and filter.failed == False])
+    if filters != "":
+        filters = "Filters: " + filters
+    total = df_unfiltered.shape[0]
+
+    subset = df.shape[0]
+    selection = ""
+    groupings = ""
+    sep = ""
+    showlegend = kwargs.get("showlegend", True)
+
+    # over / by
+    over_by = f" {histfunc}{over_by}" if x else ""
+    vs = f"{vs} {histfunc}" if y else ""
+
+    # Groupings in Legend
+    if color or symbol:
+        if showlegend:
+            groupings += "Legend"
+        else:
+            if color:
+                groupings += f"{sep}color={color}"
+                sep = ", "
+            if symbol:
+                groupings += f"{sep}symbol={symbol}"
+        sep = ", "
+
+    # this one shows on the legend, but is not labeled
+    if kwargs.get("marker_symbol"):
+        groupings += f"{sep}marker={kwargs['marker_symbol']}"
+
+    # next three don't show in the plotly legend, so we need to explicitly add them
+    if "line_group" in kwargs.keys()  and kwargs['line_group'] is not None:
+        groupings += f"{sep}line_group={kwargs['line_group']}"
+    if "size" in kwargs.keys() and kwargs['size'] is not None:
+        groupings += f"{sep}size={kwargs['size']}"
+    if "text" in kwargs.keys() and kwargs['text'] is not None:
+        groupings += f"{sep}text={kwargs['text']}"
+    if groupings != "":
+        groupings = "Grouped by " + groupings
+        if filters != "":
+            groupings += " - "
+
+    if subset != total:
+        selection = f"({subset} obs. of {total}) "
+    elif aggregation:
+        selection = "({groupby_obs} " + f"derived obs. from {total})"
+    else:
+        selection = f"({total} obs.)" if chart_type == "line" else "(all observations)"
+
+    title_format = kwargs.get("title_template", SETTINGS_STORE['title_format'].value)
+    title_rendered = title_format. \
+        format_map(defaultdict(str,
+                               date=today,
+                               filters=filters,
+                               title_x=x,
+                               title_y=y,
+                               title_z=z,
+                               title_dimensions=dimensions,
+                               title_columns=columns,
+                               title_trendline=title_trendline,
+                               vs=vs,
+                               over_by=over_by,
+                               name=name,
+                               total=total,
+                               subset=subset,
+                               selection=selection,
+                               groupings=groupings,
+                               **kwargs))
+    if title:
+        title = title.replace("{title}", title_rendered)  # to include auto title in custom kwargs title
+    else:
+        title = title_rendered
+    return title
