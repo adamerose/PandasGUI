@@ -27,7 +27,7 @@ setup(
         "wordcloud",
         "setuptools",
         "appdirs",
-        "pynput",
+        "mouse",
         "IPython",
         "pyarrow",
         "astor",
