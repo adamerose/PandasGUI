@@ -422,7 +422,7 @@ def refactor_variable(expr, old_name, new_name):
 def get_figure_type(fig):
     # Plotly
     try:
-        import plotly
+        import plotly.basedatatypes
         if issubclass(type(fig), plotly.basedatatypes.BaseFigure):
             return "plotly"
     except ModuleNotFoundError:
