@@ -2,8 +2,7 @@ import pandas as pd
 import numpy as np
 import time
 import os
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt
+from PyQt5 import QtCore, QtWidgets
 
 
 def generate_string_data(rows, cols, length=5):
@@ -101,7 +100,6 @@ def test_inputs():
 
 def test_code_history():
     import pandas as pd
-    import numpy as np
     from pandasgui import show
     from pandasgui.datasets import pokemon
     pokemon = pokemon.head(10)[['Name', 'Attack', 'Defense', 'Generation', 'HP', 'Legendary']]

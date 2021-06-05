@@ -7,7 +7,7 @@ import pandas as pd
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 from typing_extensions import Literal
-from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore
+from pandasgui.store import PandasGuiDataFrameStore
 import pandasgui
 
 import logging
@@ -1068,7 +1068,7 @@ class TrackingSpacer(QtWidgets.QFrame):
 # Examples
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-    from pandasgui.datasets import pokemon, mi_manufacturing, multiindex, simple
+    from pandasgui.datasets import pokemon
 
     view = DataFrameViewer(pokemon)
 

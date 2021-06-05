@@ -1,17 +1,8 @@
 import sys
 
-import plotly.express as px
-from PyQt5 import QtCore, QtGui, QtWidgets
-import pandas as pd
-import pandasgui
-import os
-from typing import Union, List, Iterable, Callable
+from PyQt5 import QtWidgets
 
-from pandasgui.store import Store, PandasGuiDataFrame, track_history
 
-from pandasgui.utility import flatten_df
-from pandasgui.widgets.spinner import Spinner
-from pandasgui.widgets.func_ui import FuncUi, Schema, ColumnNameArg, OptionListArg
 
 import logging
 logger = logging.getLogger(__name__)

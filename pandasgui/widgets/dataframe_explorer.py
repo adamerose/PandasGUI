@@ -1,10 +1,8 @@
 import sys
 from typing import List
-import pandas as pd
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 
-from pandasgui.utility import nunique
 from pandasgui.widgets.dataframe_viewer import DataFrameViewer
 from pandasgui.widgets.grapher import Grapher
 from pandasgui.widgets.reshaper import Reshaper

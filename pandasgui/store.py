@@ -8,31 +8,22 @@ if typing.TYPE_CHECKING:
     from pandasgui.widgets.dataframe_viewer import DataFrameViewer
     from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
     from pandasgui.widgets.navigator import Navigator
-    from pandasgui.widgets.figure_viewer import FigureViewer
-    from pandasgui.widgets.json_viewer import JsonViewer
 
-import textwrap
-import time
-from dataclasses import dataclass, field, asdict
-from typing import Dict, List, Union, Iterable
+from dataclasses import dataclass, field
+from typing import Iterable, List, Union
 from typing_extensions import Literal
 import pandas as pd
 from pandas import DataFrame
-from PyQt5 import QtCore, QtGui, QtWidgets, sip
-from PyQt5.QtCore import Qt
+from PyQt5 import QtCore, QtWidgets
 import traceback
-from functools import wraps
 from datetime import datetime
-from pandasgui.utility import unique_name, in_interactive_console, rename_duplicates, refactor_variable, parse_dates, \
-    clean_dataframe, nunique
+from pandasgui.utility import unique_name, in_interactive_console, refactor_variable, clean_dataframe, nunique
 from pandasgui.constants import LOCAL_DATA_DIR
 import os
-import collections
 from enum import Enum
 import json
 import inspect
 import logging
-import re
 import contextlib
 
 logger = logging.getLogger(__name__)

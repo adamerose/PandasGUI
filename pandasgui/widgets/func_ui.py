@@ -1,10 +1,8 @@
-import re
 from collections import OrderedDict
 
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5.QtCore import Qt
 from typing import List, Callable
-import typing
 import os
 import inspect
 import pprint
@@ -15,9 +13,9 @@ from pandasgui.utility import nunique, get_function_body, refactor_variable, kwa
 from pandasgui.store import SETTINGS_STORE, PandasGuiDataFrameStore
 import pandasgui
 import ast
-from typing import Union, List, Iterable
+from typing import List, Union
 from typing_extensions import Literal, get_args, get_origin
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass
 
 from pandasgui.widgets import base_widgets
 from pandasgui import jotly

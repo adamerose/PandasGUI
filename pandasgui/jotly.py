@@ -7,11 +7,9 @@ from typing_extensions import Literal
 from plotly.graph_objs import Figure
 import plotly.graph_objects as go
 
-import typing
 from typing import List
 import pandas as pd
 from pandasgui.store import SETTINGS_STORE
-from pandasgui.utility import flatten_iter
 
 
 class HiddenArg(type):

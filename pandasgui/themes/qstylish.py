@@ -13,14 +13,12 @@ with open(os.path.join(dirname, "compiled/light.qss")) as f:
 
 
 def dark(hot_reload=False):
-    from compiled import qstylish_rc
     if hot_reload:
         compile()
     return DARK
 
 
 def light(hot_reload=False):
-    from compiled import qstylish_rc
     if hot_reload:
         compile()
     return LIGHT

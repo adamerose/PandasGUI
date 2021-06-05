@@ -1,5 +1,3 @@
-import inspect
-import time
 
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5.QtCore import Qt

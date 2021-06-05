@@ -1,14 +1,12 @@
 import os
 import sys
 
-from PyQt5 import QtCore, QtGui, QtWidgets, sip
+from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
-from PyQt5.QtCore import QModelIndex
 from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtCore import QUrl
 
 from pandasgui.store import PandasGuiDataFrameStore
-import typing
 import pandasgui
 
 import logging

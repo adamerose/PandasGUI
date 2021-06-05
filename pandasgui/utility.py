@@ -1,5 +1,3 @@
-from collections import defaultdict
-import datetime
 import logging
 import pandas as pd
 from PyQt5 import QtWidgets

@@ -2,20 +2,16 @@ import inspect
 import os
 import sys
 import pprint
-from typing import Union, Iterable, Callable
+from typing import Callable, Union
 from dataclasses import dataclass
 import pandas as pd
 import pkg_resources
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
-import plotly.basedatatypes
 
 import pandasgui
-from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore
-from pandasgui.utility import fix_ipython, fix_pyqt, as_dict, delete_datasets, resize_widget, get_figure_type
-from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
-from pandasgui.widgets.grapher import schemas
-from pandasgui.widgets.func_ui import BooleanArg
+from pandasgui.store import PandasGuiStore
+from pandasgui.utility import as_dict, fix_ipython, get_figure_type, resize_widget
 from pandasgui.widgets.find_toolbar import FindToolbar
 from pandasgui.widgets.json_viewer import JsonViewer
 from pandasgui.widgets.navigator import Navigator
@@ -23,8 +19,7 @@ from pandasgui.widgets.figure_viewer import FigureViewer
 from pandasgui.widgets.settings_editor import SettingsEditor
 from pandasgui.themes import qstylish
 from pandasgui.widgets.python_highlighter import PythonHighlighter
-from IPython.core.magic import (register_line_magic, register_cell_magic,
-                                register_line_cell_magic)
+from IPython.core.magic import register_line_magic
 
 import logging
 
@@ -487,6 +482,6 @@ def show(*args,
 
 
 if __name__ == "__main__":
-    from pandasgui.datasets import all_datasets, pokemon, titanic, mi_manufacturing
+    from pandasgui.datasets import mi_manufacturing, pokemon, titanic
 
     gui = show(pokemon, titanic, mi_manufacturing)

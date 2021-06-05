@@ -3,7 +3,6 @@ import sys
 import tempfile
 
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
-from PyQt5.QtCore import Qt
 import PyQt5
 import logging
 
@@ -23,14 +22,13 @@ if "PyQt5.QtWebEngineWidgets" not in sys.modules:
     app = QtWidgets.QApplication.instance()
 
     if app is None:
-        from PyQt5 import QtWebEngineWidgets
+        pass
     else:
         logger.warning("Reinitializing existing QApplication to allow import of QtWebEngineWidgets. "
                        "This may cause problems. "
                        "To avoid this, import pandasgui or PyQt5.QtWebEngineWidgets before a QApplication is created.")
         app.quit()
         sip.delete(app)
-        from PyQt5 import QtWebEngineWidgets
 
         app.__init__(sys.argv + ["--ignore-gpu-blacklist", "--enable-gpu-rasterization"])
 

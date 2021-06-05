@@ -1,5 +1,3 @@
-import collections
-import json
 import sys
 from typing import Union, Literal, List
 from PyQt5 import QtCore, QtGui, QtWidgets

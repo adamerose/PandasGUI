@@ -1,15 +1,7 @@
 import sys
-from typing import List
-import pandas as pd
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt
+from PyQt5 import QtWidgets
 
-from pandasgui.utility import nunique, clear_layout
 from pandasgui.widgets.dataframe_viewer import DataFrameViewer
-from pandasgui.widgets.grapher import Grapher
-from pandasgui.widgets.reshaper import Reshaper
-from pandasgui.widgets.filter_viewer import FilterViewer
-from pandasgui.widgets.dock_widget import DockWidget
 from pandasgui.store import PandasGuiDataFrameStore
 
 import logging
@@ -36,7 +28,7 @@ class StatisticsViewer(QtWidgets.QWidget):
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-    from pandasgui.datasets import pokemon, mi_manufacturing, multiindex, simple
+    from pandasgui.datasets import pokemon
 
     view = StatisticsViewer(pokemon)
     view.pgdf.data_changed()

@@ -2,14 +2,10 @@ import ast
 import pprint
 
 import typing
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 import sys
-from typing import Union
-from dataclasses import dataclass, is_dataclass
-from enum import EnumMeta
-from pandasgui.store import SETTINGS_STORE, SettingsStore, Setting
-from pandasgui.utility import traverse_tree_widget, resize_widget
+from pandasgui.store import SETTINGS_STORE, SettingsStore
 from pandasgui.widgets import base_widgets
 from typing_extensions import Literal, get_origin
 
@@ -121,7 +117,6 @@ class SettingsEditor(QtWidgets.QWidget):
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
 
-    from pandasgui import store
 
     d = SettingsEditor(SETTINGS_STORE)
     d.show()

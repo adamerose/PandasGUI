@@ -1,25 +1,19 @@
-import inspect
 import sys
-from typing import NewType, Union, List, Callable, Iterable
-from dataclasses import dataclass
 
 from PyQt5.QtWidgets import QStyleOptionViewItem
 
 import pandasgui
 import os
-import plotly.express as px
 import plotly
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
-import pandas as pd
-from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore, HistoryItem, SETTINGS_STORE
+from pandasgui.store import PandasGuiDataFrameStore
 from pandasgui.widgets.collapsible_panel import CollapsiblePanel
 
 from pandasgui.widgets.figure_viewer import FigureViewer
-from pandasgui.utility import flatten_df, flatten_iter, kwargs_string, nunique, unique
-from pandasgui.widgets.func_ui import FuncUi, ColumnNameArg, Schema, BooleanArg
+from pandasgui.widgets.func_ui import FuncUi, Schema
 
 import logging
 
@@ -250,8 +244,7 @@ schemas = [Schema(name='histogram',
            ]
 
 if __name__ == "__main__":
-    from pandasgui.utility import fix_ipython, fix_pyqt
-    from pandasgui.datasets import iris, pokemon
+    from pandasgui.datasets import pokemon
 
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
 
