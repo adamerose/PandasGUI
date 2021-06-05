@@ -174,7 +174,7 @@ class SettingsStore(DictLike, QtCore.QObject):
         self.aggregation = Setting(label="aggregation",
                                    value=settings['aggregation'],
                                    description="aggregation",
-                                   dtype=Literal['mean', 'median', 'min', 'max', 'sum', 'none'],
+                                   dtype=Literal['mean', 'median', 'min', 'max', 'sum', None],
                                    persist=True)
 
         self.title_format = Setting(label="title_format",

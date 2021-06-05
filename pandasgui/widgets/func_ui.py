@@ -447,6 +447,8 @@ class FuncUi(QtWidgets.QWidget):
                     val = self.remembered_values[arg.arg_name]
                 elif arg.arg_name in asdict(SETTINGS_STORE).keys():
                     val = SETTINGS_STORE[arg.arg_name].value
+                    if val == '':
+                        val = None
                 else:
                     val = arg.default_value
                 ix = arg.values.index(val)

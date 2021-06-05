@@ -134,8 +134,11 @@ class Grapher(QtWidgets.QWidget):
         # Signals
         self.type_picker.itemSelectionChanged.connect(self.on_type_changed)
         self.func_ui.finished.connect(self.on_dragger_finished)
-        if pgdf.store.settings.auto_finish.value:
-            self.func_ui.valuesChanged.connect(self.on_dragger_finished)
+        try:
+            if pgdf.store.settings.auto_finish.value:
+                self.func_ui.valuesChanged.connect(self.on_dragger_finished)
+        except AttributeError:
+            pass  # running Grapher solo
         self.func_ui.saving.connect(self.on_dragger_saving)
 
     def on_type_changed(self):
