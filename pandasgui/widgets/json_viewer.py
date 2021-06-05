@@ -13,6 +13,8 @@ class JsonViewer(QtWidgets.QWidget, PandasGuiStoreItem):
     def __init__(self, jdata: Union[list, dict], parent=None):
         super().__init__(parent)
 
+        self.jdata = jdata
+
         self.find_box = QtWidgets.QLineEdit()
         self.find_box.returnPressed.connect(self.find)
         self.find_box.textChanged.connect(self.find)

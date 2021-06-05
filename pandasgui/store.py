@@ -254,22 +254,6 @@ def status_message_decorator(message):
     return decorator
 
 
-# Use this context to display a status message for a block. self should be a PandasGuiStore or PandasGuiDataFrameStore
-@contextlib.contextmanager
-def status_message_context(self, message):
-    if self.gui is not None:
-        original_status = self.gui.statusBar().currentMessage()
-        self.gui.statusBar().showMessage(message)
-        self.gui.statusBar().repaint()
-        QtWidgets.QApplication.instance().processEvents()
-        try:
-            yield
-        finally:
-            self.gui.statusBar().showMessage(original_status)
-            self.gui.statusBar().repaint()
-            QtWidgets.QApplication.instance().processEvents()
-
-
 # Objects to display in the PandasGuiStore must inherit this class
 class PandasGuiStoreItem:
     def __init__(self):
@@ -623,6 +607,23 @@ class PandasGuiStore:
 
     ###################################
 
+    # Use this context to display a status message for a block. self should be a PandasGuiStore or PandasGuiDataFrameStore
+    @contextlib.contextmanager
+    def status_message_context(self, message):
+        if self.gui is not None:
+            original_status = self.gui.statusBar().currentMessage()
+            self.gui.statusBar().showMessage(message)
+            self.gui.statusBar().repaint()
+            QtWidgets.QApplication.instance().processEvents()
+            try:
+                yield
+            finally:
+                self.gui.statusBar().showMessage(original_status)
+                self.gui.statusBar().repaint()
+                QtWidgets.QApplication.instance().processEvents()
+
+    ###################################
+
     def add_item(self, item: PandasGuiStoreItem,
                  name: str = "Untitled", shape: str = ""):
 
@@ -660,14 +661,14 @@ class PandasGuiStore:
                       name: str = "Untitled"):
 
         name = unique_name(name, self.get_dataframes().keys())
-        with status_message_context(self, "Adding DataFrame (Creating DataFrame store)..."):
+        with self.status_message_context("Adding DataFrame (Creating DataFrame store)..."):
             pgdf = PandasGuiDataFrameStore.cast(pgdf)
         pgdf.settings = self.settings
         pgdf.name = name
         pgdf.store = self
         pgdf.gui = self.gui
 
-        with status_message_context(self, "Adding DataFrame (Cleaning DataFrame)..."):
+        with self.status_message_context("Adding DataFrame (Cleaning DataFrame)..."):
             pgdf.df = clean_dataframe(pgdf.df, name)
 
         if pgdf.dataframe_explorer is None:
@@ -701,6 +702,14 @@ class PandasGuiStore:
             filename = os.path.split(path)[1].split('.parquet')[0]
             df = pd.read_parquet(path, engine='pyarrow')
             self.add_dataframe(df, filename)
+        elif path.endswith(".json"):
+            filename = os.path.split(path)[1].split('.json')[0]
+            with open(path) as f:
+                data = json.load(f)
+
+            from pandasgui.widgets.json_viewer import JsonViewer
+            jv = JsonViewer(data)
+            self.add_item(jv, filename)
 
         else:
             logger.warning("Can only import csv / xlsx / parquet. Invalid file: " + path)

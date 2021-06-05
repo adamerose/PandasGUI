@@ -347,7 +347,7 @@ class PandasGui(QtWidgets.QMainWindow):
 
     def import_dialog(self):
         dialog = QtWidgets.QFileDialog()
-        paths, _ = dialog.getOpenFileNames(filter="*.csv *.xlsx *.parquet")
+        paths, _ = dialog.getOpenFileNames(filter="*.csv *.xlsx *.parquet *.json")
         for path in paths:
             self.store.import_file(path)
 
@@ -355,7 +355,8 @@ class PandasGui(QtWidgets.QMainWindow):
         dialog = QtWidgets.QFileDialog()
         pgdf = self.store.selected_pgdf
         path, _ = dialog.getSaveFileName(directory=pgdf.name, filter="*.csv")
-        pgdf.df.to_csv(path, index=False)
+        if path:
+            pgdf.df.to_csv(path, index=False)
 
     def import_from_clipboard(self):
         df = pd.read_clipboard(engine="python")
