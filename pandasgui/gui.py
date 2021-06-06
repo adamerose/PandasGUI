@@ -17,7 +17,7 @@ from pandasgui.widgets.json_viewer import JsonViewer
 from pandasgui.widgets.navigator import Navigator
 from pandasgui.widgets.figure_viewer import FigureViewer
 from pandasgui.widgets.settings_editor import SettingsEditor
-from pandasgui.themes import qstylish
+import qtstylish
 from pandasgui.widgets.python_highlighter import PythonHighlighter
 from IPython.core.magic import register_line_magic
 
@@ -244,10 +244,10 @@ class PandasGui(QtWidgets.QMainWindow):
             self.setStyleSheet("")
             self.store.settings.theme.value = 'classic'
         elif theme == "dark":
-            self.setStyleSheet(qstylish.dark())
+            self.setStyleSheet(qtstylish.dark())
             self.store.settings.theme.value = 'dark'
         elif theme == "light":
-            self.setStyleSheet(qstylish.light())
+            self.setStyleSheet(qtstylish.light())
             self.store.settings.theme.value = 'light'
 
     def copy(self):

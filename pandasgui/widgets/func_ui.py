@@ -493,14 +493,13 @@ class FuncUi(QtWidgets.QWidget):
         self.dest_tree.autosize_columns()
 
 
-class ColumnDropZone(QtWidgets.QLabel):
+class ColumnDropZone(QtWidgets.QLineEdit):
     valueChanged = QtCore.pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
         self.setAcceptDrops(True)
-        self.setFrameStyle(QtWidgets.QFrame.Box)
-        self.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.setReadOnly(True)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
