@@ -242,7 +242,7 @@ class DataFrameViewer(QtWidgets.QWidget):
             threading.Thread(target=lambda df: df.to_clipboard(index=header, header=header), args=(df,)).start()
 
     def paste(self):
-        df_to_paste = pd.read_clipboard(sep=',|\t', header=None)
+        df_to_paste = pd.read_clipboard(sep=',|\t', header=None, skip_blank_lines=False)
 
         # Get the bounds using the top left and bottom right selected cells
         indexes = self.dataView.selectionModel().selection().indexes()

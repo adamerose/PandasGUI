@@ -17,7 +17,8 @@ from pandas import DataFrame
 from PyQt5 import QtCore, QtWidgets
 import traceback
 from datetime import datetime
-from pandasgui.utility import unique_name, in_interactive_console, refactor_variable, clean_dataframe, nunique
+from pandasgui.utility import unique_name, in_interactive_console, refactor_variable, clean_dataframe, nunique, \
+    parse_cell
 from pandasgui.constants import LOCAL_DATA_DIR
 import os
 from enum import Enum
@@ -368,15 +369,20 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
     # Editing cell data
 
     @status_message_decorator("Applying cell edit...")
-    def edit_data(self, row, col, value):
+    def edit_data(self, row, col, text):
+
+        column_dtype = self.df.dtypes[col].type
+        value = parse_cell(text, column_dtype)
+
         # Map the row number in the filtered df (which the user interacts with) to the unfiltered one
         row = self.filtered_index_map[row]
+        old_val = self.df_unfiltered.iat[row, col]
+        if old_val != value and not (pd.isna(old_val) and pd.isna(value)):
+            self.df_unfiltered.iat[row, col] = value
+            self.apply_filters()
 
-        self.df_unfiltered.iat[row, col] = value
-        self.apply_filters()
-
-        self.add_history_item("edit_data",
-                              f"df.iat[{row}, {col}] = {value}")
+            self.add_history_item("edit_data",
+                                  f"df.iat[{row}, {col}] = {repr(value)}")
 
     @status_message_decorator("Pasting data...")
     def paste_data(self, top_row, left_col, df_to_paste):

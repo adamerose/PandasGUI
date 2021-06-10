@@ -452,6 +452,28 @@ def get_figure_type(fig):
     return None
 
 
+# Take the text entered for a DataFrame cell and parse it into an appropriate type for the column
+def parse_cell(text, column_dtype):
+    import numpy as np
+    if text == "":
+        return np.nan
+
+    if column_dtype == str:
+        return text
+
+    # Parse text using same logic as reading a CSV file by using a file buffer
+    try:
+        from io import StringIO
+        import pandas as pd
+        value = pd.read_csv(StringIO(text), dtype=column_dtype, header=None).values[0][0]
+        return value
+    except ValueError:
+        raise ValueError(f"Could not convert {repr(text)} to type {column_dtype}")
+
+
+value = parse_cell('nan', str)
+
+
 def summarize_json(data, terse=True):
     from collections import defaultdict
 
