@@ -1,5 +1,3 @@
-from collections import defaultdict
-import datetime
 import logging
 import pandas as pd
 from PyQt5 import QtWidgets
@@ -185,6 +183,17 @@ def traverse_tree_widget(tree: Union[QtWidgets.QTreeWidget, QtWidgets.QTreeWidge
     return items
 
 
+# Remove all widgets from a PyQt layout
+def clear_layout(layout):
+    if layout is not None:
+        while layout.count():
+            child = layout.takeAt(0)
+            if child.widget() is not None:
+                child.widget().deleteLater()
+            elif child.layout() is not None:
+                clear_layout(child.layout())
+
+
 def unique_name(name, existing_names):
     if name in existing_names:
         for i in range(2, 999):
@@ -279,8 +288,17 @@ def clean_dataframe(df, name="DataFrame"):
     dtypes_old = df.dtypes
     df = parse_dates(df)
     dtypes_new = df.dtypes
-    for col_name in [df.columns[ix] for ix in range(len(dtypes_new)) if dtypes_old[ix] != dtypes_new[ix]]:
-        converted_names.append(str(col_name))
+
+    for ix in range(len(dtypes_new)):
+        col_name = df.columns[ix]
+
+        # Pandas is sometimes buggy when comparing dtypes
+        try:
+            if dtypes_old[ix] != dtypes_new[ix]:
+                converted_names.append(str(col_name))
+        except:
+            pass
+
     if converted_names:
         logger.warning(f"In {name}, converted columns to datetime: {', '.join(converted_names)}")
 
@@ -323,224 +341,37 @@ def flatten_iter(item):
     return t
 
 
-def active_filters_repr(filters):
-    "string representation of active filter expressions"
-    return ','.join([filter.expr for filter in filters if filter.enabled and filter.failed == False])
-
-
-def remove_units(label):
-    "we do not want to repeat units in the title. It is assumed they are in parenthesis"
-    if type(label) == list and len(label) == 0:
-        return label
-    elif type(label) == list and len(label) == 1:
-        return remove_units(label[0])
-    elif type(label) == list and len(label) > 1:
-        return [remove_units(val) for val in label]
-    try:
-        return label[:label.rindex("(")] if label[-1] == ")" else label
-    except (AttributeError, IndexError, TypeError, ValueError):
-        return label
-
-
-def axis_title_labels(kwargs):
-    "handling of x, y, z and dimentsions, columns / orientation and log scales for all charts"
-    orientation = kwargs.get("orientation")
-    log_x = kwargs.get("log_x", False)
-    log_y = kwargs.get("log_y", False)
-    log_z = kwargs.get("log_z", False)
-
-    title_log_x = "log " if log_x else ""
-    title_log_y = "log " if log_y else ""
-    title_log_z = "log " if log_z else ""
-
-    x = remove_units(kwargs.get("x"))
-    y = remove_units(kwargs.get("y", ""))
-    z = remove_units(kwargs.get("z", ""))
-    dimensions = remove_units(kwargs.get("dimensions", ""))
-    columns = remove_units(kwargs.get("columns", ""))
-
-    if orientation == "h":
-        x, y = y, x
-        title_log_x, title_log_y = title_log_y, title_log_x
-    if x is None:
-        opt_x = x  # wordcloud, pie etc have no x
-    elif type(x) == list:
-        opt_x = [title_log_x + val for val in x]
-    else:
-        opt_x = title_log_x + x
-    if type(y) == list:
-        opt_y = [title_log_y + val for val in y]
-    else:
-        opt_y = title_log_y + y
-    return opt_x, opt_y, title_log_z + z, dimensions, columns
-
-
-def eval_title(pgdf, current_schema, kwargs):
-    """template variable replacement.
-
-    Besides all dragger selections (x, y, z, color etc), and all custom kwargs, extra template variables are:
-
-          date: current datetime
-          filters: active filter expressions, comma delimited
-          title_x: x minus units and with log scale if selected
-          title_y: y minus units and with log scale if selected
-          title_z: z minus units and with log scale if selected
-          title_dimensions: dimensions list minus units
-          title_columns: columns list minus units
-          title_trendline: trendline description
-          vs: when doing a title with x vs y, use {x}{vs}{y}
-          over_by: when doing a title y over x, use {y}{over_by}{x}. Preferred. for distributions, will use "by"
-          name: dataframe name
-          total: total number of observations
-          subset: observations with active filters applied
-          selection: ready to use string representing {subset} observations of {total}
-          groupings: groupings tied to Legend and not on legend: marker_symbol, line_group, size etc
-    """
-    today = datetime.datetime.now()
-    name = pgdf.name
-    chart = current_schema.name
-    x, y, z, dimensions, columns = axis_title_labels(kwargs)
-
-    # Histograms default to count for aggregation
-    histfunc = ""
-    over_by = " over "
-    vs = " vs "
-    color = kwargs.get("color")
-    symbol = kwargs.get("symbol")
-    apply_mean = kwargs.get("apply_mean", None)
-    apply_sort = kwargs.get("apply_sort", None)
-    title_trendline = kwargs.get("trendline", "")
-    if title_trendline != "":
-        title_trendline = f"trend lines are <i>{title_trendline}</i>"
-
-    if chart == "histogram":
-        histfunc = kwargs.get("histfunc", "sum" if y else "count")
-        if x is None and y:
-            y=f"{y} {histfunc}"
-    elif chart in ("box", "violin"):
-        histfunc = "distribution"
-        over_by = " by "
-        if x is None and y:
-            y=f"{y} {histfunc}"
-    elif chart == "bar":
-        over_by = " by "
-        if y == "":
-            y = "count"
-            if color is None and apply_mean:
-                over_by = " of "
-        else:
-            if apply_mean:
-                func = "average"
-            else:
-                func = "sum"
-            y = f"{func} of {y}"
-        if apply_sort:
-            if x:
-                x = f"sorted {x}"
-    elif chart == "density_heatmap":
-        histfunc = kwargs.get("histfunc", "sum")
-        if y and z:
-            y, z = f"binned {histfunc} of {z} for ", y
-        elif y:
-            y = f"binned count of {y}"
-        histfunc = ""
-    elif chart == "density_contour":
-        histfunc = kwargs.get("histfunc", "count")
-        estimation = "estimated density "
-        if y and z:
-            y, z = f"estimated {histfunc} density of {z} for ", y
-        elif y:
-            y = f"estimated count density of {y}"
-        histfunc = ""
-    elif chart =="scatter_3d":
-        if y and z:
-            # need to separate them
-            z = ", " + z
-    elif chart in ("word_cloud", "scatter_matrix", "pie"):
-        x = ""  # else string will evaluate to None
-    elif chart == "line":
-        if kwargs.get("apply_mean", None):
-            over_by = " by "
-            if y:
-                y = f"average of {y}"
-        if kwargs.get("apply_sort", None):
-            if x:
-                x = f"sorted {x}"
-
-    # filters
-    filters = active_filters_repr(pgdf.filters)
-    if filters != "":
-        filters = "Filters: " + filters
-    total = pgdf.df_unfiltered.shape[0]
-
-    subset = pgdf.df.shape[0]
-    selection = ""
-    groupings = ""
-    sep = ""
-    showlegend = kwargs.get("showlegend", True)
-
-    # over / by
-    over_by = f" {histfunc}{over_by}" if x else ""
-    vs = f"{vs} {histfunc}" if y else ""
-
-    # Groupings in Legend
-    if color or symbol:
-        if showlegend:
-            groupings += "Legend"
-        else:
-            if color:
-                groupings += f"{sep}color={color}"
-                sep = ", "
-            if symbol:
-                groupings += f"{sep}symbol={symbol}"
-        sep = ", "
-
-    # this one shows on the legend, but is not labeled
-    if kwargs.get("marker_symbol"):
-        groupings += f"{sep}marker={kwargs['marker_symbol']}"
-
-    # next two don't show in the plotly legend, so we need to explicitly add them
-    if "line_group" in kwargs.keys():
-        groupings += f"{sep}line_group={kwargs['line_group']}"
-    if "size" in kwargs.keys():
-        groupings += f"{sep}size={kwargs['size']}"
-    if "text" in kwargs.keys():
-        groupings += f"{sep}text={kwargs['text']}"
-    if groupings != "":
-        groupings = "Grouped by " + groupings
-        if filters != "":
-            groupings += " - "
-
-    if subset != total:
-        selection = f"({subset} obs. of {total}) "
-    elif kwargs.get("apply_mean", None):
-        selection = "({groupby_obs} " + f"derived obs. from {total})"
-    else:
-        selection = f"({total} obs.)" if chart == "line" else "(all observations)"
-
-    return kwargs["title"].format_map(defaultdict(str,
-                                                  date=today,
-                                                  filters=filters,
-                                                  title_x=x,
-                                                  title_y=y,
-                                                  title_z=z,
-                                                  title_dimensions=dimensions,
-                                                  title_columns=columns,
-                                                  title_trendline=title_trendline,
-                                                  vs=vs,
-                                                  over_by=over_by,
-                                                  name=name,
-                                                  total=total,
-                                                  subset=subset,
-                                                  selection=selection,
-                                                  groupings=groupings,
-                                                  **kwargs))
-
-
 # Make a string from a kwargs dict as they would be displayed when passed to a function
 # eg. {'a': 5, 'b': 6} -> a=5, b=6
 def kwargs_string(kwargs_dict):
-    return ', '.join([f'{key}={repr(val)}' for key, val in kwargs_dict.items()])
+    chunks = []
+    for key, val in kwargs_dict.items():
+        if isinstance(val, pd.DataFrame):
+            chunk = f'{key}={val._pgdf.name}'
+        else:
+            chunk = f'{key}={repr(val)}'
+        chunks.append(chunk)
+    return ', '.join(chunks)
+
+
+def get_function_body(func):
+    import inspect
+    from itertools import dropwhile
+    source_lines = inspect.getsourcelines(func)[0]
+    source_lines = dropwhile(lambda x: x.startswith('@'), source_lines)
+    line = next(source_lines).strip()
+    if not line.startswith('def '):
+        return line.rsplit(':')[-1].strip()
+    elif not line.endswith(':'):
+        for line in source_lines:
+            line = line.strip()
+            if line.endswith(':'):
+                break
+    # Handle functions that are not one-liners
+    first_line = next(source_lines)
+    # Find the indentation of the first line
+    indentation = len(first_line) - len(first_line.lstrip())
+    return ''.join([first_line[indentation:]] + [line[indentation:] for line in source_lines])
 
 
 # In North America, Week 1 of any given year is the week which contains January 1st. Weeks span Sunday to Saturday.
@@ -587,6 +418,109 @@ def refactor_variable(expr, old_name, new_name):
 
     return astor.code_gen.to_source(tree)
 
+
+def get_figure_type(fig):
+    # Plotly
+    try:
+        import plotly.basedatatypes
+        if issubclass(type(fig), plotly.basedatatypes.BaseFigure):
+            return "plotly"
+    except ModuleNotFoundError:
+        pass
+    # Matplotlib
+    try:
+        import matplotlib.axes, matplotlib.figure
+        if issubclass(type(fig), matplotlib.axes.Axes) \
+                or issubclass(type(fig), matplotlib.figure.Figure):
+            return "matplotlib"
+    except ModuleNotFoundError:
+        pass
+    # Bokeh
+    try:
+        import bokeh.plotting
+        if issubclass(type(fig), bokeh.plotting.Figure):
+            return "bokeh"
+    except ModuleNotFoundError:
+        pass
+    # Altair
+    try:
+        import altair.vegalite.v4.api
+        if issubclass(type(fig), altair.vegalite.v4.api.Chart):
+            return "altair"
+    except ModuleNotFoundError:
+        pass
+    return None
+
+
+# Take the text entered for a DataFrame cell and parse it into an appropriate type for the column
+def parse_cell(text, column_dtype):
+    import numpy as np
+    if text == "":
+        return np.nan
+
+    if column_dtype == str:
+        return text
+
+    # Parse text using same logic as reading a CSV file by using a file buffer
+    try:
+        from io import StringIO
+        import pandas as pd
+        value = pd.read_csv(StringIO(text), dtype=column_dtype, header=None).values[0][0]
+        return value
+    except ValueError:
+        raise ValueError(f"Could not convert {repr(text)} to type {column_dtype}")
+
+
+value = parse_cell('nan', str)
+
+
+def summarize_json(data, terse=True):
+    from collections import defaultdict
+
+    if len(data) == 0:
+        print(f"Data is an empty {type(data).__name__}")
+        return
+
+    def list_keys(data, parent_key='ROOT'):
+        parent_key = parent_key.strip('.')
+        keys = []
+        if isinstance(data, list):
+            parent_subkeys = parent_key.split(".")
+            for item in data:
+                keys += list_keys(item, f'{".".join(parent_subkeys[:-1])}.[{parent_subkeys[-1]}]')
+        elif isinstance(data, dict):
+            for key, item in data.items():
+                keys += list_keys(item, f'{parent_key}.{key}')
+        else:
+            return [f'{parent_key} - {type(data).__name__}']
+
+        return keys
+
+    keycount = defaultdict(lambda: 0)
+
+    for key in reversed(sorted(list_keys(data))):
+        keycount[key] += 1
+
+    summary = ""
+
+    width = max([len(str(count)) for count in keycount.values()])
+    redundant_subkeys = set()
+    for key, count in keycount.items():
+        if terse:
+            line = f"{count: <{width}} {key}"
+
+            for redundant_subkey in sorted(list(redundant_subkeys), key=len, reverse=True):
+                line = line.replace(redundant_subkey, ' ' * len(redundant_subkey))
+
+            for i in range(line.count('.')):
+                subkey = '.'.join(key.split('.')[:-1 - i])
+                redundant_subkeys.add(subkey)
+        else:
+            line = f"{count: <{width}} {key}"
+
+        summary += line + "\n"
+
+    return summary
 
 
 event_lookup = {"0": "QEvent::None",

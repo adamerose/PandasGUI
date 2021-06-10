@@ -1,43 +1,12 @@
-# Some small datasets from https://github.com/adamerose/datasets
-
 import os
-import shutil
+from typing import Dict, Union
+
 import pandas as pd
 import numpy as np
 from pandasgui.constants import LOCAL_DATASET_DIR
 import logging
 
 logger = logging.getLogger(__name__)
-
-__all__ = ["all_datasets",
-           "simple",
-           "multiindex",
-
-           "pokemon",
-           "car_crashes",
-           "iris",
-           "mpg",
-           "penguins",
-           "tips",
-           "titanic",
-           "gapminder",
-           "stockdata",
-           "trump_tweets",
-           "mi_manufacturing"]
-
-dataset_names = ["pokemon",
-                 "car_crashes",
-                 "iris",
-                 "mpg",
-                 "penguins",
-                 "tips",
-                 "titanic",
-                 "gapminder",
-                 "stockdata",
-                 "trump_tweets",
-                 "mi_manufacturing"]
-
-all_datasets = {}
 
 
 def read_csv(path):
@@ -58,43 +27,105 @@ def to_csv(df, path):
         return df.to_csv(path, encoding='UTF-8', index=False)
 
 
-for ix, name in enumerate(dataset_names):
-    local_data_path = os.path.join(LOCAL_DATASET_DIR, f"{name}.csv")
-    os.makedirs(LOCAL_DATASET_DIR, exist_ok=True)
-    if os.path.exists(local_data_path):
-        all_datasets[name] = read_csv(local_data_path)
-    else:
-        url = f"https://raw.githubusercontent.com/adamerose/datasets/master/{name}.csv"
-        all_datasets[name] = read_csv(url)
-        to_csv(all_datasets[name], local_data_path)
-        logger.info(f"Saved {url} to {LOCAL_DATASET_DIR}")
+calculated_datasets = [
+    "simple",
+    "multiindex",
+    "small",
+    "unhashable"
+]
 
-simple = pd.DataFrame({'name': ['John', 'John', 'Mary', 'Mary', 'Pete', 'Pete', 'Mike', 'Mike'],
-                       'gender': ['m', 'm', 'f', 'f', 'm', 'm', 'm', 'm'],
-                       'trial': ['A', 'B', 'A', 'B', 'A', 'B', 'A', 'B'],
-                       'time': [473, 439, 424, 419, 433, 374, 434, 345],
-                       'points': [13, 16, 13, 18, 9, 20, 5, 18]}
-                      )
-all_datasets['simple'] = simple
+csv_datasets = [
+    "pokemon",
+    "car_crashes",
+    "iris",
+    "mpg",
+    "penguins",
+    "tips",
+    "titanic",
+    "gapminder",
+    "stockdata",
+    "trump_tweets",
+    "mi_manufacturing"
+]
 
-multiindex = pd.DataFrame(np.random.randn(8, 4),
-                          index=pd.MultiIndex.from_product([('bar', 'baz', 'foo', 'qux'),
-                                                            ('one', 'two')],
-                                                           names=['first', 'second']),
-                          columns=pd.MultiIndex.from_tuples([('A', 'cat'), ('B', 'dog'),
-                                                             ('B', 'cat'), ('A', 'dog')],
-                                                            names=['exp', 'animal']))
-all_datasets['multiindex'] = multiindex
+__all__ = ["all_datasets",
 
-unhashable = pd.DataFrame({'lists': [[1, 2, 3], [4, 5, 6], [7, 8, 9]],
-                           'dicts': [{'a': 1}, {'b': 2}, {'c': 3}],
-                           'dicts_of_lists': [{'a': [1, 2, 3]}, {'b': [4, 5, 6]}, {'c': [7, 8, 9]}],
-                           'sets': [{1, 2, 3}, {4, 5, 6}, {7, 8, 9}],
-                           'tuples': [(1, 2, 3), (4, 5, 6), (7, 8, 9)]
-                           }
-                          )
-all_datasets['unhashable'] = unhashable
+           # csv_datasets
+           "pokemon",
+           "car_crashes",
+           "iris",
+           "mpg",
+           "penguins",
+           "tips",
+           "titanic",
+           "gapminder",
+           "stockdata",
+           "trump_tweets",
+           "mi_manufacturing",
 
-# Add the datasets to globals so they can be imported like `from pandasgui.datasets import iris`
-for name in all_datasets.keys():
-    globals()[name] = all_datasets[name]
+           # calculated_datasets
+           "simple",
+           "multiindex",
+           "small",
+           "unhashable"
+           ]
+
+
+def __getattr__(name: str) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
+    if name not in __all__:
+        raise AttributeError
+
+    elif name == 'all_datasets':
+        all_datasets = {}
+        for n in csv_datasets + calculated_datasets:
+            # Exclude large datasets
+            if n not in ['youtube_trending_usa',
+                         "reddit_showerthoughts_may2015",
+                         'covid_cases_canada',
+                         'seinfeld_scripts']:
+                all_datasets[n] = __getattr__(n)
+        return all_datasets
+
+    # Download CSV files from Github repo, or open locally cached version
+    elif name in csv_datasets:
+        csv_path = os.path.join(LOCAL_DATASET_DIR, f"{name}.csv")
+        csv_url = fr"https://raw.githubusercontent.com/adamerose/datasets/master/{name}.csv"
+        if os.path.exists(csv_path):
+            df = read_csv(csv_path)
+        else:
+            logger.info(f"Downloading {csv_url}")
+            df = read_csv(csv_url)
+            os.makedirs(LOCAL_DATASET_DIR, exist_ok=True)
+            to_csv(df, csv_path)
+            logger.info(f"Saved {name}.csv to {csv_path}")
+        return df
+
+    # Return calculated datasets
+    elif name in calculated_datasets:
+        if name == 'simple':
+            return pd.DataFrame({'name': ['John', 'John', 'Mary', 'Mary', 'Pete', 'Pete', 'Mike', 'Mike'],
+                                 'gender': ['m', 'm', 'f', 'f', 'm', 'm', 'm', 'm'],
+                                 'trial': ['A', 'B', 'A', 'B', 'A', 'B', 'A', 'B'],
+                                 'time': [473, 439, 424, 419, 433, 374, 434, 345],
+                                 'points': [13, 16, 13, 18, 9, 20, 5, 18]}
+                                )
+        elif name == 'small':
+            return pd.DataFrame({'a': [1, 2],
+                                 'b': [3, 4]}
+                                )
+        elif name == 'multiindex':
+            return pd.DataFrame(np.random.randn(8, 4),
+                                index=pd.MultiIndex.from_product([('bar', 'baz', 'foo', 'qux'),
+                                                                  ('one', 'two')],
+                                                                 names=['first', 'second']),
+                                columns=pd.MultiIndex.from_tuples([('A', 'cat'), ('B', 'dog'),
+                                                                   ('B', 'cat'), ('A', 'dog')],
+                                                                  names=['exp', 'animal']))
+        elif name == 'unhashable':
+            return pd.DataFrame({'lists': [[1, 2, 3], [4, 5, 6], [7, 8, 9]],
+                                 'dicts': [{'a': 1}, {'b': 2}, {'c': 3}],
+                                 'dicts_of_lists': [{'a': [1, 2, 3]}, {'b': [4, 5, 6]}, {'c': [7, 8, 9]}],
+                                 'sets': [{1, 2, 3}, {4, 5, 6}, {7, 8, 9}],
+                                 'tuples': [(1, 2, 3), (4, 5, 6), (7, 8, 9)]
+                                 }
+                                )

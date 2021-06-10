@@ -1,39 +1,52 @@
-import textwrap
-from dataclasses import dataclass, field, asdict
-from typing import Dict, List, Union, Iterable
+from __future__ import annotations
+import typing
+from abc import abstractmethod
+
+if typing.TYPE_CHECKING:
+    from pandasgui.gui import PandasGui
+    from pandasgui.widgets.filter_viewer import FilterViewer
+    from pandasgui.widgets.dataframe_viewer import DataFrameViewer
+    from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
+    from pandasgui.widgets.navigator import Navigator
+
+from dataclasses import dataclass, field
+from typing import Iterable, List, Union
+from typing_extensions import Literal
 import pandas as pd
 from pandas import DataFrame
-from PyQt5 import QtCore, QtGui, QtWidgets, sip
-from PyQt5.QtCore import Qt
+from PyQt5 import QtCore, QtWidgets
 import traceback
-from functools import wraps
 from datetime import datetime
-from pandasgui.utility import unique_name, in_interactive_console, rename_duplicates, refactor_variable, parse_dates, \
-    clean_dataframe
-from pandasgui.constants import LOCAL_DATA_DIR, DEFAULT_TITLE_FORMAT, RENDER_MODE
+from pandasgui.utility import unique_name, in_interactive_console, refactor_variable, clean_dataframe, nunique, \
+    parse_cell
+from pandasgui.constants import LOCAL_DATA_DIR
 import os
-import collections
 from enum import Enum
 import json
 import inspect
 import logging
+import contextlib
 
 logger = logging.getLogger(__name__)
 
 # JSON file that stores persistent user preferences
 preferences_path = os.path.join(LOCAL_DATA_DIR, 'preferences.json')
-if not os.path.exists(preferences_path):
-    with open(preferences_path, 'w') as f:
-        json.dump({'theme': "light"}, f)
 
 
 def read_saved_settings():
     if not os.path.exists(preferences_path):
+        write_saved_settings({})
         return {}
     else:
-        with open(preferences_path, 'r') as f:
-            saved_settings = json.load(f)
-        return saved_settings
+        try:
+            with open(preferences_path, 'r') as f:
+                saved_settings = json.load(f)
+            return saved_settings
+        except Exception as e:
+
+            logger.warning("Error occurred reading preferences. Resetting to defaults\n" + traceback.format_exc())
+            write_saved_settings({})
+            return {}
 
 
 def write_saved_settings(settings):
@@ -70,28 +83,33 @@ class Setting(DictLike):
         super().__setattr__(key, value)
 
 
-DEFAULT_SETTINGS = {'editable': False,
-                    'style': "Fusion",
-                    'block': True,
-                    'theme': 'Dark',
-                    'title_format': DEFAULT_TITLE_FORMAT,
-                    'render_mode': RENDER_MODE,
-                    'apply_mean': True,
-                    'apply_sort': True}
+DEFAULT_SETTINGS = {'editable': True,
+                    'block': None,
+                    'theme': 'light',
+                    'auto_finish': True,
+                    'refresh_statistics': False,
+                    'render_mode': 'auto',
+                    'aggregation': 'mean',
+                    'title_format': "{name}: {title_columns}{title_dimensions}{names}{title_y}{title_z}{over_by}"
+                                    "{title_x} {selection}<br><sub>{groupings}{filters} {title_trendline}</sub>"
+
+                    }
 
 
 @dataclass
-class SettingsStore(DictLike):
+class SettingsStore(DictLike, QtCore.QObject):
+    settingsChanged = QtCore.pyqtSignal()
+
     block: Setting
     editable: Setting
-    style: Setting
     theme: Setting
-    title_format: Setting
+    auto_finish: Setting
     render_mode: Setting
-    apply_mean: Setting
-    apply_sort: Setting
+    aggregation: Setting
+    title_format: Setting
 
     def __init__(self, **settings):
+        super().__init__()
 
         saved_settings = read_saved_settings()
 
@@ -122,41 +140,50 @@ class SettingsStore(DictLike):
                                 dtype=bool,
                                 persist=True)
 
-        self.style = Setting(label="style",
-                             value=settings['style'],
-                             description="PyQt app style",
-                             dtype=Enum("StylesEnum", QtWidgets.QStyleFactory.keys()),
-                             persist=True)
-
         self.theme = Setting(label="theme",
                              value=settings['theme'],
                              description="UI theme",
-                             dtype=Enum("ThemesEnum", ['light', 'dark', 'classic']),
+                             dtype=Literal['light', 'dark', 'classic'],
                              persist=True)
 
-        self.title_format = Setting(label="title_format",
-                                    value=settings['title_format'],
-                                    description="format string for automatically generated chart title",
-                                    dtype=str,
-                                    persist=True)
+        self.refresh_statistics = Setting(label="refresh_statistics",
+                                          value=settings['refresh_statistics'],
+                                          description="Recalculate statistics when data changes",
+                                          dtype=bool,
+                                          persist=True)
+
+        # Settings related to Grapher
+
+        self.auto_finish = Setting(label="auto_finish",
+                                   value=settings['auto_finish'],
+                                   description="Automatically renders plot after each drag and drop",
+                                   dtype=bool,
+                                   persist=True)
 
         self.render_mode = Setting(label="render_mode",
                                    value=settings['render_mode'],
-                                   description="render mode for plotly express charts",
-                                   dtype=Enum("RenderEnum", ['auto', 'webgl', 'svg']),
+                                   description="render_mode",
+                                   dtype=Literal['auto', 'webgl', 'svg'],
                                    persist=True)
 
-        self.apply_mean = Setting(label="apply_mean",
-                                  value=settings['apply_mean'],
-                                  description="Default flag for whether to aggregate automatically in Grapher",
-                                  dtype=bool,
-                                  persist=True)
+        self.aggregation = Setting(label="aggregation",
+                                   value=settings['aggregation'],
+                                   description="aggregation",
+                                   dtype=Literal['mean', 'median', 'min', 'max', 'sum', None],
+                                   persist=True)
 
-        self.apply_sort = Setting(label="apply_sort",
-                                  value=settings['apply_sort'],
-                                  description="Default flag for whether to sort automatically in Grapher",
-                                  dtype=bool,
-                                  persist=True)
+        self.title_format = Setting(label="title_format",
+                                    value=settings['title_format'],
+                                    description="title_format",
+                                    dtype=dict,
+                                    persist=True)
+
+    def reset_to_defaults(self):
+        for setting_name, setting_value in DEFAULT_SETTINGS.items():
+            self[setting_name].value = setting_value
+
+    def __repr__(self):
+        return '\n'.join([f"{key} = {val.value}" for key, val in self.__dict__.items()])
 
 
 @dataclass
@@ -178,7 +205,58 @@ class HistoryItem:
         self.time = datetime.now().strftime("%H:%M:%S")
 
 
-class PandasGuiDataFrameStore:
+# Use this decorator on PandasGuiStore or PandasGuiDataFrameStore to display a status bar message during a method run
+def status_message_decorator(message):
+    def decorator(function):
+        def wrapper(self, *args, **kwargs):
+
+            if not (issubclass(type(self), PandasGuiStore) or issubclass(type(self), PandasGuiDataFrameStore)):
+                raise ValueError
+
+            full_kwargs = kwargs.copy()
+            # Allow putting method argument values in the status message by putting them in curly braces
+            args_spec = inspect.getfullargspec(function).args
+            args_spec.pop(0)  # Removes self
+            for ix, arg_name in enumerate(args_spec):
+                # Need to check length because if the param has default value it may be in args_spec but not args
+                if ix < len(args):
+                    full_kwargs[arg_name] = args[ix]
+            new_message = message
+
+            for arg_name in full_kwargs.keys():
+                new_message = new_message.replace('{' + arg_name + '}', str(full_kwargs[arg_name]))
+
+            if self.gui is not None:
+                original_status = self.gui.statusBar().currentMessage()
+                self.gui.statusBar().showMessage(new_message)
+                self.gui.statusBar().repaint()
+                QtWidgets.QApplication.instance().processEvents()
+                try:
+                    result = function(self, *args, **kwargs)
+                finally:
+                    self.gui.statusBar().showMessage(original_status)
+                    self.gui.statusBar().repaint()
+                    QtWidgets.QApplication.instance().processEvents()
+            else:
+                result = function(self, *args, **kwargs)
+            return result
+
+        return wrapper
+
+    return decorator
+
+
+# Objects to display in the PandasGuiStore must inherit this class
+class PandasGuiStoreItem:
+    def __init__(self):
+        self.name = None
+
+    @abstractmethod
+    def pg_widget(self):
+        raise NotImplementedError
+
+
+class PandasGuiDataFrameStore(PandasGuiStoreItem):
     """
     All methods that modify the data should modify self.df_unfiltered, then self.df gets computed from that
     """
@@ -197,10 +275,11 @@ class PandasGuiDataFrameStore:
         # References to other object instances that may be assigned later
         self.settings: SettingsStore = SETTINGS_STORE
         self.store: Union[PandasGuiStore, None] = None
-        self.gui: Union["PandasGui", None] = None
-        self.dataframe_explorer: Union["DataFrameExplorer", None] = None
-        self.dataframe_viewer: Union["DataFrameViewer", None] = None
-        self.filter_viewer: Union["FilterViewer", None] = None
+        self.gui: Union[PandasGui, None] = None
+        self.dataframe_explorer: DataFrameExplorer = None
+        self.dataframe_viewer: Union[DataFrameViewer, None] = None
+        self.stats_viewer: Union[DataFrameViewer, None] = None
+        self.filter_viewer: Union[FilterViewer, None] = None
 
         self.column_sorted: Union[int, None] = None
         self.index_sorted: Union[int, None] = None
@@ -209,12 +288,59 @@ class PandasGuiDataFrameStore:
         self.filters: List[Filter] = []
         self.filtered_index_map = df.reset_index().index
 
+        # Statistics
+        self.column_statistics = None
+        self.row_statistics = None
+        self.statistics_outdated = True
+
+        self.data_changed()
+
+    def __setattr__(self, name, value):
+        if name == 'df':
+            value.pgdf = self
+        super().__setattr__(name, value)
+
+    def pg_widget(self):
+        return self.dataframe_explorer
+
+    @status_message_decorator("Refreshing statistics...")
+    def refresh_statistics(self, force=True):
+        if force or self.settings.refresh_statistics.value:
+            df = self.df
+            self.column_statistics = pd.DataFrame({
+                "Type": df.dtypes.astype(str),
+                "Count": df.count(),
+                "N Unique": nunique(df),
+                "Mean": df.mean(numeric_only=True),
+                "StdDev": df.std(numeric_only=True),
+                "Min": df.min(numeric_only=True),
+                "Max": df.max(numeric_only=True),
+            }, index=df.columns
+            )
+
+            df = self.df.transpose()
+            df_numeric = self.df.select_dtypes('number').transpose()
+            self.row_statistics = pd.DataFrame({
+                # "Type": df.dtypes.astype(str),
+                # "Count": df.count(),
+                # "N Unique": nunique(df),
+                # "Mean": df_numeric.mean(numeric_only=True),
+                # "StdDev": df_numeric.std(numeric_only=True),
+                # "Min": df_numeric.min(numeric_only=True),
+                "Max": df_numeric.max(numeric_only=True),
+            }, index=df.columns
+            )
+
+            if self.dataframe_explorer is not None:
+                self.dataframe_explorer.statistics_viewer.refresh_statistics()
+
     ###################################
     # Code history
 
+    @status_message_decorator("Generating code export...")
     def code_export(self):
 
-        if len(self.history) == 0:
+        if len(self.history) == 0 and not any([filt.enabled for filt in self.filters]):
             return f"# No actions have been recorded yet on this DataFrame ({self.name})"
 
         code_history = "# 'df' refers to the DataFrame passed into 'pandasgui.show'\n\n"
@@ -242,16 +368,23 @@ class PandasGuiDataFrameStore:
     ###################################
     # Editing cell data
 
-    def edit_data(self, row, col, value):
+    @status_message_decorator("Applying cell edit...")
+    def edit_data(self, row, col, text):
+
+        column_dtype = self.df.dtypes[col].type
+        value = parse_cell(text, column_dtype)
+
         # Map the row number in the filtered df (which the user interacts with) to the unfiltered one
         row = self.filtered_index_map[row]
+        old_val = self.df_unfiltered.iat[row, col]
+        if old_val != value and not (pd.isna(old_val) and pd.isna(value)):
+            self.df_unfiltered.iat[row, col] = value
+            self.apply_filters()
 
-        self.df_unfiltered.iat[row, col] = value
-        self.apply_filters()
+            self.add_history_item("edit_data",
+                                  f"df.iat[{row}, {col}] = {repr(value)}")
 
-        self.add_history_item("edit_data",
-                              f"df.iat[{row}, {col}] = {value}")
-
+    @status_message_decorator("Pasting data...")
     def paste_data(self, top_row, left_col, df_to_paste):
         new_df = self.df_unfiltered.copy()
 
@@ -278,6 +411,7 @@ class PandasGuiDataFrameStore:
     ###################################
     # Sorting
 
+    @status_message_decorator("Sorting column...")
     def sort_column(self, ix: int):
         col_name = self.df_unfiltered.columns[ix]
 
@@ -288,7 +422,7 @@ class PandasGuiDataFrameStore:
             self.sort_is_ascending = True
 
             self.add_history_item("sort_column",
-                                  f"df = df.sort_values(df.columns[{ix}], ascending=True, kind='mergesort')")
+                                  f"df = df.sort_values({self.df_unfiltered.columns[ix]}, ascending=True, kind='mergesort')")
 
         # Clicked a sorted column
         elif ix == self.column_sorted and self.sort_is_ascending:
@@ -297,7 +431,7 @@ class PandasGuiDataFrameStore:
             self.sort_is_ascending = False
 
             self.add_history_item("sort_column",
-                                  f"df = df.sort_values(df.columns[{ix}], ascending=False, kind='mergesort')")
+                                  f"df = df.sort_values({self.df_unfiltered.columns[ix]}, ascending=False, kind='mergesort')")
 
         # Clicked a reverse sorted column - reset to sorted by index
         elif ix == self.column_sorted:
@@ -311,6 +445,7 @@ class PandasGuiDataFrameStore:
         self.index_sorted = None
         self.apply_filters()
 
+    @status_message_decorator("Sorting index...")
     def sort_index(self, ix: int):
         # Clicked an unsorted index level
         if ix != self.index_sorted:
@@ -368,6 +503,7 @@ class PandasGuiDataFrameStore:
         self.filters[index].enabled = not self.filters[index].enabled
         self.apply_filters()
 
+    @status_message_decorator("Applying filters...")
     def apply_filters(self):
         df = self.df_unfiltered.copy()
         df['_temp_range_index'] = df.reset_index().index
@@ -384,65 +520,65 @@ class PandasGuiDataFrameStore:
         df = df.drop('_temp_range_index', axis=1)
 
         self.df = df
-        self.update()
+        self.data_changed()
 
     ###################################
     # Other
 
-    # Refresh PyQt models when the underlying pgdf is changed in anyway that needs to be reflected in the GUI
-    def update(self):
+    def data_changed(self):
+        self.refresh_ui()
+        self.refresh_statistics()
+        # Remake Grapher plot
+        if self.dataframe_explorer is not None:
+            self.dataframe_explorer.grapher.on_dragger_finished()
 
-        # Update models
+    # Refresh PyQt models when the underlying pgdf is changed in anyway that needs to be reflected in the GUI
+    def refresh_ui(self):
+
         self.models = []
-        if self.dataframe_viewer is not None:
-            self.models += [self.dataframe_viewer.dataView.model(),
-                            self.dataframe_viewer.columnHeader.model(),
-                            self.dataframe_viewer.indexHeader.model(),
-                            self.dataframe_viewer.columnHeaderNames.model(),
-                            self.dataframe_viewer.indexHeaderNames.model(),
-                            ]
 
         if self.filter_viewer is not None:
-            self.models += [self.filter_viewer.list_model,
-                            ]
+            self.models += [self.filter_viewer.list_model]
 
         for model in self.models:
             model.beginResetModel()
             model.endResetModel()
 
         if self.dataframe_viewer is not None:
-            # Update multi-index spans
-            for view in [self.dataframe_viewer.columnHeader,
-                         self.dataframe_viewer.indexHeader]:
-                view.set_spans()
-
-            # Update sizing
-            for view in [self.dataframe_viewer.columnHeader,
-                         self.dataframe_viewer.indexHeader,
-                         self.dataframe_viewer.dataView]:
-                view.updateGeometry()
+            self.dataframe_viewer.refresh_ui()
 
     @staticmethod
-    def cast(x: Union["PandasGuiDataFrameStore", pd.DataFrame, pd.Series, Iterable]):
-        if isinstance(x, PandasGuiDataFrameStore):
-            return x
-        if isinstance(x, pd.DataFrame):
-            return PandasGuiDataFrameStore(x.copy())
-        elif isinstance(x, pd.Series):
-            return PandasGuiDataFrameStore(x.to_frame())
+    def cast(df: Union[PandasGuiDataFrameStore, pd.DataFrame, pd.Series, Iterable]):
+        if isinstance(df, PandasGuiDataFrameStore):
+            return df
+        if isinstance(df, pd.DataFrame):
+            return PandasGuiDataFrameStore(df.copy())
+        elif isinstance(df, pd.Series):
+            return PandasGuiDataFrameStore(df.to_frame())
         else:
             try:
-                return PandasGuiDataFrameStore(pd.DataFrame(x))
+                return PandasGuiDataFrameStore(pd.DataFrame(df))
             except:
-                raise TypeError(f"Could not convert {type(x)} to DataFrame")
+                raise TypeError(f"Could not convert {type(df)} to DataFrame")
 
 
 @dataclass
 class PandasGuiStore:
-    settings: Union["SettingsStore", None] = None
-    data: Dict[str, PandasGuiDataFrameStore] = field(default_factory=dict)
-    gui: Union["PandasGui", None] = None
-    navigator: Union["Navigator", None] = None
+    """This class stores all state data of the PandasGUI main GUI.
+
+    Attributes:
+        settings         Settings as defined in SettingsStore
+        data             A dict of PandasGuiDataFrameStore instances which wrap DataFrames. These show up in left nav
+        data    A dict of other widgets that can show up in the left nav such as JsonViewer and FigureViewer
+        gui              A reference to the PandasGui widget instance
+        navigator        A reference to the Navigator widget instance
+        selected_pgdf    The PandasGuiDataFrameStore currently selected in the nav
+    """
+
+    settings: Union[SettingsStore, None] = None
+    data: typing.OrderedDict[str, Union[PandasGuiStoreItem, PandasGuiDataFrameStore]] = field(default_factory=dict)
+    gui: Union[PandasGui, None] = None
+    navigator: Union[Navigator, None] = None
     selected_pgdf: Union[PandasGuiDataFrameStore, None] = None
 
     def __post_init__(self):
@@ -450,9 +586,8 @@ class PandasGuiStore:
 
     ###################################
     # IPython magic
-
+    @status_message_decorator("Executing IPython command...")
     def eval_magic(self, line):
-
         names_to_update = []
         command = line
         for name in self.data.keys():
@@ -469,38 +604,85 @@ class PandasGuiStore:
 
     ###################################
 
+    # Use this context to display a status message for a block. self should be a PandasGuiStore or PandasGuiDataFrameStore
+    @contextlib.contextmanager
+    def status_message_context(self, message):
+        if self.gui is not None:
+            original_status = self.gui.statusBar().currentMessage()
+            self.gui.statusBar().showMessage(message)
+            self.gui.statusBar().repaint()
+            QtWidgets.QApplication.instance().processEvents()
+            try:
+                yield
+            finally:
+                self.gui.statusBar().showMessage(original_status)
+                self.gui.statusBar().repaint()
+                QtWidgets.QApplication.instance().processEvents()
+
+    ###################################
+
+    def add_item(self, item: PandasGuiStoreItem,
+                 name: str = "Untitled", shape: str = ""):
+
+        # Add it to store and create widgets
+        self.data[name] = item
+        self.gui.stacked_widget.addWidget(item.pg_widget())
+
+        # Add to nav
+        nav_item = QtWidgets.QTreeWidgetItem(self.navigator, [name, shape])
+        self.navigator.itemSelectionChanged.emit()
+        self.navigator.setCurrentItem(nav_item)
+        self.navigator.apply_tree_settings()
+
+    def remove_item(self, name_or_index):
+        if type(name_or_index) == int:
+            ix = name_or_index
+            name = list(self.data.keys())[ix]
+        elif type(name_or_index) == str:
+            name = name_or_index
+        else:
+            raise ValueError
+
+        item = self.data[name]
+        if isinstance(item, PandasGuiDataFrameStore):
+            widget = item.dataframe_explorer
+        else:
+            widget = item
+
+        self.data.pop(name)
+        self.gui.navigator.remove_item(name)
+        self.gui.stacked_widget.removeWidget(widget)
+
+    @status_message_decorator("Adding DataFrame...")
     def add_dataframe(self, pgdf: Union[DataFrame, PandasGuiDataFrameStore],
                       name: str = "Untitled"):
 
         name = unique_name(name, self.get_dataframes().keys())
-        pgdf = PandasGuiDataFrameStore.cast(pgdf)
+        with self.status_message_context("Adding DataFrame (Creating DataFrame store)..."):
+            pgdf = PandasGuiDataFrameStore.cast(pgdf)
         pgdf.settings = self.settings
         pgdf.name = name
         pgdf.store = self
+        pgdf.gui = self.gui
 
-        pgdf.df = clean_dataframe(pgdf.df, name)
+        with self.status_message_context("Cleaning DataFrame..."):
+            pgdf.df = clean_dataframe(pgdf.df, name)
+            pgdf.data_changed()
 
-        # Add it to store and create widgets
-        self.data[name] = pgdf
         if pgdf.dataframe_explorer is None:
             from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
             pgdf.dataframe_explorer = DataFrameExplorer(pgdf)
-        dfe = pgdf.dataframe_explorer
-        self.gui.stacked_widget.addWidget(dfe)
 
         # Add to nav
         shape = pgdf.df.shape
-        shape = str(shape[0]) + " X " + str(shape[1])
+        shape = f"{shape[0]:,} x {shape[1]:,}"
 
-        item = QtWidgets.QTreeWidgetItem(self.navigator, [name, shape])
-        self.navigator.itemSelectionChanged.emit()
-        self.navigator.setCurrentItem(item)
-        self.navigator.apply_tree_settings()
+        self.add_item(pgdf, name, shape)
 
-    def remove_dataframe(self, name):
-        self.data.pop(name)
-        self.gui.navigator.remove_item(name)
+    def remove_dataframe(self, name_or_index):
+        self.remove_item(name_or_index)
 
+    @status_message_decorator('Importing file "{path}"...')
     def import_file(self, path):
         if not os.path.isfile(path):
             logger.warning("Path is not a file: " + path)
@@ -518,28 +700,34 @@ class PandasGuiStore:
             filename = os.path.split(path)[1].split('.parquet')[0]
             df = pd.read_parquet(path, engine='pyarrow')
             self.add_dataframe(df, filename)
+        elif path.endswith(".json"):
+            filename = os.path.split(path)[1].split('.json')[0]
+            with open(path) as f:
+                data = json.load(f)
+
+            from pandasgui.widgets.json_viewer import JsonViewer
+            jv = JsonViewer(data)
+            self.add_item(jv, filename)
 
         else:
             logger.warning("Can only import csv / xlsx / parquet. Invalid file: " + path)
 
-    def get_pgdf(self, name):
-        return self.data[name]
-
-    def get_dataframes(self, names: Union[None, str, list] = None):
+    def get_dataframes(self, names: Union[None, str, list, int] = None):
         if type(names) == str:
             return self.data[names].df
+        elif type(names) == int:
+            return self.data.items()[names]
 
         df_dict = {}
-        for pgdf in self.data.values():
+        for pgdf in [item for item in self.data.values() if isinstance(item, PandasGuiDataFrameStore)]:
             if names is None or pgdf.name in names:
                 df_dict[pgdf.name] = pgdf.df
 
         return df_dict
 
     def select_pgdf(self, name):
-        pgdf = self.get_pgdf(name)
-        dfe = pgdf.dataframe_explorer
-        self.gui.stacked_widget.setCurrentWidget(dfe)
+        pgdf = self.data[name]
+        self.gui.stacked_widget.setCurrentWidget(pgdf.pg_widget())
         self.selected_pgdf = pgdf
 
     def to_dict(self):

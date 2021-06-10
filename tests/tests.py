@@ -2,8 +2,7 @@ import pandas as pd
 import numpy as np
 import time
 import os
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt
+from PyQt5 import QtCore, QtWidgets
 
 
 def generate_string_data(rows, cols, length=5):
@@ -64,7 +63,7 @@ sys.excepthook = except_hook
 
 def test_webengine_import():
     app = QtWidgets.QApplication([])
-    from pandasgui.widgets.plotly_viewer import PlotlyViewer
+    from pandasgui.widgets.figure_viewer import FigureViewer
     import plotly.graph_objs as go
 
     fig = go.Figure()
@@ -80,7 +79,7 @@ def test_webengine_import():
         },
     )
 
-    pv = PlotlyViewer(fig)
+    pv = FigureViewer(fig)
     pv.show()
 
 
@@ -101,7 +100,6 @@ def test_inputs():
 
 def test_code_history():
     import pandas as pd
-    import numpy as np
     from pandasgui import show
     from pandasgui.datasets import pokemon
     pokemon = pokemon.head(10)[['Name', 'Attack', 'Defense', 'Generation', 'HP', 'Legendary']]
@@ -125,6 +123,17 @@ def test_code_history():
     assert (df.fillna('NULL').equals(gui.get_dataframes('pokemon').fillna('NULL')))
 
 
+def test_json():
+    import requests
+    from pandasgui import show
+    from pandasgui.datasets import all_datasets
+    comments = requests.get('https://jsonplaceholder.typicode.com/comments').json()
+    photos = requests.get('https://jsonplaceholder.typicode.com/photos').json()
+
+    gui = show(comments, photos, **all_datasets)
+
+
+test_json()
 test_webengine_import()
 test_inputs()
 test_code_history()

@@ -2,7 +2,7 @@
 
 # https://stackoverflow.com/a/7693234/3620725
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import Qt
 
 

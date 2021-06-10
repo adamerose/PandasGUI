@@ -1,5 +1,5 @@
 import re
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtWidgets
 
 
 class SearchableListWidget(QtWidgets.QWidget):

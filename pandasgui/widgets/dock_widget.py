@@ -62,7 +62,10 @@ class DockWidget(QtWidgets.QDockWidget):
 
         self.setFloating(False)
         if len(dock_widgets) > 0:
-            main.tabifyDockWidget(dock_widgets[0], self)
+            if self != dock_widgets[0]:
+                main.tabifyDockWidget(dock_widgets[0], self)
+            else:
+                main.tabifyDockWidget(dock_widgets[1], self)
         else:
             main.addDockWidget(Qt.LeftDockWidgetArea, self)
 

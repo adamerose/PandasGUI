@@ -2,20 +2,20 @@ import os
 import re
 import sys
 
-from PyQt5 import QtCore, QtGui, QtWidgets, sip
+from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
-from PyQt5.QtCore import QModelIndex
 from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtCore import QUrl
 from pandasgui.utility import nunique, unique
 
-from pandasgui.constants import CATEGORICAL_THRESHOLD
 from pandasgui.store import PandasGuiDataFrameStore
-import typing
 import pandasgui
 
 import logging
+
 logger = logging.getLogger(__name__)
+
+CATEGORICAL_THRESHOLD = 50
 
 
 class Completer(QtWidgets.QCompleter):
@@ -86,7 +86,8 @@ class FilterViewer(QtWidgets.QWidget):
         self.text_input = QtWidgets.QLineEdit()
         self.text_input.setCompleter(self.completer)
         self.text_input.setPlaceholderText("Enter query expression")
-        self.text_input_label = QtWidgets.QLabel('''<a style="color: #1e81cc;" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.query.html">What's a query expression?</a>''')
+        self.text_input_label = QtWidgets.QLabel(
+            '''<a style="color: #1e81cc;" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.query.html">What's a query expression?</a>''')
         self.text_input_label.linkActivated.connect(lambda link: QDesktopServices.openUrl(QUrl(link)))
         self.text_input.setValidator(None)
 

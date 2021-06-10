@@ -1,80 +1,122 @@
-from PyQt5 import QtWidgets, QtCore, QtGui
+import ast
+import pprint
+
+import typing
+from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
 import sys
-from typing import Union
-from dataclasses import dataclass, is_dataclass
-from enum import EnumMeta
-from pandasgui.store import SETTINGS_STORE, SettingsStore, Setting
+from pandasgui.store import SETTINGS_STORE, SettingsStore
+from pandasgui.widgets import base_widgets
+from typing_extensions import Literal, get_origin
 
 
 class SettingsEditor(QtWidgets.QWidget):
     def __init__(self, settings: SettingsStore, parent=None):
-        super().__init__()
+        super().__init__(parent)
 
-        layout = QtWidgets.QGridLayout()
-        layout.setColumnStretch(0, 0)
-        layout.setColumnStretch(1, 1)
         self.settings = settings
-        setter = lambda key, val: self.settings[key].value.__setattr__(val)
+        self.tree = base_widgets.QTreeWidget()
+        self.tree.setHeaderLabels(['Name', 'Value'])
+        self.tree.setRootIsDecorated(False)
 
-        # Dont display these settings because they have effects during the GUI initialization so changing them doesn't work
-        settings_to_show = {k: v for k, v in self.settings.__dict__.items() if k not in ['block', 'style', 'editable']}
+        finish_button = QtWidgets.QPushButton('Finish')
+        finish_button.clicked.connect(self.finish)
 
-        for setting_name, setting in settings_to_show.items():
-            if setting.dtype == str:
-                widget = self.text_editor(setting)
-            elif setting.dtype == bool:
-                widget = self.bool_editor(setting)
-            elif issubclass(type(setting.dtype), EnumMeta):
-                widget = self.enum_editor(setting)
-            else:
-                raise TypeError
-            row = layout.rowCount()
-            layout.addWidget(QtWidgets.QLabel(setting.label), row, 0)
-            layout.addWidget(widget, row, 1)
+        reset_button = QtWidgets.QPushButton('Reset To Defaults')
+        reset_button.clicked.connect(self.reset_to_defaults)
 
-        layout.addItem(QtWidgets.QSpacerItem(0, 0, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding),
-                       layout.rowCount(), 0)
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(self.tree)
+        layout.addWidget(finish_button)
+        layout.addWidget(reset_button)
+
+        self.init_tree()
+
         self.setLayout(layout)
 
-    def text_editor(self, setting: Setting):
+    def init_tree(self):
 
-        def setter(new_val, setting=setting):
-            setting.value = new_val
+        self.tree.clear()
 
-        line_edit = QtWidgets.QLineEdit(setting.value)
-        line_edit.textChanged.connect(setter)
+        # Dont display these settings because they have effects during the GUI initialization so changing them doesn't work
+        settings_to_show = {k: v for k, v in self.settings.__dict__.items() if k not in ['block']}
 
-        return line_edit
+        # Make a QTreeWidget with widgets in col2 that set its value
+        for ix, (setting_name, setting) in enumerate(settings_to_show.items()):
 
-    def bool_editor(self, setting: Setting):
+            item = QtWidgets.QTreeWidgetItem(self.tree, [setting_name])
+            item.setData(1, Qt.UserRole, setting.value)
+            if setting.dtype == str:
 
-        def setter(new_val, setting=setting):
-            setting.value = new_val == Qt.Checked
+                def setter(new_val, item=item):
+                    try:
+                        item.setData(1, Qt.UserRole, new_val)
+                    except:
+                        pass
 
-        checkbox = QtWidgets.QCheckBox(setting.label)
-        checkbox.setCheckState(Qt.Checked if setting.value else Qt.Unchecked)
-        checkbox.stateChanged.connect(setter)
+                widget = QtWidgets.QLineEdit(setting.value)
+                widget.textChanged.connect(setter)
 
-        return checkbox
+            elif setting.dtype == dict:
 
-    def enum_editor(self, setting: Setting):
+                def setter(new_val, item=item):
+                    try:
+                        item.setData(1, Qt.UserRole, dict(ast.literal_eval(new_val)))
+                    except:
+                        pass
 
-        def setter(new_val, setting=setting):
-            setting.value = new_val
+                widget = QtWidgets.QPlainTextEdit(pprint.pformat(setting.value))
+                widget.textChanged.connect(lambda widget=widget: setter(widget.toPlainText()))
 
-        combo = QtWidgets.QComboBox()
-        combo.addItems([x.name for x in list(setting.dtype)])
-        combo.setCurrentText(setting.value)
-        combo.currentTextChanged.connect(setter)
+            elif setting.dtype == bool:
 
-        return combo
+                def setter(new_val, item=item):
+                    try:
+                        item.setData(1, Qt.UserRole, new_val == Qt.Checked)
+                    except:
+                        pass
+
+                widget = QtWidgets.QCheckBox(setting.label)
+                widget.setCheckState(Qt.Checked if setting.value else Qt.Unchecked)
+                widget.stateChanged.connect(setter)
+
+            elif get_origin(setting.dtype) == Literal:
+
+                def setter(new_val, item=item):
+                    try:
+                        item.setData(1, Qt.UserRole, new_val)
+                    except:
+                        pass
+
+                widget = QtWidgets.QComboBox()
+                widget.addItems(typing.get_args(setting.dtype))
+                widget.setCurrentText(setting.value)
+                widget.currentTextChanged.connect(setter)
+
+            else:
+                raise TypeError
+
+            item.treeWidget().setItemWidget(item, 1, widget)
+
+    def finish(self):
+        # Get args from destination UI
+        root = self.tree.invisibleRootItem()
+        for i in range(root.childCount()):
+            item = root.child(i)
+            setting_name = item.text(0)
+            setting_value = item.data(1, Qt.UserRole)
+            self.settings[setting_name].value = setting_value
+        self.settings.settingsChanged.emit()
+
+    def reset_to_defaults(self):
+        self.settings.reset_to_defaults()
+        self.init_tree()
+        self.finish()
 
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
 
-    from pandasgui import store
 
     d = SettingsEditor(SETTINGS_STORE)
     d.show()

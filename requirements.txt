@@ -6,7 +6,9 @@ plotly
 wordcloud
 setuptools
 appdirs
-pynput
+mouse
 IPython
 pyarrow
 astor
+typing-extensions
+qtstylish>=0.1.0

@@ -2,14 +2,13 @@ import os
 import sys
 import tempfile
 
-from plotly.io import to_html
-import plotly.graph_objs as go
-from plotly.validators.scatter.marker import SymbolValidator
 from PyQt5 import QtCore, QtGui, QtWidgets, sip
 from PyQt5.QtCore import Qt
 import PyQt5
-
 import logging
+
+from pandasgui.store import PandasGuiStoreItem
+from pandasgui.utility import get_figure_type
 
 logger = logging.getLogger(__name__)
 
@@ -35,12 +34,8 @@ if "PyQt5.QtWebEngineWidgets" not in sys.modules:
 
         app.__init__(sys.argv + ["--ignore-gpu-blacklist", "--enable-gpu-rasterization"])
 
-# Available symbol names for a given version of Plotly
-_extended_symbols = SymbolValidator().values[0::2][1::3]
-plotly_markers = [symbol for symbol in _extended_symbols if symbol[-3:] != "dot"]
 
-
-class PlotlyViewer(PyQt5.QtWebEngineWidgets.QWebEngineView):
+class FigureViewer(PyQt5.QtWebEngineWidgets.QWebEngineView, PandasGuiStoreItem):
     def __init__(self, fig=None, store=None):
         super().__init__()
         self.store = store
@@ -48,7 +43,7 @@ class PlotlyViewer(PyQt5.QtWebEngineWidgets.QWebEngineView):
 
         # Fix scrollbar sometimes disappearing after Plotly autosizes and leaving behind white space
         self.settings().setAttribute(self.settings().ShowScrollBars, False)
-        self.settings().setAttribute(QtWebEngineWidgets.QWebEngineSettings.WebGLEnabled, True)
+        self.settings().setAttribute(PyQt5.QtWebEngineWidgets.QWebEngineSettings.WebGLEnabled, True)
 
         # https://stackoverflow.com/a/8577226/3620725
         self.temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False)
@@ -60,16 +55,47 @@ class PlotlyViewer(PyQt5.QtWebEngineWidgets.QWebEngineView):
     def set_figure(self, fig=None):
 
         self.temp_file.seek(0)
+        dark = self.store is not None and self.store.settings.theme.value == "dark"
+        fig_type = get_figure_type(fig)
 
         if fig is None:
-            fig = go.Figure()
+            html = ""
+        elif fig_type == "plotly":
+            from plotly.io import to_html
+            if dark:
+                fig.update_layout(template="plotly_dark", autosize=True)
+            html = to_html(fig, config={"responsive": True})
+        elif fig_type == "bokeh":
+            from bokeh.resources import CDN
+            from bokeh.embed import file_html
+            html = file_html(fig, resources=CDN, title="my fig")
+        elif fig_type == "matplotlib":
+            fig = fig.get_figure() or fig
+            import base64
+            from io import BytesIO
+            tmpfile = BytesIO()
+            fig.savefig(tmpfile, format='png')
+            encoded = base64.b64encode(tmpfile.getvalue()).decode('utf-8')
+            html = '<img src=\'data:image/png;base64,{}\'>'.format(encoded)
+        elif fig_type == "altair":
+            fig = fig.properties(
+                width='container',
+                height='container'
+            )
+            from io import StringIO
+            tmp = StringIO()
+            fig.save(tmp, format='html')
+            html = tmp.getvalue()
 
-        dark = self.store is not None and self.store.settings.theme.value == "dark"
-        if dark:
-            fig.update_layout(template="plotly_dark", autosize=True)
-        html = to_html(fig, config={"responsive": True})
-        html += "\n<style>body{margin: 0;}" \
-                "\n.plot-container,.main-svg,.svg-container{width:100% !important; height:100% !important;}</style>"
+        else:
+            raise TypeError
+
+        html = html.replace("<style>",
+                     "<style>"
+                     "body{margin: 0; width:100vw; height:100vh;} "
+                     # https://github.com/vega/react-vega/issues/85#issuecomment-795138175
+                     ".vega-embed{width:100%; height:100%;} "
+                     )
 
         self.temp_file.write(html)
         self.temp_file.truncate()
@@ -93,6 +119,8 @@ class PlotlyViewer(PyQt5.QtWebEngineWidgets.QWebEngineView):
             download.setPath(path)
             download.accept()
 
+    def pg_widget(self):
+        return self
 
 if __name__ == "__main__":
     # Create a QtWidgets.QApplication instance or use the existing one if it exists
@@ -118,6 +146,6 @@ if __name__ == "__main__":
         },
     )
 
-    pv = PlotlyViewer(fig)
+    pv = FigureViewer(fig)
     pv.show()
     app.exec_()

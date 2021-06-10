@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
-
-from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore
+from typing_extensions import Literal
+from pandasgui.store import PandasGuiDataFrameStore
 import pandasgui
 
 import logging
@@ -23,8 +23,9 @@ class DataFrameViewer(QtWidgets.QWidget):
         pgdf.dataframe_viewer = self
         self.pgdf = pgdf
 
-        # Indicates whether the widget has been shown yet. Set to True in
-        self._loaded = False
+        # Local state
+        # How to color cells
+        self.color_mode: Literal[None, 'column', 'row', 'all'] = None
 
         # Set up DataFrame TableView and Model
         self.dataView = DataTableView(parent=self)
@@ -74,6 +75,12 @@ class DataFrameViewer(QtWidgets.QWidget):
         self.gridLayout.addWidget(self.dataView.horizontalScrollBar(), 4, 2, 1, 1)
         self.gridLayout.addWidget(self.dataView.verticalScrollBar(), 3, 3, 1, 1)
 
+        # Fix scrollbars forcing a minimum height of the dataView which breaks layout for small number of rows
+        self.dataView.verticalScrollBar().setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed,
+                                                                              QtWidgets.QSizePolicy.Ignored))
+        self.dataView.horizontalScrollBar().setSizePolicy(QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Ignored,
+                                                                                QtWidgets.QSizePolicy.Fixed))
+
         # These expand when the window is enlarged instead of having the grid squares spread out
         self.gridLayout.setColumnStretch(4, 1)
         self.gridLayout.setRowStretch(5, 1)
@@ -86,6 +93,15 @@ class DataFrameViewer(QtWidgets.QWidget):
         self.indexHeader.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Maximum)
         self.columnHeader.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding)
 
+        # Default row height
+        default_row_height = 28
+        self.indexHeader.verticalHeader().setDefaultSectionSize(default_row_height)
+        self.dataView.verticalHeader().setDefaultSectionSize(default_row_height)
+
+        # Set column widths
+        for column_index in range(self.columnHeader.model().columnCount()):
+            self.auto_size_column(column_index)
+
     def set_styles(self):
         for item in [self.dataView, self.columnHeader, self.indexHeader, self.indexHeaderNames, self.columnHeaderNames]:
             item.setContentsMargins(0, 0, 0, 0)
@@ -95,52 +111,30 @@ class DataFrameViewer(QtWidgets.QWidget):
         # This is so dataclasses.asdict doesn't complain about this being unpicklable
         return "DataFrameViewer"
 
-    def showEvent(self, event: QtGui.QShowEvent):
-        """
-        Initialize column and row sizes on the first time the widget is shown
-        """
-        if not self._loaded:
-            # Set column widths
-            for column_index in range(self.columnHeader.model().columnCount()):
-                self.auto_size_column(column_index)
-
-            # Set row heights
-            # Just sets a single uniform row height based on the first N rows for performance.
-            N = 100
-            default_row_height = 30
-            for row_index in range(self.indexHeader.model().rowCount())[:N]:
-                self.auto_size_row(row_index)
-                height = self.indexHeader.rowHeight(row_index)
-                default_row_height = max(default_row_height, height)
-
-            # Set limit for default row height
-            default_row_height = min(default_row_height, 100)
-
-            self.indexHeader.verticalHeader().setDefaultSectionSize(default_row_height)
-            self.dataView.verticalHeader().setDefaultSectionSize(default_row_height)
-
-        self._loaded = True
-        event.accept()
-
     def auto_size_column(self, column_index):
         """
         Set the size of column at column_index to fit its contents
         """
-        padding = 30
 
-        self.columnHeader.resizeColumnToContents(column_index)
-        width = self.columnHeader.columnWidth(column_index)
+        width = 0
 
-        # Iterate over the column's rows and check the width of each to determine the max width for the column
+        # Iterate over the data view rows and check the width of each to determine the max width for the column
         # Only check the first N rows for performance. If there is larger content in cells below it will be cut off
         N = 100
         for i in range(self.dataView.model().rowCount())[:N]:
             mi = self.dataView.model().index(i, column_index)
             text = self.dataView.model().data(mi)
             w = self.dataView.fontMetrics().boundingRect(text).width()
-
             width = max(width, w)
 
+        # Repeat for header cells
+        for i in range(self.columnHeader.model().rowCount()):
+            mi = self.columnHeader.model().index(i, column_index)
+            text = self.columnHeader.model().data(mi)
+            w = self.columnHeader.fontMetrics().boundingRect(text).width()
+            width = max(width, w)
+
+        padding = 20
         width += padding
 
         # add maximum allowable column width so column is never too big.
@@ -239,17 +233,16 @@ class DataFrameViewer(QtWidgets.QWidget):
         else:
             return
 
-        # Special case for single-cell copy since df.to_clipboard appends extra newline
+        # If I try to use df.to_clipboard without starting new thread, large selections give access denied error
         if df.shape == (1, 1):
-            clipboard = QtWidgets.QApplication.instance().clipboard()
-            value = str(df.iloc[0, 0])
-            clipboard.setText(value)
+            # Special case for single-cell copy, excel=False removes the trailing \n character.
+            threading.Thread(target=lambda df: df.to_clipboard(index=header, header=header,
+                                                               excel=False), args=(df,)).start()
         else:
-            # If I try to use Pyperclip without starting new thread large selections give access denied error
             threading.Thread(target=lambda df: df.to_clipboard(index=header, header=header), args=(df,)).start()
 
     def paste(self):
-        df_to_paste = pd.read_clipboard(sep=',|\t', header=None)
+        df_to_paste = pd.read_clipboard(sep=',|\t', header=None, skip_blank_lines=False)
 
         # Get the bounds using the top left and bottom right selected cells
         indexes = self.dataView.selectionModel().selection().indexes()
@@ -269,6 +262,32 @@ class DataFrameViewer(QtWidgets.QWidget):
                                                       QtCore.QItemSelectionModel.Select)
 
         self.dataView.setSelectionMode(temp)
+
+    def refresh_ui(self):
+
+        # Update models
+        self.models = []
+        self.models += [self.dataView.model(),
+                        self.columnHeader.model(),
+                        self.indexHeader.model(),
+                        self.columnHeaderNames.model(),
+                        self.indexHeaderNames.model(),
+                        ]
+
+        for model in self.models:
+            model.beginResetModel()
+            model.endResetModel()
+
+        # Update multi-index spans
+        for view in [self.columnHeader,
+                     self.indexHeader]:
+            view.set_spans()
+
+        # Update sizing
+        for view in [self.columnHeader,
+                     self.indexHeader,
+                     self.dataView]:
+            view.updateGeometry()
 
 
 # Remove dotted border on cell focus.  https://stackoverflow.com/a/55252650/3620725
@@ -305,19 +324,23 @@ class DataTableModel(QtCore.QAbstractTableModel):
 
     # Returns the data from the DataFrame
     def data(self, index, role=QtCore.Qt.DisplayRole):
-        if (
-                role == QtCore.Qt.DisplayRole
-                or role == QtCore.Qt.EditRole
-                or role == QtCore.Qt.ToolTipRole
-        ):
-            row = index.row()
-            col = index.column()
-            cell = self.pgdf.df.iloc[row, col]
 
+        row = index.row()
+        col = index.column()
+        cell = self.pgdf.df.iloc[row, col]
+
+        if (role == QtCore.Qt.DisplayRole
+                or role == QtCore.Qt.EditRole
+                or role == QtCore.Qt.ToolTipRole):
             # Need to check type since a cell might contain a list or Series, then .isna returns a Series not a bool
             cell_is_na = pd.isna(cell)
             if type(cell_is_na) == bool and cell_is_na:
-                return ""
+                if role == QtCore.Qt.DisplayRole:
+                    return "●"
+                elif role == QtCore.Qt.EditRole:
+                    return ""
+                elif role == QtCore.Qt.ToolTipRole:
+                    return "NaN"
 
             # Float formatting
             if isinstance(cell, (float, np.floating)):
@@ -327,11 +350,34 @@ class DataTableModel(QtCore.QAbstractTableModel):
             return str(cell)
 
         elif role == QtCore.Qt.ToolTipRole:
-            row = index.row()
-            col = index.column()
-            cell = self.pgdf.df.iloc[row, col]
-
             return str(cell)
+
+        elif role == QtCore.Qt.BackgroundRole:
+
+            color_mode = self.parent().color_mode
+
+            if color_mode == None or pd.isna(cell):
+                return None
+
+            try:
+                x = float(cell)
+            except:
+                # Cell isn't numeric
+                return None
+
+            if color_mode == 'all':
+                percentile = cell / self.pgdf.column_statistics['Max'].max()
+            elif color_mode == 'row':
+                percentile = cell / self.pgdf.row_statistics['Max'][row]
+            elif color_mode == 'column':
+                percentile = cell / self.pgdf.column_statistics['Max'][col]
+            else:
+                raise ValueError
+
+            if pd.isna(percentile):
+                return None
+            else:
+                return QtGui.QColor(QtGui.QColor(255, 0, 0, int(255 * percentile)))
 
     def flags(self, index):
         if self.parent().pgdf.settings.editable:
@@ -556,11 +602,30 @@ class HeaderView(QtWidgets.QTableView):
     def mousePressEvent(self, event):
         point = event.pos()
         ix = self.indexAt(point)
-        if event.button() == QtCore.Qt.RightButton:
+
+        if event.button() == QtCore.Qt.RightButton and self.orientation == Qt.Horizontal:
+
             menu = QtWidgets.QMenu(self)
-            action = QtWidgets.QAction("Sort")
-            action.triggered.connect(lambda: self.pgdf.sort_column(ix.column()))
-            menu.addAction(action)
+
+            action1 = QtWidgets.QAction("Sort column")
+            action1.triggered.connect(lambda: self.pgdf.sort_column(ix.column()))
+
+            action2 = QtWidgets.QAction("Color by None")
+            action2.triggered.connect(lambda: [setattr(self.parent(), 'color_mode', None),
+                                               self.parent().refresh_ui()])
+            action3 = QtWidgets.QAction("Color by columns")
+            action3.triggered.connect(lambda: [setattr(self.parent(), 'color_mode', 'column'),
+                                               self.parent().refresh_ui()])
+            action4 = QtWidgets.QAction("Color by rows")
+            action4.triggered.connect(lambda: [setattr(self.parent(), 'color_mode', 'row'),
+                                               self.parent().refresh_ui()])
+            action5 = QtWidgets.QAction("Color by all")
+            action5.triggered.connect(lambda: [setattr(self.parent(), 'color_mode', 'all'),
+                                               self.parent().refresh_ui()])
+
+            for action in [action1, action2, action3, action4, action5]:
+                menu.addAction(action)
+
             menu.exec_(self.mapToGlobal(point))
         else:
             super().mousePressEvent(event)
@@ -646,21 +711,8 @@ class HeaderView(QtWidgets.QTableView):
     def init_column_sizes(self):
         padding = 30
 
-        if self.orientation == Qt.Horizontal:
-            min_size = 100
-
-            self.resizeColumnsToContents()
-
-            for col in range(self.model().columnCount()):
-                width = self.columnWidth(col)
-                if width + padding < min_size:
-                    new_width = min_size
-                else:
-                    new_width = width + padding
-
-                self.setColumnWidth(col, new_width)
-                self.table.setColumnWidth(col, new_width)
-        else:
+        # Horizontal header column sizes are tied to the DataTableView
+        if self.orientation == Qt.Vertical:
             self.resizeColumnsToContents()
             for col in range(self.model().columnCount()):
                 width = self.columnWidth(col)
@@ -746,6 +798,8 @@ class HeaderView(QtWidgets.QTableView):
                             self.setSpan(match_start, level, span_size, 1)
                             match_start = None
 
+    # For the horizontal header, return the column edge the mouse is over
+    # For the vertical header, return the row edge the mouse is over
     def over_header_edge(self, mouse_position, margin=3):
 
         # Return the index of the column this x position is on the right edge of
@@ -1014,9 +1068,9 @@ class TrackingSpacer(QtWidgets.QFrame):
 # Examples
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-    from pandasgui.datasets import pokemon, mi_manufacturing, multiindex
+    from pandasgui.datasets import pokemon
 
-    view = DataFrameViewer(multiindex)
+    view = DataFrameViewer(pokemon)
 
     view.show()
     app.exec_()

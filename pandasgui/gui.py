@@ -2,28 +2,24 @@ import inspect
 import os
 import sys
 import pprint
-from typing import Union, Iterable, Callable
+from typing import Callable, Union
 from dataclasses import dataclass
 import pandas as pd
 import pkg_resources
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
-import plotly.basedatatypes
 
-from pandasgui.store import PandasGuiStore, PandasGuiDataFrameStore
-from pandasgui.utility import fix_ipython, fix_pyqt, as_dict, delete_datasets, resize_widget
-from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
-from pandasgui.widgets.grapher import schemas
-from pandasgui.widgets.dragger import BooleanArg
+import pandasgui
+from pandasgui.store import PandasGuiStore
+from pandasgui.utility import as_dict, fix_ipython, get_figure_type, resize_widget
 from pandasgui.widgets.find_toolbar import FindToolbar
 from pandasgui.widgets.json_viewer import JsonViewer
 from pandasgui.widgets.navigator import Navigator
-from pandasgui.widgets.plotly_viewer import PlotlyViewer
+from pandasgui.widgets.figure_viewer import FigureViewer
 from pandasgui.widgets.settings_editor import SettingsEditor
-from pandasgui.themes import qstylish
+import qtstylish
 from pandasgui.widgets.python_highlighter import PythonHighlighter
-from IPython.core.magic import (register_line_magic, register_cell_magic,
-                                register_line_cell_magic)
+from IPython.core.magic import register_line_magic
 
 import logging
 
@@ -40,12 +36,12 @@ sys.excepthook = except_hook
 # Enables PyQt event loop in IPython
 fix_ipython()
 
-# Keep a list of PandasGUI widgets so they don't get garbage collected
+# Keep a list of widgets so they don't get garbage collected
 refs = []
-plotly_refs = []
 
 
 class PandasGui(QtWidgets.QMainWindow):
+
     def __init__(self, settings: dict = {}, **kwargs):
         """
         Args:
@@ -57,7 +53,7 @@ class PandasGui(QtWidgets.QMainWindow):
 
         self.caller_stack = inspect.currentframe().f_back
 
-        self.stacked_widget = None
+        self.stacked_widget: QtWidgets.QStackedWidget = None
         self.navigator = None
         self.splitter = None
         self.find_bar = None
@@ -71,25 +67,37 @@ class PandasGui(QtWidgets.QMainWindow):
             setting = self.store.settings[key]
             setting.value = value
 
-        # update default schema
-        for i, chart in enumerate(schemas):
-            if chart.name in ('bar','line'):
-                args = schemas[i].args
-                for j, arg in enumerate(args):
-                    if arg.arg_name == 'apply_sort':
-                        args[j] = BooleanArg(arg_name='apply_sort', default_value=self.store.settings.apply_sort.value)
-                    elif arg.arg_name == 'apply_mean':
-                        args[j] = BooleanArg(arg_name='apply_mean', default_value=self.store.settings.apply_mean.value)
-
-        # This will silently fail if the style isn't available on the OS, which is okay
-        self.app.setStyle(QtWidgets.QStyleFactory.create(self.store.settings.style.value))
+        self.app.setStyle(QtWidgets.QStyleFactory.create('Fusion'))
 
         # Create all widgets
         self.init_ui()
 
-        # Adds DataFrames listed in kwargs to data store.
-        for df_name, df in kwargs.items():
-            self.store.add_dataframe(df, df_name)
+        plotly_kwargs = {key: value for (key, value) in kwargs.items() if get_figure_type(value) is not None}
+        json_kwargs = {key: value for (key, value) in kwargs.items() if any([
+            issubclass(type(value), list),
+            issubclass(type(value), dict),
+        ])}
+        dataframe_kwargs = {key: value for (key, value) in kwargs.items() if any([
+            issubclass(type(value), pd.DataFrame),
+            issubclass(type(value), pd.Series),
+        ])}
+
+        if json_kwargs:
+            for name, val in json_kwargs.items():
+                jv = JsonViewer(val)
+                jv.setWindowTitle(name)
+                self.store.add_item(jv, name)
+
+        if plotly_kwargs:
+            for name, fig in plotly_kwargs.items():
+                pv = FigureViewer(fig)
+                pv.setWindowTitle(name)
+                self.store.add_item(pv, name)
+
+        if dataframe_kwargs:
+            # Adds DataFrames listed in kwargs to data store.
+            for df_name, df in dataframe_kwargs.items():
+                self.store.add_dataframe(df, df_name)
 
         # Default to first item
         self.navigator.setCurrentItem(self.navigator.topLevelItem(0))
@@ -102,6 +110,9 @@ class PandasGui(QtWidgets.QMainWindow):
     # Create and add all widgets to GUI.
     def init_ui(self):
         resize_widget(self, 0.7, 0.7)
+
+        # Status bar
+        self.setStatusBar(QtWidgets.QStatusBar())
 
         # Center window on screen
         screen = QtWidgets.QDesktopWidget().screenGeometry()
@@ -136,10 +147,6 @@ class PandasGui(QtWidgets.QMainWindow):
         self.splitter.setStretchFactor(0, 0)
         self.splitter.setStretchFactor(1, 1)
 
-        nav_width = self.navigator.sizeHint().width()
-        self.splitter.setSizes([nav_width, self.width() - nav_width])
-        self.splitter.setContentsMargins(10, 10, 10, 10)
-
         # makes the find toolbar
         self.find_bar = FindToolbar(self)
         self.addToolBar(self.find_bar)
@@ -147,6 +154,19 @@ class PandasGui(QtWidgets.QMainWindow):
         # QMainWindow setup
         self.make_menu_bar()
         self.setCentralWidget(self.splitter)
+
+        # Signals
+        self.store.settings.settingsChanged.connect(self.apply_settings)
+
+        self.apply_settings()
+
+    def showEvent(self, a0: QtGui.QShowEvent) -> None:
+        self.fit_to_nav()
+
+    def fit_to_nav(self) -> None:
+        nav_width = self.navigator.sizeHint().width()
+        self.splitter.setSizes([nav_width, self.width() - nav_width])
+        self.splitter.setContentsMargins(10, 10, 10, 10)
 
     ####################
     # Menu bar functions
@@ -196,14 +216,12 @@ class PandasGui(QtWidgets.QMainWindow):
                               ],
                  'Debug': [MenuItem(name='About',
                                     func=self.about),
-                           MenuItem(name='Print Data PandasGuiStore',
-                                    func=self.print_store),
-                           MenuItem(name='View Data PandasGuiStore',
-                                    func=self.view_store),
-                           MenuItem(name='Print History (for current DataFrame)',
-                                    func=self.print_history),
                            MenuItem(name='Browse Sample Datasets',
                                     func=self.show_sample_datasets),
+                           MenuItem(name='View PandasGuiStore',
+                                    func=self.view_store),
+                           MenuItem(name='View DataFrame History',
+                                    func=self.view_history),
                            ]
                  }
 
@@ -218,41 +236,29 @@ class PandasGui(QtWidgets.QMainWindow):
                 action.triggered.connect(x.func)
                 menu.addAction(action)
 
-        # Add an extra option list to the menu for each GUI style that exist for the user's system
-        theme_menu = menus['Settings'].addMenu("&Set Theme")
-        theme_group = QtWidgets.QActionGroup(theme_menu)
-        for theme in ["light", "dark", "classic"]:
-            theme_action = QtWidgets.QAction(f"&{theme}", self, checkable=True)
-            theme_action.triggered.connect(lambda checked, theme=theme: self.set_theme(theme))
-            theme_group.addAction(theme_action)
-            theme_menu.addAction(theme_action)
-
-            # Set the default theme
-            if theme == self.store.settings.theme.value:
-                theme_action.trigger()
-
-    def set_theme(self, name: str):
-        if name == "classic":
+    def apply_settings(self):
+        theme = self.store.settings.theme.value
+        if theme == "classic":
             self.setStyleSheet("")
             self.store.settings.theme.value = 'classic'
-        elif name == "dark":
-            self.setStyleSheet(qstylish.dark())
+        elif theme == "dark":
+            self.setStyleSheet(qtstylish.dark())
             self.store.settings.theme.value = 'dark'
-        elif name == "light":
-            self.setStyleSheet(qstylish.light())
+        elif theme == "light":
+            self.setStyleSheet(qtstylish.light())
             self.store.settings.theme.value = 'light'
 
     def copy(self):
         if self.store.selected_pgdf.dataframe_explorer.active_tab == "DataFrame":
             self.store.selected_pgdf.dataframe_explorer.dataframe_viewer.copy()
         elif self.store.selected_pgdf.dataframe_explorer.active_tab == "Statistics":
-            self.store.selected_pgdf.dataframe_explorer.statistics_viewer.copy()
+            self.store.selected_pgdf.dataframe_explorer.statistics_viewer.dataframe_viewer.copy()
 
     def copy_with_headers(self):
         if self.store.selected_pgdf.dataframe_explorer.active_tab == "DataFrame":
             self.store.selected_pgdf.dataframe_viewer.copy(header=True)
         elif self.store.selected_pgdf.dataframe_explorer.active_tab == "Statistics":
-            self.store.selected_pgdf.dataframe_explorer.statistics_viewer.copy(header=True)
+            self.store.selected_pgdf.dataframe_explorer.statistics_viewer.dataframe_viewer.copy(header=True)
 
     def paste(self):
         if self.store.selected_pgdf.dataframe_explorer.active_tab == "DataFrame":
@@ -270,6 +276,7 @@ class PandasGui(QtWidgets.QMainWindow):
         layout.addWidget(textbox)
         resize_widget(self.code_export_dialog, 0.5, 0.5)
         self.code_export_dialog.setLayout(layout)
+        self.code_export_dialog.setWindowTitle(f"Code Export ({self.store.selected_pgdf.name})")
         self.code_export_dialog.show()
 
     def delete_selected_dataframes(self):
@@ -304,25 +311,15 @@ class PandasGui(QtWidgets.QMainWindow):
         else:
             e.ignore()
 
-    def print_store(self):
-        d = as_dict(self.store)
-        pprint.pprint(d)
-
-    def print_history(self):
-        pgdf = self.store.selected_pgdf
-        if len(pgdf.history) == 0:
-            print(f"No actions recorded yet for {pgdf.name}")
-        else:
-            header = f'---- History ({pgdf.name}) ----'
-            print(header)
-            for h in pgdf.history:
-                print(h)
-            print('-' * len(header))
+    def view_history(self):
+        d = self.store.selected_pgdf.history
+        self.viewer = JsonViewer(d)
+        self.viewer.show()
 
     def view_store(self):
         d = as_dict(self.store)
-        self.store_viewer = JsonViewer(d)
-        self.store_viewer.show()
+        self.viewer = JsonViewer(d)
+        self.viewer.show()
 
     # Return all DataFrames, or a subset specified by names. Returns a dict of name:df or a single df if there's only 1
     def get_dataframes(self, names: Union[None, str, list] = None):
@@ -333,7 +330,7 @@ class PandasGui(QtWidgets.QMainWindow):
 
     def import_dialog(self):
         dialog = QtWidgets.QFileDialog()
-        paths, _ = dialog.getOpenFileNames(filter="*.csv *.xlsx *.parquet")
+        paths, _ = dialog.getOpenFileNames(filter="*.csv *.xlsx *.parquet *.json")
         for path in paths:
             self.store.import_file(path)
 
@@ -341,10 +338,11 @@ class PandasGui(QtWidgets.QMainWindow):
         dialog = QtWidgets.QFileDialog()
         pgdf = self.store.selected_pgdf
         path, _ = dialog.getSaveFileName(directory=pgdf.name, filter="*.csv")
-        pgdf.df.to_csv(path, index=False)
+        if path:
+            pgdf.df.to_csv(path, index=False)
 
     def import_from_clipboard(self):
-        df = pd.read_clipboard()
+        df = pd.read_clipboard(sep=',|\t', engine="python", skip_blank_lines=False)
         self.store.add_dataframe(df)
 
     # https://stackoverflow.com/a/29769228/3620725
@@ -353,7 +351,7 @@ class PandasGui(QtWidgets.QMainWindow):
 
         key = winreg.HKEY_CURRENT_USER
         value = rf'{sys.executable} -m pandasgui.run_with_args "%V"'
-        icon_value = r"C:\_MyFiles\Programming\pandasgui\pandasgui\resources\images\icon.ico"
+        icon_value = fr"{os.path.dirname(pandasgui.__file__)}\resources\images\icon.ico"
 
         handle = winreg.CreateKeyEx(key, "Software\Classes\*\shell\Open with PandasGUI\command", 0,
                                     winreg.KEY_SET_VALUE)
@@ -373,6 +371,7 @@ class PandasGui(QtWidgets.QMainWindow):
         layout = QtWidgets.QVBoxLayout()
         layout.addWidget(SettingsEditor(self.store.settings))
         dialog.setLayout(layout)
+        dialog.resize(700, 800)
         dialog.show()
 
     def about(self):
@@ -417,6 +416,14 @@ class PandasGui(QtWidgets.QMainWindow):
 def show(*args,
          settings={},
          **kwargs):
+    '''
+    Objects provided as args and kwargs should be any of the following:
+    DataFrame   Show it using PandasGui
+    Series      Show it using PandasGui
+    Figure      Show it using FigureViewer. Supports figures from plotly, bokeh, matplotlib, altair
+    dict/list   Show it using JsonViewer
+    '''
+    logger.info("Opening PandasGUI...")
     # Get the variable names in the scope show() was called from
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
 
@@ -437,42 +444,31 @@ def show(*args,
 
     dupes = [key for key in items.keys() if key in kwargs.keys()]
     if any(dupes):
-        logger.warning("Duplicate DataFrame names were provided, duplicates were ignored.")
+        logger.warning("Duplicate names were provided, duplicates were ignored.")
 
     kwargs = {**kwargs, **items}
 
-    plotly_kwargs = {key: value for (key, value) in kwargs.items() if
-                     issubclass(type(value), plotly.basedatatypes.BaseFigure)}
-    if plotly_kwargs:
-        for name, fig in plotly_kwargs.items():
-            pv = PlotlyViewer(fig)
-            pv.show()
-            plotly_refs.append(pv)
-            pv.setWindowTitle(name)
+    pandas_gui = PandasGui(settings=settings, **kwargs)
+    pandas_gui.caller_stack = inspect.currentframe().f_back
 
-    dataframe_kwargs = {key: value for (key, value) in kwargs.items() if issubclass(type(value), pd.DataFrame)}
-    if dataframe_kwargs:
-        pandas_gui = PandasGui(settings=settings, **dataframe_kwargs)
-        pandas_gui.caller_stack = inspect.currentframe().f_back
+    # Register IPython magic
+    try:
+        @register_line_magic
+        def pg(line):
+            pandas_gui.store.eval_magic(line)
+            return line
 
-        # Register IPython magic
-        try:
-            @register_line_magic
-            def pg(line):
-                pandas_gui.store.eval_magic(line)
-                return line
+    except Exception as e:
+        # Let this silently fail if no IPython console exists
+        if e.args[0] == 'Decorator can only run in context where `get_ipython` exists':
+            pass
+        else:
+            raise e
 
-        except Exception as e:
-            # Let this silently fail if no IPython console exists
-            if e.args[0] == 'Decorator can only run in context where `get_ipython` exists':
-                pass
-            else:
-                raise e
-
-        return pandas_gui
+    return pandas_gui
 
 
 if __name__ == "__main__":
-    from pandasgui.datasets import all_datasets, pokemon, mi_manufacturing
+    from pandasgui.datasets import mi_manufacturing, pokemon, titanic
 
-    gui = show(**all_datasets)
+    gui = show(pokemon, titanic, mi_manufacturing)

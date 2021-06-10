@@ -1,6 +1,13 @@
-# PandasGUI
+- [About](#about)
+- [Demo](#demo)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Features](#features)
+- [More Info](#more-info)
 
-A GUI for analyzing Pandas DataFrames.
+## About
+
+PandasGUI is a GUI for viewing, plotting and analyzing Pandas DataFrames.
 
 ## Demo
 
@@ -27,16 +34,16 @@ Create and view a simple DataFrame
 ```python
 import pandas as pd
 from pandasgui import show
-df = pd.DataFrame(([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), columns=['a', 'b', 'c'])
+df = pd.DataFrame({'a':[1,2,3], 'b':[4,5,6], 'c':[7,8,9]})
 show(df)
 ```
 
-PandasGUI comes with sample datasets that will download on first use.   
-You can also import `all_datasets` which is a dictionary of all the sample datasets
+PandasGUI comes with sample datasets that will download on first use. You can also import `all_datasets` which is a dictionary of all sample datasets like `Dict[str, DataFrame]`
 
 ```python
 from pandasgui import show
 from pandasgui.datasets import pokemon, titanic, all_datasets
+show(pokemon, titanic)
 show(**all_datasets)
 ```
 
