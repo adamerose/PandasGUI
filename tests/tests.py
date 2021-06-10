@@ -46,7 +46,7 @@ def test_memory_leak():
 
         print(len(getObjects(QtCore.QObject)), 'QObjects')
         start = time.time()
-        gui = show(df)
+        gui = show(df, settings={'block': False})
         gui.close()
         end = time.time()
         print(end - start)
@@ -95,7 +95,7 @@ def test_inputs():
                         2: [1, 2, 3], 'c': [4, 5, 6], }).rename(columns={'c': 2})
 
     from pandasgui.datasets import all_datasets
-    show(df, df2, **all_datasets)
+    show(df, df2, **all_datasets, settings={'block': False})
 
 
 def test_code_history():
@@ -103,12 +103,12 @@ def test_code_history():
     from pandasgui import show
     from pandasgui.datasets import pokemon
     pokemon = pokemon.head(10)[['Name', 'Attack', 'Defense', 'Generation', 'HP', 'Legendary']]
-    gui = show(pokemon)
+    gui = show(pokemon, settings={'block': False})
     pgdf = gui.store.data['pokemon']
 
-    pgdf.edit_data(6, 3, 999)
+    pgdf.edit_data(6, 3, "999")
     pgdf.sort_column(5)
-    pgdf.edit_data(3, 4, 5)
+    pgdf.edit_data(3, 4, "5")
     pgdf.paste_data(0, 1, pd.DataFrame({0: {0: 1000, 1: 1001}, 1: {0: 1002, 1: 1003}, 2: {0: 1004, 1: 1005}}))
     pgdf.add_filter('HP > 50')
     pgdf.sort_column(4)
@@ -130,14 +130,15 @@ def test_json():
     comments = requests.get('https://jsonplaceholder.typicode.com/comments').json()
     photos = requests.get('https://jsonplaceholder.typicode.com/photos').json()
 
-    gui = show(comments, photos, **all_datasets)
+    gui = show(comments, photos, **all_datasets, settings={'block': False})
 
 
 test_json()
-test_webengine_import()
 test_inputs()
 test_code_history()
+# test_webengine_import()
 
+QtWidgets.QApplication
 # iterables = [["bar", "baz", "baz"], ["one", "two"]]
 # ix = pd.MultiIndex.from_product(iterables, names=["first", "second"])
 # df = pd.DataFrame(np.random.randn(6, 6), index=ix[:6], columns=ix[:6])

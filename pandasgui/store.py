@@ -372,7 +372,9 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
     def edit_data(self, row, col, text):
 
         column_dtype = self.df.dtypes[col].type
-        value = parse_cell(text, column_dtype)
+        # type should always be str when being called from PyQt GUI but someone might call this directly
+        if type(text) == str:
+            value = parse_cell(text, column_dtype)
 
         # Map the row number in the filtered df (which the user interacts with) to the unfiltered one
         row = self.filtered_index_map[row]
