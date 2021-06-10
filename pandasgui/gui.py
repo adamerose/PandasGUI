@@ -216,14 +216,12 @@ class PandasGui(QtWidgets.QMainWindow):
                               ],
                  'Debug': [MenuItem(name='About',
                                     func=self.about),
-                           MenuItem(name='Print Data PandasGuiStore',
-                                    func=self.print_store),
-                           MenuItem(name='View Data PandasGuiStore',
-                                    func=self.view_store),
-                           MenuItem(name='Print History (for current DataFrame)',
-                                    func=self.print_history),
                            MenuItem(name='Browse Sample Datasets',
                                     func=self.show_sample_datasets),
+                           MenuItem(name='View PandasGuiStore',
+                                    func=self.view_store),
+                           MenuItem(name='View DataFrame History',
+                                    func=self.view_history),
                            ]
                  }
 
@@ -313,25 +311,15 @@ class PandasGui(QtWidgets.QMainWindow):
         else:
             e.ignore()
 
-    def print_store(self):
-        d = as_dict(self.store)
-        pprint.pprint(d)
-
-    def print_history(self):
-        pgdf = self.store.selected_pgdf
-        if len(pgdf.history) == 0:
-            print(f"No actions recorded yet for {pgdf.name}")
-        else:
-            header = f'---- History ({pgdf.name}) ----'
-            print(header)
-            for h in pgdf.history:
-                print(h)
-            print('-' * len(header))
+    def view_history(self):
+        d = self.store.selected_pgdf.history
+        self.viewer = JsonViewer(d)
+        self.viewer.show()
 
     def view_store(self):
         d = as_dict(self.store)
-        self.store_viewer = JsonViewer(d)
-        self.store_viewer.show()
+        self.viewer = JsonViewer(d)
+        self.viewer.show()
 
     # Return all DataFrames, or a subset specified by names. Returns a dict of name:df or a single df if there's only 1
     def get_dataframes(self, names: Union[None, str, list] = None):
@@ -434,9 +422,8 @@ def show(*args,
     Series      Show it using PandasGui
     Figure      Show it using FigureViewer. Supports figures from plotly, bokeh, matplotlib, altair
     dict/list   Show it using JsonViewer
-
-    TODO - Display all these different widget types within a PandasGui and show them in the nav
     '''
+    logger.info("Opening PandasGUI...")
     # Get the variable names in the scope show() was called from
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
 

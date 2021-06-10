@@ -576,7 +576,7 @@ class PandasGuiStore:
     """
 
     settings: Union[SettingsStore, None] = None
-    data: typing.OrderedDict[str, PandasGuiStoreItem] = field(default_factory=dict)
+    data: typing.OrderedDict[str, Union[PandasGuiStoreItem, PandasGuiDataFrameStore]] = field(default_factory=dict)
     gui: Union[PandasGui, None] = None
     navigator: Union[Navigator, None] = None
     selected_pgdf: Union[PandasGuiDataFrameStore, None] = None
@@ -665,8 +665,9 @@ class PandasGuiStore:
         pgdf.store = self
         pgdf.gui = self.gui
 
-        with self.status_message_context("Adding DataFrame (Cleaning DataFrame)..."):
+        with self.status_message_context("Cleaning DataFrame..."):
             pgdf.df = clean_dataframe(pgdf.df, name)
+            pgdf.data_changed()
 
         if pgdf.dataframe_explorer is None:
             from pandasgui.widgets.dataframe_explorer import DataFrameExplorer
