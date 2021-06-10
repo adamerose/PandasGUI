@@ -342,7 +342,9 @@ class PandasGui(QtWidgets.QMainWindow):
             pgdf.df.to_csv(path, index=False)
 
     def import_from_clipboard(self):
-        df = pd.read_clipboard(sep=',|\t', engine="python", skip_blank_lines=False)
+        df = pd.read_clipboard(sep=',|\t', engine="python",
+                               na_values='""',  # https://stackoverflow.com/a/67915100/3620725
+                               skip_blank_lines=False)
         self.store.add_dataframe(df)
 
     # https://stackoverflow.com/a/29769228/3620725
