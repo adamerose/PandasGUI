@@ -109,6 +109,8 @@ class PandasGui(QtWidgets.QMainWindow):
 
     # Create and add all widgets to GUI.
     def init_ui(self):
+        self.code_export_dialog = None
+
         resize_widget(self, 0.7, 0.7)
 
         # Status bar
@@ -204,7 +206,7 @@ class PandasGui(QtWidgets.QMainWindow):
                                    func=self.reload_data,
                                    shortcut='Ctrl+R'),
                           MenuItem(name='Code Export',
-                                   func=self.code_export),
+                                   func=self.show_code_export),
                           ],
                  'Settings': [MenuItem(name='Add To Context Menu',
                                        func=self.add_to_context_menu),
@@ -264,20 +266,25 @@ class PandasGui(QtWidgets.QMainWindow):
         if self.store.selected_pgdf.dataframe_explorer.active_tab == "DataFrame":
             self.store.selected_pgdf.dataframe_explorer.dataframe_viewer.paste()
 
-    def code_export(self):
-        code_history = self.store.selected_pgdf.code_export()
-        self.code_export_dialog = QtWidgets.QDialog(self)
-        layout = QtWidgets.QVBoxLayout()
-        textbox = QtWidgets.QPlainTextEdit()
-        highlight = PythonHighlighter(textbox.document(), dark=self.store.selected_pgdf.settings.theme.value == 'dark')
-        textbox.setPlainText(code_history)
-        textbox.setReadOnly(True)
-        textbox.setLineWrapMode(textbox.NoWrap)
-        layout.addWidget(textbox)
-        resize_widget(self.code_export_dialog, 0.5, 0.5)
-        self.code_export_dialog.setLayout(layout)
-        self.code_export_dialog.setWindowTitle(f"Code Export ({self.store.selected_pgdf.name})")
+    def show_code_export(self):
+        self.update_code_export()
         self.code_export_dialog.show()
+
+    def update_code_export(self):
+        code_history = self.store.selected_pgdf.code_export()
+        if not self.code_export_dialog:
+            self.code_export_dialog = QtWidgets.QDialog(self)
+            layout = QtWidgets.QVBoxLayout()
+            self.code_export_dialog.setLayout(layout)
+            self.code_export_dialog_textbox = QtWidgets.QPlainTextEdit()
+            layout.addWidget(self.code_export_dialog_textbox)
+        highlight = PythonHighlighter(self.code_export_dialog_textbox.document(),
+                                      dark=self.store.selected_pgdf.settings.theme.value == 'dark')
+        self.code_export_dialog_textbox.setPlainText(code_history)
+        self.code_export_dialog_textbox.setReadOnly(True)
+        self.code_export_dialog_textbox.setLineWrapMode(self.code_export_dialog_textbox.NoWrap)
+        resize_widget(self.code_export_dialog, 0.5, 0.5)
+        self.code_export_dialog.setWindowTitle(f"Code Export ({self.store.selected_pgdf.name})")
 
     def delete_selected_dataframes(self):
         for name in [item.text(0) for item in self.navigator.selectedItems()]:
