@@ -478,6 +478,6 @@ def show(*args,
 
 
 if __name__ == "__main__":
-    from pandasgui.datasets import mi_manufacturing, pokemon, titanic
+    from pandasgui.datasets import pokemon, titanic, mi_manufacturing, all_datasets
 
     gui = show(pokemon, titanic, mi_manufacturing)

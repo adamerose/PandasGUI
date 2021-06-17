@@ -311,7 +311,7 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
         return self.dataframe_explorer
 
     @status_message_decorator("Refreshing statistics...")
-    def refresh_statistics(self, force=True):
+    def refresh_statistics(self, force=False):
         if force or self.settings.refresh_statistics.value:
             df = self.df
             self.column_statistics = pd.DataFrame({
@@ -430,9 +430,10 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
         # Need to inform the PyQt model too so column widths properly shift
         self.dataframe_viewer._remove_column(ix)
 
-        self.apply_filters()
         self.add_history_item("delete_column",
                               f"df = df.drop('{col_name}', axis=1)")
+
+        self.apply_filters()
 
     @status_message_decorator("Moving column...")
     def move_column(self, ix: int, direction: Literal[-1, 1], to_end: bool):
@@ -466,10 +467,9 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
         # Need to inform the PyQt model too so column widths properly shift
         self.dataframe_viewer._move_column(ix, new_ix)
 
-        self.df = self.df.reindex(cols, axis=1)
         self.df_unfiltered = self.df_unfiltered.reindex(cols, axis=1)
 
-        # self.apply_filters()
+        self.apply_filters()
 
     ###################################
     # Sorting
@@ -660,18 +660,20 @@ class PandasGuiStore:
     # IPython magic
     @status_message_decorator("Executing IPython command...")
     def eval_magic(self, line):
-        names_to_update = []
+        dataframes_affected = []
         command = line
         for name in self.data.keys():
-            names_to_update.append(name)
             command = refactor_variable(command, name, f"self.data['{name}'].df_unfiltered")
+            if name in command:
+                dataframes_affected.append(name)
 
-        # print(command)
         exec(command)
 
-        for name in names_to_update:
+        for name in dataframes_affected:
             self.data[name].apply_filters()
-        # self.data[0].df_unfiltered = self.data[0].df_unfiltered[self.data[0].df_unfiltered.HP > 50]
+            self.data[name].add_history_item("iPython magic",
+                                             refactor_variable(line, name, 'df'))
+
         return line
 
     ###################################
