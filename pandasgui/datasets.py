@@ -5,8 +5,10 @@ import pandas as pd
 import numpy as np
 from pandasgui.constants import LOCAL_DATASET_DIR
 import logging
-
+from pandasgui.utility import SlicableOrderedDict
 logger = logging.getLogger(__name__)
+
+
 
 
 def read_csv(path):
@@ -36,15 +38,34 @@ calculated_datasets = [
 
 csv_datasets = [
     "pokemon",
-    "car_crashes",
+    "googleplaystore",
+    "googleplaystore_reviews",
+    "netflix_titles",
+    "trump_tweets",
+    "harry_potter_characters",
+    "happiness",
+    "country_indicators",
+    "us_shooting_incidents",
+    "stockdata",
+    "gapminder",
+    "anscombe",
+    "attention",
+    "brain_networks",
+    "diamonds",
+    "dots",
+    "exercise",
+    "flights",
+    "fmri",
+    "gammas",
+    "geyser",
     "iris",
     "mpg",
     "penguins",
+    "planets",
     "tips",
     "titanic",
-    "gapminder",
-    "stockdata",
-    "trump_tweets",
+    "seinfeld_episodes",
+    "seinfeld_scripts",
     "mi_manufacturing"
 ]
 
@@ -52,15 +73,34 @@ __all__ = ["all_datasets",
 
            # csv_datasets
            "pokemon",
-           "car_crashes",
+           "googleplaystore",
+           "googleplaystore_reviews",
+           "netflix_titles",
+           "trump_tweets",
+           "harry_potter_characters",
+           "happiness",
+           "country_indicators",
+           "us_shooting_incidents",
+           "stockdata",
+           "gapminder",
+           "anscombe",
+           "attention",
+           "brain_networks",
+           "diamonds",
+           "dots",
+           "exercise",
+           "flights",
+           "fmri",
+           "gammas",
+           "geyser",
            "iris",
            "mpg",
            "penguins",
+           "planets",
            "tips",
            "titanic",
-           "gapminder",
-           "stockdata",
-           "trump_tweets",
+           "seinfeld_episodes",
+           "seinfeld_scripts",
            "mi_manufacturing",
 
            # calculated_datasets
@@ -76,14 +116,13 @@ def __getattr__(name: str) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
         raise AttributeError
 
     elif name == 'all_datasets':
-        all_datasets = {}
+        all_datasets = SlicableOrderedDict()
         for n in csv_datasets + calculated_datasets:
-            # Exclude large datasets
-            if n not in ['youtube_trending_usa',
-                         "reddit_showerthoughts_may2015",
-                         'covid_cases_canada',
-                         'seinfeld_scripts']:
+            try:
                 all_datasets[n] = __getattr__(n)
+            except:
+                # Don't want to completely fail to open PandasGUI if deprecated datasets aren't found
+                logger.warning(f"Failed to load {name}.csv")
         return all_datasets
 
     # Download CSV files from Github repo, or open locally cached version
