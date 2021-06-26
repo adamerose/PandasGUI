@@ -384,8 +384,8 @@ class DataTableModel(QtCore.QAbstractTableModel):
 
             # Float formatting
             if isinstance(cell, (float, np.floating)):
-                if not role == QtCore.Qt.ToolTipRole:
-                    return "{:.4f}".format(cell)
+                if role == QtCore.Qt.DisplayRole:
+                    return str(round(cell, 3))
 
             return str(cell)
 
