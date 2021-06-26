@@ -49,7 +49,6 @@ class FigureViewer(PyQt5.QtWebEngineWidgets.QWebEngineView, PandasGuiStoreItem):
         self.temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False)
         self.set_figure(fig)
 
-        self.resize(700, 600)
         self.setWindowTitle("Plotly Viewer")
 
     def set_figure(self, fig=None):
@@ -106,9 +105,6 @@ class FigureViewer(PyQt5.QtWebEngineWidgets.QWebEngineView, PandasGuiStoreItem):
         self.temp_file.close()
         os.unlink(self.temp_file.name)
         super().closeEvent(event)
-
-    def sizeHint(self) -> QtCore.QSize:
-        return QtCore.QSize(400, 400)
 
     # https://stackoverflow.com/questions/55963931/how-to-download-csv-file-with-qwebengineview-and-qurl
     def on_downloadRequested(self, download):

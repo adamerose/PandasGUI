@@ -219,10 +219,20 @@ class FuncUi(QtWidgets.QWidget):
         self.button_layout.addWidget(self.preview_button)
         self.button_layout.addWidget(self.finish_button)
 
+        self.source_tree_layout = QtWidgets.QVBoxLayout()
+        self.source_tree_layout.addWidget(self.source_tree)
+        self.source_tree_layout.addWidget(self.source_tree2)
+        self.source_tree_layout_wrapper = QtWidgets.QWidget()
+        self.source_tree_layout_wrapper.setLayout(self.source_tree_layout)
+
+        self.splitter = QtWidgets.QSplitter(Qt.Horizontal)
+        self.splitter.setHandleWidth(3)
+
+        self.splitter.addWidget(self.source_tree_layout_wrapper)
+        self.splitter.addWidget(self.dest_tree)
+
         self.main_layout = QtWidgets.QGridLayout()
-        self.main_layout.addWidget(self.source_tree, 0, 0)
-        self.main_layout.addWidget(self.source_tree2, 1, 0)
-        self.main_layout.addWidget(self.dest_tree, 0, 1, 2, 1)
+        self.main_layout.addWidget(self.splitter, 0, 0, 2, 1)
         self.main_layout.addLayout(self.button_layout, 2, 0, 1, 2)
 
         self.setLayout(self.main_layout)

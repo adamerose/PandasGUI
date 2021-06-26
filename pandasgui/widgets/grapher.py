@@ -92,9 +92,6 @@ class Grapher(QtWidgets.QWidget):
 
         # UI setup
         self.figure_viewer = FigureViewer(store=self.pgdf.store)
-        self.figure_viewer.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
-                                         QtWidgets.QSizePolicy.Expanding)
-
         self.func_ui = FuncUi(pgdf, schema=Schema())
 
         # Layouts
@@ -103,8 +100,6 @@ class Grapher(QtWidgets.QWidget):
 
         self.plot_splitter.addWidget(self.func_ui)
         self.plot_splitter.addWidget(self.figure_viewer)
-        self.plot_splitter.setStretchFactor(1, 1)
-
         self.layout = QtWidgets.QVBoxLayout()
         self.layout.addWidget(self.type_picker)
         self.layout.addWidget(self.plot_splitter)
@@ -112,10 +107,16 @@ class Grapher(QtWidgets.QWidget):
         self.setLayout(self.layout)
 
         # Size policies
-        self.figure_viewer.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-        self.func_ui.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.figure_viewer.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.plot_splitter.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        self.error_console.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Minimum)
+        self.func_ui.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        self.error_console.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        self.figure_viewer.setMinimumWidth(500)
+        self.figure_viewer.setMinimumHeight(500)
+
+        # This has to be called at the end https://stackoverflow.com/a/68027597/3620725
+        self.plot_splitter.setStretchFactor(0, 0)
+        self.plot_splitter.setStretchFactor(1, 1)
 
         # Initial selection
         self.type_picker.setCurrentRow(0)
