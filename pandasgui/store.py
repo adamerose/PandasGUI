@@ -584,10 +584,14 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
             if filt.enabled and not filt.failed:
                 try:
                     df = df.query(filt.expr)
+                    # Handle case where filter returns only one row
+                    if isinstance(df, pd.Series):
+                        df = df.to_frame().T
                 except Exception as e:
                     self.filters[ix].failed = True
                     logger.exception(e)
 
+        # self.filtered_index_map is used elsewhere to map unfiltered index to filtered index
         self.filtered_index_map = df['_temp_range_index'].reset_index(drop=True)
         df = df.drop('_temp_range_index', axis=1)
 
