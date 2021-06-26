@@ -210,12 +210,17 @@ class PandasGui(QtWidgets.QMainWindow):
                           MenuItem(name='Parse All Dates',
                                    func=lambda: self.store.selected_pgdf.parse_all_dates()),
                           ],
-                 'Settings': [MenuItem(name='Add To Context Menu',
-                                       func=self.add_to_context_menu),
-                              MenuItem(name='Remove From Context Menu',
-                                       func=self.remove_from_context_menu),
-                              MenuItem(name='Preferences...',
+                 'Settings': [MenuItem(name='Preferences...',
                                        func=self.edit_settings),
+                              MenuItem(name='Add PandasGUI To Context Menu',
+                                       func=self.add_to_context_menu),
+                              MenuItem(name='Remove PandasGUI From Context Menu',
+                                       func=self.remove_from_context_menu),
+
+                              MenuItem(name='Add JupyterLab To Context Menu',
+                                       func=self.add_jupyter_to_context_menu),
+                              MenuItem(name='Remove JupyterLab From Context Menu',
+                                       func=self.remove_jupyter_from_context_menu),
 
                               ],
                  'Debug': [MenuItem(name='About',
@@ -361,12 +366,12 @@ class PandasGui(QtWidgets.QMainWindow):
         import winreg
 
         key = winreg.HKEY_CURRENT_USER
-        value = rf'{sys.executable} -m pandasgui.run_with_args "%V"'
+        command_value = rf'{sys.executable} -m pandasgui.run_with_args "%V"'
         icon_value = fr"{os.path.dirname(pandasgui.__file__)}\resources\images\icon.ico"
 
         handle = winreg.CreateKeyEx(key, "Software\Classes\*\shell\Open with PandasGUI\command", 0,
                                     winreg.KEY_SET_VALUE)
-        winreg.SetValueEx(handle, "", 0, winreg.REG_SZ, value)
+        winreg.SetValueEx(handle, "", 0, winreg.REG_SZ, command_value)
         handle = winreg.CreateKeyEx(key, "Software\Classes\*\shell\Open with PandasGUI", 0, winreg.KEY_SET_VALUE)
         winreg.SetValueEx(handle, "icon", 0, winreg.REG_SZ, icon_value)
 
@@ -375,6 +380,26 @@ class PandasGui(QtWidgets.QMainWindow):
         key = winreg.HKEY_CURRENT_USER
         winreg.DeleteKey(key, "Software\Classes\*\shell\Open with PandasGUI\command")
         winreg.DeleteKey(key, "Software\Classes\*\shell\Open with PandasGUI")
+
+    def add_jupyter_to_context_menu(self):
+        import winreg
+
+        key = winreg.HKEY_CURRENT_USER
+        command_value = rf'cmd.exe /k jupyter lab --notebook-dir="%V"'
+        icon_value = fr"{os.path.dirname(pandasgui.__file__)}\resources\images\jupyter_icon.ico"
+
+        handle = winreg.CreateKeyEx(key, "Software\Classes\directory\Background\shell\Open with JupyterLab\command", 0,
+                                    winreg.KEY_SET_VALUE)
+        winreg.SetValueEx(handle, "", 0, winreg.REG_SZ, command_value)
+        handle = winreg.CreateKeyEx(key, "Software\Classes\directory\Background\shell\Open with JupyterLab", 0,
+                                    winreg.KEY_SET_VALUE)
+        winreg.SetValueEx(handle, "icon", 0, winreg.REG_SZ, icon_value)
+
+    def remove_jupyter_from_context_menu(self):
+        import winreg
+        key = winreg.HKEY_CURRENT_USER
+        winreg.DeleteKey(key, "Software\Classes\directory\Background\shell\Open with JupyterLab\command")
+        winreg.DeleteKey(key, "Software\Classes\directory\Background\shell\Open with JupyterLab")
 
     def edit_settings(self):
 
