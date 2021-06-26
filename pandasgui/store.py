@@ -208,7 +208,7 @@ class HistoryItem:
 # Use this decorator on PandasGuiStore or PandasGuiDataFrameStore to display a status bar message during a method run
 def status_message_decorator(message):
     def decorator(function):
-        def wrapper(self, *args, **kwargs):
+        def status_message_wrapper(self, *args, **kwargs):
 
             if not (issubclass(type(self), PandasGuiStore) or issubclass(type(self), PandasGuiDataFrameStore)):
                 raise ValueError
@@ -241,7 +241,7 @@ def status_message_decorator(message):
                 result = function(self, *args, **kwargs)
             return result
 
-        return wrapper
+        return status_message_wrapper
 
     return decorator
 
