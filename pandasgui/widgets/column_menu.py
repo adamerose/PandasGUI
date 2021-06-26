@@ -86,6 +86,13 @@ class ColumnMenu(QtWidgets.QMenu):
         self.add_widget(button)
 
         ########################
+        # Parse Date
+
+        button = QtWidgets.QPushButton("Parse Date")
+        button.clicked.connect(lambda: [self.pgdf.parse_date(column_ix), self.close()])
+        self.add_widget(button)
+
+        ########################
         # Coloring
         self.add_action("Color by None",
                         lambda: [setattr(self.pgdf.dataframe_viewer, 'color_mode', None),

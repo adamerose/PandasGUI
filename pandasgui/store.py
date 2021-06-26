@@ -18,7 +18,7 @@ from PyQt5 import QtCore, QtWidgets
 import traceback
 from datetime import datetime
 from pandasgui.utility import unique_name, in_interactive_console, refactor_variable, clean_dataframe, nunique, \
-    parse_cell
+    parse_cell, parse_all_dates, parse_date
 from pandasgui.constants import LOCAL_DATA_DIR
 import os
 from enum import Enum
@@ -593,6 +593,49 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
 
         self.df = df
         self.data_changed()
+
+    # Convert all columns to datetime where possible
+    def parse_all_dates(self):
+        df = self.df_unfiltered
+        converted_names = []
+        dtypes_old = df.dtypes
+        df = parse_all_dates(df)
+        dtypes_new = df.dtypes
+
+        for ix in range(len(dtypes_new)):
+            col_name = df.columns[ix]
+
+            # Pandas is sometimes buggy when comparing dtypes
+            try:
+                if dtypes_old[ix] != dtypes_new[ix]:
+                    converted_names.append(str(col_name))
+            except:
+                pass
+
+        if converted_names:
+            logger.info(f"In {self.name}, converted columns to datetime: {', '.join(converted_names)}")
+        else:
+            logger.warning(f"In {self.name}, unable to parse any columns as datetime")
+
+        self.df_unfiltered = df
+        self.apply_filters()
+
+    # Convert a single column to date
+    def parse_date(self, ix):
+        df = self.df_unfiltered
+        name = list(df.columns)[ix]
+
+        dtype_old = df[name].dtype
+        df[name] = parse_date(df[name])
+        dtype_new = df[name].dtype
+
+        if dtype_old != dtype_new:
+            logger.info(f"In {self.name}, converted {name} to datetime")
+        else:
+            logger.warning(f"In {self.name}, unable to convert {name} to datetime")
+
+        self.df_unfiltered = df
+        self.apply_filters()
 
     ###################################
     # Other

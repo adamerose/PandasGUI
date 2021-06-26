@@ -256,18 +256,30 @@ def delete_datasets():
     shutil.rmtree(LOCAL_DATASET_DIR)
 
 
-# Automatically try to parse dates for all columns
-def parse_dates(df: Union[pd.DataFrame, pd.Series]):
-    def parse_dates_series(s: pd.Series):
-        try:
-            return pd.to_datetime(s)
-        except:
-            return s
+def parse_date(s: pd.Series):
+    try:
+        return pd.to_datetime(s)
+    except:
+        return s
 
+
+# Automatically try to parse dates for all columns
+def parse_all_dates(df: Union[pd.DataFrame, pd.Series]):
+    # Try to parse all string columns as dates
     if type(df) == pd.DataFrame:
-        return df.apply(lambda col: parse_dates_series(col) if col.dtype == object else col)
+        def parse_dates_if_str(col: pd.Series):
+            if (col.dtype == object or col.dtype == pd.StringDtype):
+                # Edge case where pd.to_datetime will work but we don't want it to
+                if all(col.isna()):
+                    return col
+                else:
+                    return parse_date(col)
+            else:
+                return col
+
+        return df.apply(parse_dates_if_str)
     elif type(df) == pd.Series:
-        return parse_dates_series(df)
+        return parse_date(df)
 
 
 def clean_dataframe(df, name="DataFrame"):
@@ -294,25 +306,6 @@ def clean_dataframe(df, name="DataFrame"):
     if any(df.columns.duplicated()):
         logger.warning(f"In {name}, renamed duplicate columns: {list(set(df.columns[df.columns.duplicated()]))}")
         rename_duplicates(df)
-
-    # Convert columns to datetime where possible
-    converted_names = []
-    dtypes_old = df.dtypes
-    df = parse_dates(df)
-    dtypes_new = df.dtypes
-
-    for ix in range(len(dtypes_new)):
-        col_name = df.columns[ix]
-
-        # Pandas is sometimes buggy when comparing dtypes
-        try:
-            if dtypes_old[ix] != dtypes_new[ix]:
-                converted_names.append(str(col_name))
-        except:
-            pass
-
-    if converted_names:
-        logger.warning(f"In {name}, converted columns to datetime: {', '.join(converted_names)}")
 
     return df
 
