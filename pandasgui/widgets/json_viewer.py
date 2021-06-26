@@ -4,6 +4,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 from pandasgui.store import PandasGuiStoreItem
 from pandasgui.utility import summarize_json, traverse_tree_widget
+from pandasgui.widgets import base_widgets
 
 
 class JsonViewer(QtWidgets.QWidget, PandasGuiStoreItem):
@@ -25,9 +26,8 @@ class JsonViewer(QtWidgets.QWidget, PandasGuiStoreItem):
         self.find_box.textChanged.connect(self.find)
         self.find_box.setPlaceholderText("Find regex")
 
-        self.tree_widget = QtWidgets.QTreeWidget()
+        self.tree_widget = base_widgets.QTreeWidget()
         self.tree_widget.setHeaderLabels(["Key", "Value"])
-        self.tree_widget.header().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
 
         root_item = self.tree_widget.invisibleRootItem()
         self.recurse_jdata(jdata, root_item)

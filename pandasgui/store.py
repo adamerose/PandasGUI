@@ -18,7 +18,7 @@ from PyQt5 import QtCore, QtWidgets
 import traceback
 from datetime import datetime
 from pandasgui.utility import unique_name, in_interactive_console, refactor_variable, clean_dataframe, nunique, \
-    parse_cell
+    parse_cell, parse_all_dates, parse_date
 from pandasgui.constants import LOCAL_DATA_DIR
 import os
 from enum import Enum
@@ -281,9 +281,9 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
         self.stats_viewer: Union[DataFrameViewer, None] = None
         self.filter_viewer: Union[FilterViewer, None] = None
 
-        self.column_sorted: Union[int, None] = None
-        self.index_sorted: Union[int, None] = None
-        self.sort_is_ascending: Union[bool, None] = None
+        self.sorted_column_name: Union[str, None] = None
+        self.sorted_index_level: Union[int, None] = None
+        self.sort_state: Literal['Asc', 'Desc', 'None'] = 'None'
 
         self.filters: List[Filter] = []
         self.filtered_index_map = df.reset_index().index
@@ -295,6 +295,13 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
 
         self.data_changed()
 
+    @property
+    def sorted_column_ix(self):
+        try:
+            return list(self.df_unfiltered.columns).index(self.sorted_column_name)
+        except ValueError:
+            return None
+
     def __setattr__(self, name, value):
         if name == 'df':
             value.pgdf = self
@@ -304,7 +311,7 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
         return self.dataframe_explorer
 
     @status_message_decorator("Refreshing statistics...")
-    def refresh_statistics(self, force=True):
+    def refresh_statistics(self, force=False):
         if force or self.settings.refresh_statistics.value:
             df = self.df
             self.column_statistics = pd.DataFrame({
@@ -364,6 +371,8 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
     def add_history_item(self, comment, code):
         history_item = HistoryItem(comment, code)
         self.history.append(history_item)
+        if self.gui is not None:
+            self.gui.update_code_export()
 
     ###################################
     # Editing cell data
@@ -372,7 +381,9 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
     def edit_data(self, row, col, text):
 
         column_dtype = self.df.dtypes[col].type
-        value = parse_cell(text, column_dtype)
+        # type should always be str when being called from PyQt GUI but someone might call this directly
+        if type(text) == str:
+            value = parse_cell(text, column_dtype)
 
         # Map the row number in the filtered df (which the user interacts with) to the unfiltered one
         row = self.filtered_index_map[row]
@@ -409,73 +420,134 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
             """))
 
     ###################################
+    # Changing columns
+    @status_message_decorator("Deleting column...")
+    def delete_column(self, ix: int):
+
+        col_name = self.df_unfiltered.columns[ix]
+        self.df_unfiltered = self.df_unfiltered.drop(col_name, axis=1)
+
+        # Need to inform the PyQt model too so column widths properly shift
+        self.dataframe_viewer._remove_column(ix)
+
+        self.add_history_item("delete_column",
+                              f"df = df.drop('{col_name}', axis=1)")
+
+        self.apply_filters()
+
+    @status_message_decorator("Moving column...")
+    def move_column(self, ix: int, direction: Literal[-1, 1], to_end: bool):
+
+        col_name = self.df_unfiltered.columns[ix]
+        cols = list(self.df_unfiltered.columns)
+
+        history_snippet = "cols = list(df.columns)\n"
+
+        if to_end:
+            if direction == 1:
+                cols.insert(len(cols), cols.pop(ix))
+                history_snippet += f"cols.insert(len(cols), cols.pop({ix}))\n"
+            else:
+                cols.insert(0, cols.pop(ix))
+                history_snippet += f"cols.insert(0, cols.pop({ix}))\n"
+        else:
+            if direction == 1:
+                cols.insert(ix + 1, cols.pop(ix))
+                history_snippet += f"cols.insert({ix + 1}, cols.pop({ix}))\n"
+            else:
+                cols.insert(ix - 1, cols.pop(ix))
+                history_snippet += f"cols.insert({ix - 1}, cols.pop({ix}))\n"
+
+        history_snippet += "df = df.reindex(cols, axis=1)\n"
+        self.add_history_item("move_column",
+                              history_snippet)
+
+        new_ix = cols.index(col_name)
+
+        # Need to inform the PyQt model too so column widths properly shift
+        self.dataframe_viewer._move_column(ix, new_ix)
+
+        self.df_unfiltered = self.df_unfiltered.reindex(cols, axis=1)
+
+        self.apply_filters()
+
+    ###################################
     # Sorting
 
     @status_message_decorator("Sorting column...")
-    def sort_column(self, ix: int):
+    def sort_column(self, ix: int, next_sort_state: Literal['Asc', 'Desc', 'None'] = None):
         col_name = self.df_unfiltered.columns[ix]
 
-        # Clicked an unsorted column
-        if ix != self.column_sorted:
+        # Determine next sorting state by current state
+        if next_sort_state is None:
+            # Clicked an unsorted column
+            if ix != self.sorted_column_ix:
+                next_sort_state = 'Asc'
+            # Clicked a sorted column
+            elif ix == self.sorted_column_ix and self.sort_state == 'Asc':
+                next_sort_state = 'Desc'
+            # Clicked a reverse sorted column - reset to sorted by index
+            elif ix == self.sorted_column_ix:
+                next_sort_state = 'None'
+
+        if next_sort_state == 'Asc':
             self.df_unfiltered = self.df_unfiltered.sort_values(col_name, ascending=True, kind='mergesort')
-            self.column_sorted = ix
-            self.sort_is_ascending = True
+            self.sorted_column_name = self.df_unfiltered.columns[ix]
+            self.sort_state = 'Asc'
 
             self.add_history_item("sort_column",
-                                  f"df = df.sort_values({self.df_unfiltered.columns[ix]}, ascending=True, kind='mergesort')")
+                                  f"df = df.sort_values('{self.df_unfiltered.columns[ix]}', ascending=True, kind='mergesort')")
 
-        # Clicked a sorted column
-        elif ix == self.column_sorted and self.sort_is_ascending:
+        elif next_sort_state == 'Desc':
             self.df_unfiltered = self.df_unfiltered.sort_values(col_name, ascending=False, kind='mergesort')
-            self.column_sorted = ix
-            self.sort_is_ascending = False
+            self.sorted_column_name = self.df_unfiltered.columns[ix]
+            self.sort_state = 'Desc'
 
             self.add_history_item("sort_column",
-                                  f"df = df.sort_values({self.df_unfiltered.columns[ix]}, ascending=False, kind='mergesort')")
+                                  f"df = df.sort_values('{self.df_unfiltered.columns[ix]}', ascending=False, kind='mergesort')")
 
-        # Clicked a reverse sorted column - reset to sorted by index
-        elif ix == self.column_sorted:
+        elif next_sort_state == 'None':
             self.df_unfiltered = self.df_unfiltered.sort_index(ascending=True, kind='mergesort')
-            self.column_sorted = None
-            self.sort_is_ascending = None
+            self.sorted_column_name = None
+            self.sort_state = 'None'
 
             self.add_history_item("sort_column",
                                   "df = df.sort_index(ascending=True, kind='mergesort')")
 
-        self.index_sorted = None
+        self.sorted_index_level = None
         self.apply_filters()
 
     @status_message_decorator("Sorting index...")
     def sort_index(self, ix: int):
         # Clicked an unsorted index level
-        if ix != self.index_sorted:
+        if ix != self.sorted_index_level:
             self.df_unfiltered = self.df_unfiltered.sort_index(level=ix, ascending=True, kind='mergesort')
-            self.index_sorted = ix
-            self.sort_is_ascending = True
+            self.sorted_index_level = ix
+            self.sort_state = 'Asc'
 
             self.add_history_item("sort_index",
                                   f"df = df.sort_index(level={ix}, ascending=True, kind='mergesort')")
 
         # Clicked a sorted index level
-        elif ix == self.index_sorted and self.sort_is_ascending:
+        elif ix == self.sorted_index_level and self.sort_state == 'Asc':
             self.df_unfiltered = self.df_unfiltered.sort_index(level=ix, ascending=False, kind='mergesort')
-            self.index_sorted = ix
-            self.sort_is_ascending = False
+            self.sorted_index_level = ix
+            self.sort_state = 'Desc'
 
             self.add_history_item("sort_index",
                                   f"df = df.sort_index(level={ix}, ascending=False, kind='mergesort')")
 
         # Clicked a reverse sorted index level - reset to sorted by full index
-        elif ix == self.index_sorted:
+        elif ix == self.sorted_index_level:
             self.df_unfiltered = self.df_unfiltered.sort_index(ascending=True, kind='mergesort')
 
-            self.index_sorted = None
-            self.sort_is_ascending = None
+            self.sorted_index_level = None
+            self.sort_state = 'None'
 
             self.add_history_item("sort_index",
                                   "df = df.sort_index(ascending=True, kind='mergesort')")
 
-        self.column_sorted = None
+        self.sorted_column = None
         self.apply_filters()
 
     ###################################
@@ -521,6 +593,49 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
 
         self.df = df
         self.data_changed()
+
+    # Convert all columns to datetime where possible
+    def parse_all_dates(self):
+        df = self.df_unfiltered
+        converted_names = []
+        dtypes_old = df.dtypes
+        df = parse_all_dates(df)
+        dtypes_new = df.dtypes
+
+        for ix in range(len(dtypes_new)):
+            col_name = df.columns[ix]
+
+            # Pandas is sometimes buggy when comparing dtypes
+            try:
+                if dtypes_old[ix] != dtypes_new[ix]:
+                    converted_names.append(str(col_name))
+            except:
+                pass
+
+        if converted_names:
+            logger.info(f"In {self.name}, converted columns to datetime: {', '.join(converted_names)}")
+        else:
+            logger.warning(f"In {self.name}, unable to parse any columns as datetime")
+
+        self.df_unfiltered = df
+        self.apply_filters()
+
+    # Convert a single column to date
+    def parse_date(self, ix):
+        df = self.df_unfiltered
+        name = list(df.columns)[ix]
+
+        dtype_old = df[name].dtype
+        df[name] = parse_date(df[name])
+        dtype_new = df[name].dtype
+
+        if dtype_old != dtype_new:
+            logger.info(f"In {self.name}, converted {name} to datetime")
+        else:
+            logger.warning(f"In {self.name}, unable to convert {name} to datetime")
+
+        self.df_unfiltered = df
+        self.apply_filters()
 
     ###################################
     # Other
@@ -588,18 +703,20 @@ class PandasGuiStore:
     # IPython magic
     @status_message_decorator("Executing IPython command...")
     def eval_magic(self, line):
-        names_to_update = []
+        dataframes_affected = []
         command = line
         for name in self.data.keys():
-            names_to_update.append(name)
             command = refactor_variable(command, name, f"self.data['{name}'].df_unfiltered")
+            if name in command:
+                dataframes_affected.append(name)
 
-        # print(command)
         exec(command)
 
-        for name in names_to_update:
+        for name in dataframes_affected:
             self.data[name].apply_filters()
-        # self.data[0].df_unfiltered = self.data[0].df_unfiltered[self.data[0].df_unfiltered.HP > 50]
+            self.data[name].add_history_item("iPython magic",
+                                             refactor_variable(line, name, 'df'))
+
         return line
 
     ###################################

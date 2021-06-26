@@ -20,11 +20,25 @@ if os.name == 'nt':
     def mouse_pressed():
         return win32api.GetKeyState(0x01) not in [0, 1]
 else:
-    import mouse
+    from pynput import mouse
+
+
+    class MouseState(mouse.Listener):
+        def __init__(self):
+            self.pressed = False
+            self.listener = mouse.Listener(on_click=self.on_click)
+            self.listener.start()
+
+        def on_click(self, x, y, button, pressed):
+            self.pressed = pressed
+
+
+    mouse_state = MouseState()
 
 
     def mouse_pressed():
-        return mouse.is_pressed()
+        return mouse_state.pressed
+
 
 
 class DelayedMimeData(QtCore.QMimeData):

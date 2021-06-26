@@ -1,6 +1,7 @@
 import sys
 from PyQt5 import QtWidgets
 
+from pandasgui.utility import clear_layout
 from pandasgui.widgets.dataframe_viewer import DataFrameViewer
 from pandasgui.store import PandasGuiDataFrameStore
 
@@ -23,7 +24,10 @@ class StatisticsViewer(QtWidgets.QWidget):
 
     # Replace the data in self.dataframe_viewer pgdf with the current statistics of the main pgdf
     def refresh_statistics(self):
-        self.dataframe_viewer.pgdf.paste_data(0, 0, self.pgdf.column_statistics)
+        # self.dataframe_viewer.pgdf.paste_data(0, 0, self.pgdf.column_statistics)
+        clear_layout(self.layout)
+        self.dataframe_viewer = DataFrameViewer(self.pgdf.column_statistics)
+        self.layout.addWidget(self.dataframe_viewer)
 
 
 if __name__ == "__main__":

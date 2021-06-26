@@ -5,10 +5,10 @@ with open("README.md", "r", encoding="utf8") as fh:
 
 setup(
     name="pandasgui",
-    version="0.2.11",
+    version="0.2.12",
     description="A GUI for Pandas DataFrames.",
     author="Adam Rose",
-    author_email="adam.e.rose@hotmail.com",
+    author_email="adrotog@gmail.com",
     url="https://github.com/adamerose/pandasgui",
     packages=find_packages(),
     include_package_data=True,
@@ -27,7 +27,7 @@ setup(
         "wordcloud",
         "setuptools",
         "appdirs",
-        "mouse",
+        "pynput",
         "IPython",
         "pyarrow",
         "astor",
