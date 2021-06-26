@@ -207,6 +207,8 @@ class PandasGui(QtWidgets.QMainWindow):
                                    shortcut='Ctrl+R'),
                           MenuItem(name='Code Export',
                                    func=self.show_code_export),
+                          MenuItem(name='Parse All Dates',
+                                   func=lambda: self.store.selected_pgdf.parse_all_dates()),
                           ],
                  'Settings': [MenuItem(name='Add To Context Menu',
                                        func=self.add_to_context_menu),
@@ -432,7 +434,7 @@ def show(*args,
     Figure      Show it using FigureViewer. Supports figures from plotly, bokeh, matplotlib, altair
     dict/list   Show it using JsonViewer
     '''
-    logger.info("Opening PandasGUI...")
+    logger.info("Opening PandasGUI")
     # Get the variable names in the scope show() was called from
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
 
