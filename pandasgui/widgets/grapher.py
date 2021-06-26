@@ -8,6 +8,7 @@ import plotly
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
+from pandasgui.jotly import generate_title
 
 from pandasgui.store import PandasGuiDataFrameStore
 from pandasgui.widgets.collapsible_panel import CollapsiblePanel
@@ -166,6 +167,9 @@ class Grapher(QtWidgets.QWidget):
 
         try:
             self.fig = func(data_frame=self.pgdf.df, **kwargs)
+            # Generate a title and apply it to the figure
+            self.fig.update_layout(title=generate_title(self.pgdf, self.current_schema.name, kwargs))
+
             self.figure_viewer.set_figure(self.fig)
             self.error_console.setText("")
             self.error_console_wrapper.setTitle("Grapher Console")
@@ -190,11 +194,7 @@ def clear_layout(layout):
 
 from pandasgui import jotly
 
-schemas = [Schema(name='histogram',
-                  label='Histogram',
-                  function=jotly.histogram,
-                  icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-histogram.svg')),
-           Schema(name='scatter',
+schemas = [Schema(name='scatter',
                   label='Scatter',
                   function=jotly.scatter,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-scatter.svg')),
@@ -206,6 +206,10 @@ schemas = [Schema(name='histogram',
                   label='Bar',
                   function=jotly.bar,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-bar.svg')),
+           Schema(name='histogram',
+                  label='Histogram',
+                  function=jotly.histogram,
+                  icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-histogram.svg')),
            Schema(name='box',
                   label='Box',
                   function=jotly.box,
@@ -237,7 +241,8 @@ schemas = [Schema(name='histogram',
            Schema(name='candlestick',
                   label='Candlestick',
                   function=jotly.candlestick,
-                  icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-candlestick.svg')),
+                  icon_path=os.path.join(pandasgui.__path__[0],
+                                         'resources/images/draggers/trace-type-candlestick.svg')),
            Schema(name='word_cloud',
                   label='Word Cloud',
                   function=jotly.word_cloud,

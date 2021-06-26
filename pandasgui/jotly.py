@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 
 from typing import List
 import pandas as pd
-from pandasgui.store import SETTINGS_STORE
+from pandasgui.store import SETTINGS_STORE, PandasGuiDataFrameStore
 
 
 class HiddenArg(type):
@@ -50,9 +50,6 @@ def histogram(data_frame: DataFrame,
                        cumulative=cumulative,
                        **kwargs)
 
-    # Settings and config
-    fig.update_layout(title=generate_title(data_frame, "histogram", locals()))
-
     return fig
 
 
@@ -87,9 +84,6 @@ def scatter(data_frame: DataFrame,
                      **kwargs)
     fig.update()
 
-    # Settings and config
-    fig.update_layout(title=generate_title(data_frame, "scatter", locals()))
-
     return fig
 
 
@@ -107,11 +101,6 @@ def line(data_frame: DataFrame,
     # Create list of key columns
     key_cols = [val for val in [x, color, facet_row, facet_col] if val is not None]
     if key_cols != []:
-        # need those in locals() for description, because aggregation / sort will destroy those references
-        name = data_frame.pgdf.name
-        filters = data_frame.pgdf.filters
-        df_unfiltered = data_frame.pgdf.df_unfiltered
-        df = data_frame.pgdf.df
         if aggregation is not None:
             data_frame = data_frame.groupby(key_cols).agg(aggregation).reset_index()
         else:
@@ -132,9 +121,6 @@ def line(data_frame: DataFrame,
     # Don't want gaps in line where there are NaN datapoints
     fig.update_traces(connectgaps=True)
 
-    # Settings and config
-    fig.update_layout(title=generate_title(data_frame, "line", locals()))
-
     return fig
 
 
@@ -152,11 +138,6 @@ def bar(data_frame: DataFrame,
     # Create list of key columns
     key_cols = [val for val in [x, color, facet_row, facet_col] if val is not None]
     if key_cols != []:
-        # need those in locals() for description, because aggregation / sort will destroy those references
-        name = data_frame.pgdf.name
-        filters = data_frame.pgdf.filters
-        df_unfiltered = data_frame.pgdf.df_unfiltered
-        df = data_frame.pgdf.df
         if aggregation is not None:
             data_frame = data_frame.groupby(key_cols).agg(aggregation).reset_index()
         else:
@@ -170,9 +151,6 @@ def bar(data_frame: DataFrame,
                  facet_row=facet_row,
                  facet_col=facet_col,
                  **kwargs)
-
-    # Settings and config
-    fig.update_layout(title=generate_title(data_frame, "bar", locals()))
 
     return fig
 
@@ -195,9 +173,6 @@ def box(data_frame: DataFrame,
 
                  **kwargs)
 
-    # Settings and config
-    fig.update_layout(title=generate_title(data_frame, "box", locals()))
-
     return fig
 
 
@@ -219,9 +194,6 @@ def violin(data_frame: DataFrame,
 
                     **kwargs)
 
-    # Settings and config
-    fig.update_layout(title=generate_title(data_frame, "violin", locals()))
-
     return fig
 
 
@@ -242,9 +214,6 @@ def density_heatmap(data_frame: DataFrame,
                              facet_col=facet_col,
 
                              **kwargs)
-
-    # Settings and config
-    fig.update_layout(title=generate_title(data_frame, "density_heatmap", locals()))
 
     return fig
 
@@ -269,9 +238,6 @@ def density_contour(data_frame: DataFrame,
 
     fig.update_traces(contours_coloring="fill", contours_showlabels=True)
 
-    # Settings and config
-    fig.update_layout(title=generate_title(data_frame, "density_contour", locals()))
-
     return fig
 
 
@@ -293,9 +259,6 @@ def pie(data_frame: DataFrame,
                  color=color,
                  **kwargs)
 
-    # Settings and config
-    fig.update_layout(title=generate_title(data_frame, "pie", locals()))
-
     return fig
 
 
@@ -310,9 +273,6 @@ def scatter_matrix(data_frame: DataFrame,
                             color=color,
 
                             **kwargs)
-
-    # Settings and config
-    fig.update_layout(title=generate_title(data_frame, "scatter_matrix", locals()))
 
     return fig
 
@@ -332,9 +292,6 @@ def scatter_3d(data_frame: DataFrame,
                         color=color,
                         **kwargs)
 
-    # Settings and config
-    fig.update_layout(title=generate_title(data_frame, "scatter_3d", locals()))
-
     return fig
 
 
@@ -351,9 +308,6 @@ def candlestick(data_frame: DataFrame,
                                          low=data_frame[low],
                                          close=data_frame[close],
                                          )])
-
-    # Settings and config
-    fig.update_layout(title=generate_title(data_frame, "candlestick", locals()))
 
     return fig
 
@@ -372,9 +326,6 @@ def word_cloud(data_frame: DataFrame,
     text = ' '.join(pd.concat([data_frame[x].dropna().astype(str) for x in words]))
     wc = WordCloud(scale=2, collocations=False).generate(text)
     fig = px.imshow(wc)
-
-    # Settings and config
-    fig.update_layout(title=generate_title(data_frame, "word_cloud", locals()))
 
     return fig
 
@@ -443,7 +394,7 @@ def concat(data_frame: DataFrame,
 # Utility functions
 
 
-def generate_title(data_frame, chart_type, kwargs):
+def generate_title(pgdf: PandasGuiDataFrameStore, chart_type, kwargs):
     """template variable replacement.
 
     Besides all dragger selections (x, y, z, color etc), and all custom kwargs, extra template variables are:
@@ -464,6 +415,7 @@ def generate_title(data_frame, chart_type, kwargs):
           selection: ready to use string representing {subset} observations of {total}
           groupings: groupings tied to Legend and not on legend: marker_symbol, line_group, size etc
     """
+
     def remove_units(label):
         "we do not want to repeat units in the title. It is assumed they are in parenthesis"
         if type(label) == list and len(label) == 0:
@@ -518,17 +470,15 @@ def generate_title(data_frame, chart_type, kwargs):
         return opt_x, opt_y, title_log_z + z, dimensions, columns
 
     try:
-        pgdf = data_frame.pgdf
         name = pgdf.name
         pgdf_filters = pgdf.filters
         df_unfiltered = pgdf.df_unfiltered
         df = pgdf.df
     except AttributeError:  # plain dataframe
-        pgdf = data_frame
         name = kwargs.pop("name", "untitled")
-        pgdf_filters = kwargs.pop("filters")
-        df_unfiltered = kwargs.get("df_unfiltered")
-        df = kwargs.get("df")
+        pgdf_filters = pgdf.filters
+        df_unfiltered = pgdf.df_unfiltered
+        df = pgdf.df
 
     today = datetime.datetime.now()
     x, y, z, dimensions, columns = axis_title_labels(kwargs)
@@ -635,7 +585,7 @@ def generate_title(data_frame, chart_type, kwargs):
         groupings += f"{sep}marker={kwargs['marker_symbol']}"
 
     # next three don't show in the plotly legend, so we need to explicitly add them
-    if "line_group" in kwargs.keys()  and kwargs['line_group'] is not None:
+    if "line_group" in kwargs.keys() and kwargs['line_group'] is not None:
         groupings += f"{sep}line_group={kwargs['line_group']}"
     if "size" in kwargs.keys() and kwargs['size'] is not None:
         groupings += f"{sep}size={kwargs['size']}"
