@@ -200,27 +200,27 @@ class PandasGui(QtWidgets.QMainWindow):
                                    func=self.import_from_clipboard),
                           MenuItem(name='Export',
                                    func=self.export_dialog),
-                          MenuItem(name='Delete Selected DataFrames',
-                                   func=self.delete_selected_dataframes),
-                          MenuItem(name='Refresh Data',
-                                   func=self.reload_data,
-                                   shortcut='Ctrl+R'),
                           MenuItem(name='Code Export',
                                    func=self.show_code_export),
-                          MenuItem(name='Parse All Dates',
-                                   func=lambda: self.store.selected_pgdf.parse_all_dates()),
                           ],
+                 'DataFrame': [MenuItem(name='Delete Selected DataFrames',
+                                        func=self.delete_selected_dataframes),
+                               MenuItem(name='Reload DataFrames',
+                                        func=self.reload_data,
+                                        shortcut='Ctrl+R'),
+                               MenuItem(name='Parse All Dates',
+                                        func=lambda: self.store.selected_pgdf.parse_all_dates()),
+                               ],
                  'Settings': [MenuItem(name='Preferences...',
                                        func=self.edit_settings),
-                              MenuItem(name='Add PandasGUI To Context Menu',
-                                       func=self.add_to_context_menu),
-                              MenuItem(name='Remove PandasGUI From Context Menu',
-                                       func=self.remove_from_context_menu),
-
-                              MenuItem(name='Add JupyterLab To Context Menu',
-                                       func=self.add_jupyter_to_context_menu),
-                              MenuItem(name='Remove JupyterLab From Context Menu',
-                                       func=self.remove_jupyter_from_context_menu),
+                              {"Context Menus": [MenuItem(name='Add PandasGUI To Context Menu',
+                                                          func=self.add_to_context_menu),
+                                                 MenuItem(name='Remove PandasGUI From Context Menu',
+                                                          func=self.remove_from_context_menu),
+                                                 MenuItem(name='Add JupyterLab To Context Menu',
+                                                          func=self.add_jupyter_to_context_menu),
+                                                 MenuItem(name='Remove JupyterLab From Context Menu',
+                                                          func=self.remove_jupyter_from_context_menu), ]}
 
                               ],
                  'Debug': [MenuItem(name='About',
@@ -234,16 +234,20 @@ class PandasGui(QtWidgets.QMainWindow):
                            ]
                  }
 
-        menus = {}
-        # Add menu items and actions to UI using the schema defined above
-        for menu_name in items.keys():
-            menu = menubar.addMenu(menu_name)
-            menus[menu_name] = menu
-            for x in items[menu_name]:
-                action = QtWidgets.QAction(x.name, self)
-                action.setShortcut(x.shortcut)
-                action.triggered.connect(x.func)
-                menu.addAction(action)
+        def add_menus(dic, root):
+            # Add menu items and actions to UI using the schema defined above
+            for menu_name in dic.keys():
+                menu = root.addMenu(menu_name)
+                for x in dic[menu_name]:
+                    if type(x) == dict:
+                        add_menus(x, menu)
+                    else:
+                        action = QtWidgets.QAction(x.name, self)
+                        action.setShortcut(x.shortcut)
+                        action.triggered.connect(x.func)
+                        menu.addAction(action)
+
+        add_menus(items, menubar)
 
     def apply_settings(self):
         theme = self.store.settings.theme.value
@@ -511,6 +515,6 @@ def show(*args,
 
 
 if __name__ == "__main__":
-    from pandasgui.datasets import pokemon, titanic, mi_manufacturing, all_datasets
+    from pandasgui.datasets import pokemon, titanic, mi_manufacturing, trump_tweets, all_datasets
 
     gui = show(pokemon, titanic, mi_manufacturing)
