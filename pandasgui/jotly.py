@@ -53,7 +53,6 @@ def histogram(data_frame: DataFrame,
     return fig
 
 
-# TODO add old advanced args
 def scatter(data_frame: DataFrame,
             y: ColumnName = None,
             x: ColumnName = None,
@@ -67,6 +66,10 @@ def scatter(data_frame: DataFrame,
             # Args that won't appear in Grapher UI
             title_format: HiddenArg = None,
             **kwargs) -> Figure:
+
+    if size is not None:
+        data_frame = data_frame.dropna(subset=[size])
+
     fig = px.scatter(data_frame=data_frame,
                      x=x,
                      y=y,
