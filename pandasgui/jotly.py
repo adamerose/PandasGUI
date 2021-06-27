@@ -38,8 +38,6 @@ def histogram(data_frame: DataFrame,
               facet_col: ColumnName = None,
               marginal: Literal[None, 'rug', 'box', 'violin'] = None,
               cumulative: bool = False,
-              # Args that won't appear in Grapher UI
-              title_format: HiddenArg = None,
               **kwargs) -> Figure:
     fig = px.histogram(data_frame=data_frame,
                        x=x,
@@ -63,13 +61,9 @@ def scatter(data_frame: DataFrame,
             size: ColumnName = None,
             trendline: Literal[None, 'ols', 'lowess'] = None,
             marginal: Literal[None, 'histogram', 'rug', 'box', 'violin'] = None,
-            # Args that won't appear in Grapher UI
-            title_format: HiddenArg = None,
             **kwargs) -> Figure:
-
     if size is not None:
         data_frame = data_frame.dropna(subset=[size])
-
     fig = px.scatter(data_frame=data_frame,
                      x=x,
                      y=y,
@@ -98,8 +92,6 @@ def line(data_frame: DataFrame,
          facet_col: ColumnName = None,
          # Custom args
          aggregation: Literal['mean', 'median', 'min', 'max', 'sum', None] = 'mean',
-         # Args that won't appear in Grapher UI
-         title_format: HiddenArg = None,
          **kwargs) -> Figure:
     # Create list of key columns
     key_cols = [val for val in [x, color, facet_row, facet_col] if val is not None]
@@ -135,8 +127,6 @@ def bar(data_frame: DataFrame,
         facet_col: ColumnName = None,
         # Custom args
         aggregation: Literal['mean', 'median', 'min', 'max', 'sum', None] = 'mean',
-        # Args that won't appear in Grapher UI
-        title_format: HiddenArg = None,
         **kwargs) -> Figure:
     # Create list of key columns
     key_cols = [val for val in [x, color, facet_row, facet_col] if val is not None]
@@ -164,8 +154,6 @@ def box(data_frame: DataFrame,
         color: ColumnName = None,
         facet_row: ColumnName = None,
         facet_col: ColumnName = None,
-        # Args that won't appear in Grapher UI
-        title_format: HiddenArg = None,
         **kwargs) -> Figure:
     fig = px.box(data_frame=data_frame,
                  x=x,
@@ -185,8 +173,6 @@ def violin(data_frame: DataFrame,
            color: ColumnName = None,
            facet_row: ColumnName = None,
            facet_col: ColumnName = None,
-           # Args that won't appear in Grapher UI
-           title_format: HiddenArg = None,
            **kwargs) -> Figure:
     fig = px.violin(data_frame=data_frame,
                     x=x,
@@ -206,8 +192,6 @@ def density_heatmap(data_frame: DataFrame,
                     z: ColumnName = None,
                     facet_row: ColumnName = None,
                     facet_col: ColumnName = None,
-                    # Args that won't appear in Grapher UI
-                    title_format: HiddenArg = None,
                     **kwargs) -> Figure:
     fig = px.density_heatmap(data_frame=data_frame,
                              x=x,
@@ -227,8 +211,6 @@ def density_contour(data_frame: DataFrame,
                     z: ColumnName = None,
                     facet_row: ColumnName = None,
                     facet_col: ColumnName = None,
-                    # Args that won't appear in Grapher UI
-                    title_format: HiddenArg = None,
                     **kwargs) -> Figure:
     fig = px.density_contour(data_frame=data_frame,
                              x=x,
@@ -250,8 +232,6 @@ def pie(data_frame: DataFrame,
         color: ColumnName = None,
         facet_row: ColumnName = None,
         facet_col: ColumnName = None,
-        # Args that won't appear in Grapher UI
-        title_format: HiddenArg = None,
         **kwargs) -> Figure:
     if facet_row is not None or facet_col is not None:
         raise NotImplementedError
@@ -268,8 +248,6 @@ def pie(data_frame: DataFrame,
 def scatter_matrix(data_frame: DataFrame,
                    dimensions: ColumnNameList = None,
                    color: ColumnName = None,
-                   # Args that won't appear in Grapher UI
-                   title_format: HiddenArg = None,
                    **kwargs) -> Figure:
     fig = px.scatter_matrix(data_frame=data_frame,
                             dimensions=dimensions,
@@ -285,8 +263,6 @@ def scatter_3d(data_frame: DataFrame,
                x: ColumnName = None,
                z: ColumnName = None,
                color: ColumnName = None,
-               # Args that won't appear in Grapher UI
-               title_format: HiddenArg = None,
                **kwargs) -> Figure:
     fig = px.scatter_3d(data_frame=data_frame,
                         x=x,
@@ -317,8 +293,6 @@ def candlestick(data_frame: DataFrame,
 
 def word_cloud(data_frame: DataFrame,
                words: ColumnNameList = None,
-               # Args that won't appear in Grapher UI
-               title_format: HiddenArg = None,
                **kwargs) -> Figure:
     from wordcloud import WordCloud
 
