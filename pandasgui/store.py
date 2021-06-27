@@ -87,7 +87,7 @@ DEFAULT_SETTINGS = {'editable': True,
                     'block': None,
                     'theme': 'light',
                     'auto_finish': True,
-                    'refresh_statistics': False,
+                    'refresh_statistics': True,
                     'render_mode': 'auto',
                     'aggregation': 'mean',
                     'title_format': "{name}: {title_columns}{title_dimensions}{names}{title_y}{title_z}{over_by}"
