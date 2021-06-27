@@ -506,10 +506,8 @@ def show(*args,
             raise e
 
     # Start how the GUI in front of all other windows
-    pandas_gui.setWindowFlags(pandas_gui.windowFlags() | QtCore.Qt.WindowStaysOnTopHint)
     pandas_gui.show()
-    pandas_gui.setWindowFlags(pandas_gui.windowFlags() & ~QtCore.Qt.WindowStaysOnTopHint)
-    pandas_gui.show()
+    pandas_gui.raise_()
 
     return pandas_gui
 
