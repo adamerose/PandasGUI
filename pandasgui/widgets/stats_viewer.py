@@ -13,10 +13,9 @@ logger = logging.getLogger(__name__)
 class StatisticsViewer(QtWidgets.QWidget):
     def __init__(self, pgdf: PandasGuiDataFrameStore):
         super().__init__()
-
         pgdf = PandasGuiDataFrameStore.cast(pgdf)
-        pgdf.dataframe_explorer = self
         self.pgdf = pgdf
+
         self.layout = QtWidgets.QVBoxLayout()
         self.setLayout(self.layout)
         self.dataframe_viewer = DataFrameViewer(self.pgdf.column_statistics)
