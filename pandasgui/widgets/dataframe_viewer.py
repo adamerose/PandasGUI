@@ -278,8 +278,9 @@ class DataFrameViewer(QtWidgets.QWidget):
         else:
             column_ix = column_ix_or_name
 
-        point = QtCore.QPoint(self.columnHeader.columnViewportPosition(column_ix),
-                              self.columnHeader.geometry().bottom())
+        point = QtCore.QPoint(self.columnHeader.columnViewportPosition(column_ix) +
+                              self.columnHeader.columnWidth(column_ix) - 15,
+                              self.columnHeader.geometry().bottom() - 6)
 
         menu = ColumnMenu(self.pgdf, column_ix, self)
         menu.show_menu(self.columnHeader.mapToGlobal(point))
