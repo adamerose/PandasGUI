@@ -93,6 +93,16 @@ class ColumnMenu(QtWidgets.QMenu):
         self.add_widget(button)
 
         ########################
+        # Data Type
+        col_type = self.pgdf.df_unfiltered.dtypes[column_ix]
+        types = list(dict.fromkeys([str(col_type)] + ['float', 'bool', 'category', 'str']))
+        combo = QtWidgets.QComboBox()
+        combo.addItems(types)
+        combo.setCurrentText(str(col_type))
+        combo.currentTextChanged.connect(lambda x: [self.pgdf.change_column_type(column_ix, x)])
+        self.add_widget(combo)
+
+        ########################
         # Coloring
         self.add_action("Color by None",
                         lambda: [setattr(self.pgdf.dataframe_viewer, 'color_mode', None),

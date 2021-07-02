@@ -550,6 +550,14 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
         self.sorted_column = None
         self.apply_filters()
 
+    def change_column_type(self, ix: int, type):
+        name = self.df_unfiltered.columns[ix]
+        self.df_unfiltered[name] = self.df_unfiltered[name].astype(type)
+        self.apply_filters()
+
+        self.add_history_item("change_column_type",
+                              f"df[{name}] = df[{name}].astype({type})")
+
     ###################################
     # Filters
 
