@@ -67,7 +67,7 @@ class PandasGui(QtWidgets.QMainWindow):
             setting = self.store.settings[key]
             setting.value = value
 
-        self.app.setStyle(QtWidgets.QStyleFactory.create('Fusion'))
+        # self.app.setStyle(QtWidgets.QStyleFactory.create('Fusion'))
 
         # Create all widgets
         self.init_ui()
@@ -289,6 +289,7 @@ class PandasGui(QtWidgets.QMainWindow):
             self.code_export_dialog.setLayout(layout)
             self.code_export_dialog_textbox = QtWidgets.QPlainTextEdit()
             layout.addWidget(self.code_export_dialog_textbox)
+
         highlight = PythonHighlighter(self.code_export_dialog_textbox.document(),
                                       dark=self.store.selected_pgdf.settings.theme.value == 'dark')
         self.code_export_dialog_textbox.setPlainText(code_history)
