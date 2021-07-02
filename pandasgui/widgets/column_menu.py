@@ -15,6 +15,7 @@ class ColumnMenu(QtWidgets.QMenu):
 
         self.pgdf = pgdf
         self.column_ix = column_ix
+        df = self.pgdf.df_unfiltered
 
         ########################
         # Info
@@ -57,16 +58,16 @@ class ColumnMenu(QtWidgets.QMenu):
 
         col_name = self.pgdf.df.columns[column_ix]
         self.move_b1 = QtWidgets.QPushButton("<<")
-        self.move_b1.clicked.connect(lambda: [self.pgdf.move_column(column_ix, -1, True),
+        self.move_b1.clicked.connect(lambda: [self.pgdf.move_columns(column_ix, 0),
                                               self.close(), self.pgdf.dataframe_viewer.show_column_menu(col_name)])
         self.move_b2 = QtWidgets.QPushButton("<")
-        self.move_b2.clicked.connect(lambda: [self.pgdf.move_column(column_ix, -1, False),
+        self.move_b2.clicked.connect(lambda: [self.pgdf.move_columns(column_ix, column_ix-1),
                                               self.close(), self.pgdf.dataframe_viewer.show_column_menu(col_name)])
         self.move_b3 = QtWidgets.QPushButton(">")
-        self.move_b3.clicked.connect(lambda: [self.pgdf.move_column(column_ix, 1, False),
+        self.move_b3.clicked.connect(lambda: [self.pgdf.move_columns(column_ix, column_ix+1),
                                               self.close(), self.pgdf.dataframe_viewer.show_column_menu(col_name)])
         self.move_b4 = QtWidgets.QPushButton(">>")
-        self.move_b4.clicked.connect(lambda: [self.pgdf.move_column(column_ix, 1, True),
+        self.move_b4.clicked.connect(lambda: [self.pgdf.move_columns(column_ix, len(df.columns)),
                                               self.close(), self.pgdf.dataframe_viewer.show_column_menu(col_name)])
 
         move_control = QtWidgets.QWidget()

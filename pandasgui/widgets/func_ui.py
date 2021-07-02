@@ -19,6 +19,7 @@ from dataclasses import asdict, dataclass
 
 from pandasgui.widgets import base_widgets
 from pandasgui import jotly
+from pandasgui.widgets.column_viewer import ColumnViewer
 
 
 class HiddenArg:
@@ -180,8 +181,8 @@ class FuncUi(QtWidgets.QWidget):
             format_kwargs(self.get_data())))
 
         # Sources list
-        self.source_tree = SourceTree(self.df)
-        self.source_tree2 = SourceTree(self.df)
+        self.source_tree = ColumnViewer(self.df)
+        self.source_tree2 = ColumnViewer(self.df)
 
         # Destinations tree
         self.dest_tree = DestinationTree(self)
@@ -475,7 +476,7 @@ class FuncUi(QtWidgets.QWidget):
                 combo_box.currentIndexChanged.connect(
                     lambda ix, values=other_dataframes, item=item: [
                         item.setData(1, Qt.UserRole, values[ix]),
-                        self.source_tree2.set_df(values[ix])
+                        self.source_tree2.update_df(values[ix])
                     ])
                 combo_box.currentIndexChanged.connect(lambda: self.valuesChanged.emit())
 
@@ -683,80 +684,6 @@ class DestinationTree(base_widgets.QTreeWidget):
         self.updateGeometries()
 
 
-class DraggableTree(base_widgets.QTreeWidget):
-
-    def dropEvent(self, e: QtGui.QDropEvent):
-        super().dropEvent(e)
-        self.parent().itemDropped.emit()
-
-    def mimeData(self, indexes):
-        mimedata = super().mimeData(indexes)
-        if indexes:
-            mimedata.setText(indexes[0].text(0))
-        return mimedata
-
-
-class SourceTree(QtWidgets.QWidget):
-    def __init__(self, df):
-        super().__init__()
-
-        self.tree = DraggableTree()
-
-        # Search box
-        self.search_bar = QtWidgets.QLineEdit()
-        self.search_bar.textChanged.connect(self.filter)
-
-        self.tree.setHeaderLabels(['Name', '#Unique', 'Type'])
-
-        self.tree.setSortingEnabled(True)
-
-        self.source_tree_layout = QtWidgets.QVBoxLayout()
-        self.source_tree_layout.addWidget(self.search_bar)
-        self.source_tree_layout.addWidget(self.tree)
-        self.setLayout(self.source_tree_layout)
-
-        # Configure drag n drop
-        self.tree.setDragDropMode(self.tree.DragOnly)
-        self.tree.setSelectionMode(self.tree.ExtendedSelection)
-        self.tree.setDefaultDropAction(QtCore.Qt.CopyAction)
-
-        self.set_df(df)
-
-    def set_df(self, df):
-        sources = df.columns
-        source_nunique = nunique(df)
-        source_types = df.dtypes.values.astype(str)
-
-        # Ensure no duplicates
-        assert (len(sources) == len(set(sources)))
-        assert (len(sources) == len(source_nunique))
-        assert (len(sources) == len(source_types))
-
-        self.set_sources(sources, source_nunique, source_types)
-
-        # Depends on Search Box and Source list
-        self.filter()
-
-    def set_sources(self, sources: List[str], source_nunique: List[str], source_types: List[str]):
-        self.tree.clear()
-        for i in range(len(sources)):
-            item = base_widgets.QTreeWidgetItem(self.tree,
-                                                [str(sources[i]), str(source_nunique[i]), str(source_types[i])])
-
-        self.filter()
-
-    def filter(self):
-        root = self.tree.invisibleRootItem()
-        for i in range(root.childCount()):
-            child = root.child(i)
-            child.setHidden(True)
-
-        items = self.tree.findItems(f".*{self.search_bar.text()}.*",
-                                    Qt.MatchRegExp | Qt.MatchRecursive)
-        for item in items:
-            item.setHidden(False)
-
-
 class CustomKwargsEditor(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -818,6 +745,5 @@ if __name__ == "__main__":
                                 icon_path=os.path.join(pandasgui.__path__[0],
                                                        'resources/images/draggers/trace-type-histogram.svg')),
                   )
-    test.finished.connect(lambda: print(test.get_data()))
     test.show()
     sys.exit(app.exec_())

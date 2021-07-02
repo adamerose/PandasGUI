@@ -181,6 +181,12 @@ class DataFrameViewer(QtWidgets.QWidget):
         self.dataView.updateGeometry()
         self.indexHeader.updateGeometry()
 
+    def scroll_to_column(self, column=0):
+        index = self.dataView.model().index(0, column)
+        self.dataView.scrollTo(index)
+        self.columnHeader.selectColumn(column)
+        self.columnHeader.on_selectionChanged(force=True)
+
     def keyPressEvent(self, event):
         # Disabling this and moving hotkeys to main GUI
         if self.pgdf.gui is not None:
@@ -291,7 +297,7 @@ class DataFrameViewer(QtWidgets.QWidget):
             model.beginRemoveColumns(parent, ix, ix)
             model.endRemoveColumns()
 
-    def _move_column(self, ix, new_ix):
+    def _move_column(self, ix, new_ix, refresh=True):
         for view in [self.dataView, self.columnHeader]:
             model = view.model()
             column_widths = [view.columnWidth(ix) for ix in range(model.columnCount())]
@@ -301,7 +307,8 @@ class DataFrameViewer(QtWidgets.QWidget):
             for j in range(len(column_widths)):
                 view.setColumnWidth(j, column_widths[j])
 
-        self.refresh_ui()
+        if refresh:
+            self.refresh_ui()
 
     def refresh_ui(self):
 
@@ -610,7 +617,7 @@ class HeaderView(QtWidgets.QTableView):
         self.setFont(font)
 
         # Link selection to DataTable
-        self.selectionModel().selectionChanged.connect(self.on_selectionChanged)
+        self.selectionModel().selectionChanged.connect(lambda x: self.on_selectionChanged())
         self.set_spans()
 
         self.horizontalHeader().hide()
@@ -654,13 +661,13 @@ class HeaderView(QtWidgets.QTableView):
             super().mousePressEvent(event)
 
     # Header
-    def on_selectionChanged(self):
+    def on_selectionChanged(self, force=False):
         """
         Runs when cells are selected in the Header. This selects columns in the data table when the header is clicked,
         and then calls selectAbove()
         """
         # Check focus so we don't get recursive loop, since headers trigger selection of data cells and vice versa
-        if self.hasFocus():
+        if self.hasFocus() or force:
             dataView = self.dataframe_viewer.dataView
 
             # Set selection mode so selecting one row or column at a time adds to selection each time

@@ -18,7 +18,7 @@ from PyQt5 import QtCore, QtWidgets
 import traceback
 from datetime import datetime
 from pandasgui.utility import unique_name, in_interactive_console, refactor_variable, clean_dataframe, nunique, \
-    parse_cell, parse_all_dates, parse_date
+    parse_cell, parse_all_dates, parse_date, get_movements
 from pandasgui.constants import LOCAL_DATA_DIR
 import os
 from enum import Enum
@@ -435,41 +435,41 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
 
         self.apply_filters()
 
-    @status_message_decorator("Moving column...")
-    def move_column(self, ix: int, direction: Literal[-1, 1], to_end: bool):
+    @status_message_decorator("Moving columns...")
+    def move_columns(self, src: Union[int, List[int]], dest: int):
 
-        col_name = self.df_unfiltered.columns[ix]
         cols = list(self.df_unfiltered.columns)
-
-        history_snippet = "cols = list(df.columns)\n"
-
-        if to_end:
-            if direction == 1:
-                cols.insert(len(cols), cols.pop(ix))
-                history_snippet += f"cols.insert(len(cols), cols.pop({ix}))\n"
-            else:
-                cols.insert(0, cols.pop(ix))
-                history_snippet += f"cols.insert(0, cols.pop({ix}))\n"
-        else:
-            if direction == 1:
-                cols.insert(ix + 1, cols.pop(ix))
-                history_snippet += f"cols.insert({ix + 1}, cols.pop({ix}))\n"
-            else:
-                cols.insert(ix - 1, cols.pop(ix))
-                history_snippet += f"cols.insert({ix - 1}, cols.pop({ix}))\n"
-
-        history_snippet += "df = df.reindex(cols, axis=1)\n"
-        self.add_history_item("move_column",
-                              history_snippet)
-
-        new_ix = cols.index(col_name)
-
-        # Need to inform the PyQt model too so column widths properly shift
-        self.dataframe_viewer._move_column(ix, new_ix)
-
+        cols.insert(dest, cols.pop(src))
         self.df_unfiltered = self.df_unfiltered.reindex(cols, axis=1)
 
+        self.add_history_item("move_column",
+                              (f"cols = list(df.columns)"
+                               f"cols.insert({dest}, cols.pop({src}))"
+                               f"df = df.reindex(cols, axis=1)"))
+
+        # Need to inform the PyQt model too so column widths properly shift
+        self.dataframe_viewer._move_column(src, dest)
+
         self.apply_filters()
+
+    @status_message_decorator("Reordering columns...")
+    def reorder_columns(self, columns: List[str]):
+        if sorted(list(columns)) != sorted(list(self.df_unfiltered.columns)):
+            raise ValueError("Provided column names do not match DataFrame")
+
+        original_columns = list(self.df_unfiltered.columns)
+
+        self.df_unfiltered = self.df_unfiltered.reindex(columns=columns)
+
+        self.dataframe_viewer.setUpdatesEnabled(False)
+        # Move columns around in TableView to maintain column widths
+        for (src, dest) in get_movements(original_columns, columns):
+            self.dataframe_viewer._move_column(src, dest, refresh=False)
+        self.apply_filters()
+        self.dataframe_viewer.setUpdatesEnabled(True)
+
+        self.add_history_item("reorder_columns",
+                              f"df = df.reindex(columns={columns})")
 
     ###################################
     # Sorting
