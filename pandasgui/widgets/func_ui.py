@@ -282,7 +282,6 @@ class FuncUi(QtWidgets.QWidget):
 
         # Add imports
         text = ("import plotly.express as px\n" +
-                "from pandasgui.jotly import generate_title\n" +
                 "from pandasgui import show\n\n" + text)
 
         self.code_export_dialog_text.setText(text)

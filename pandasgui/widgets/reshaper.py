@@ -15,54 +15,9 @@ from pandasgui.widgets.func_ui import FuncUi, Schema
 
 import logging
 
+from pandasgui.widgets.grapher import TypePicker
+
 logger = logging.getLogger(__name__)
-
-
-class TypePicker(QtWidgets.QListWidget):
-    def __init__(self, orientation=Qt.Horizontal):
-        super().__init__()
-        self.orientation = orientation
-        self.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
-        self.setWordWrap(False)
-        self.setSpacing(0)
-        self.setWrapping(False)
-        self.setUniformItemSizes(True)
-        if self.orientation == Qt.Vertical:
-            self.setFlow(QtWidgets.QListView.TopToBottom)
-            self.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
-        else:
-            self.setFlow(QtWidgets.QListView.LeftToRight)
-            self.setSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
-        self.setIconSize(QtCore.QSize(50, 50))
-
-    def viewOptions(self) -> 'QStyleOptionViewItem':
-        options = super().viewOptions()
-        options.decorationPosition = QStyleOptionViewItem.Top
-        options.displayAlignment = Qt.AlignCenter
-        return options
-
-    def sizeHint(self):
-        if self.orientation == Qt.Vertical:
-            width = self.sizeHintForColumn(0) + 5
-            if not self.verticalScrollBar().visibleRegion().isEmpty():
-                width += self.verticalScrollBar().sizeHint().width()
-            height = super().sizeHint().height()
-
-            return QtCore.QSize(width, height)
-        else:
-            height = self.sizeHintForRow(0) + 5
-            if not self.horizontalScrollBar().visibleRegion().isEmpty():
-                height += self.horizontalScrollBar().sizeHint().height()
-            width = super().sizeHint().width()
-
-            return QtCore.QSize(width, height)
-
-    def resizeEvent(self, e: QtGui.QResizeEvent) -> None:
-        if self.orientation == Qt.Vertical:
-            self.setFixedWidth(self.sizeHint().width())
-        else:
-            self.setFixedHeight(self.sizeHint().height())
-        super().resizeEvent(e)
 
 
 class Reshaper(QtWidgets.QWidget):
@@ -199,7 +154,8 @@ if __name__ == "__main__":
 
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
 
-    gb = Reshaper(pokemon)
+    pgdf = PandasGuiDataFrameStore(pokemon)
+    gb = Reshaper(pgdf)
     gb.show()
 
     # gb.set_state('scatter', {'y': 'Attack', 'x': 'Defense'})
