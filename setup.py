@@ -32,5 +32,6 @@ setup(
         "pyarrow",
         "astor",
         "typing-extensions",
+        "qtstylish",
     ],
 )
