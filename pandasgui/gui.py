@@ -140,7 +140,7 @@ class PandasGui(QtWidgets.QMainWindow):
         self.navigator = Navigator(self.store)
 
         # Make splitter to hold nav and DataFrameExplorers
-        self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
+        self.splitter = QtWidgets.QSplitter(Qt.Horizontal)
         self.splitter.addWidget(self.navigator)
         self.splitter.addWidget(self.stacked_widget)
 
@@ -161,14 +161,6 @@ class PandasGui(QtWidgets.QMainWindow):
         self.store.settings.settingsChanged.connect(self.apply_settings)
 
         self.apply_settings()
-
-    def showEvent(self, a0: QtGui.QShowEvent) -> None:
-        self.fit_to_nav()
-
-    def fit_to_nav(self) -> None:
-        nav_width = self.navigator.sizeHint().width()
-        self.splitter.setSizes([nav_width, self.width() - nav_width])
-        self.splitter.setContentsMargins(10, 10, 10, 10)
 
     ####################
     # Menu bar functions
@@ -505,10 +497,6 @@ def show(*args,
             pass
         else:
             raise e
-
-    # Start how the GUI in front of all other windows
-    pandas_gui.show()
-    pandas_gui.raise_()
 
     return pandas_gui
 

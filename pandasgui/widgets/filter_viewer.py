@@ -90,35 +90,20 @@ class FilterViewer(QtWidgets.QWidget):
             '''<a style="color: #1e81cc;" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.query.html">What's a query expression?</a>''')
         self.text_input_label.linkActivated.connect(lambda link: QDesktopServices.openUrl(QUrl(link)))
         self.text_input.setValidator(None)
-
-        self.submit_button = QtWidgets.QPushButton("Add Filter")
-        self.autocomplete_check = QtWidgets.QCheckBox("Autocomplete")
-        self.autocomplete_check.setChecked(True)
+        self.text_input.setCompleter(self.completer)
 
         # Signals
         self.text_input.returnPressed.connect(self.add_filter)
-        self.submit_button.clicked.connect(self.add_filter)
-        self.autocomplete_check.clicked.connect(self.autocomplete)
 
         # Layout
         self.new_filter_layout = QtWidgets.QHBoxLayout()
         self.new_filter_layout.addWidget(self.text_input)
-        self.new_filter_layout.addWidget(self.submit_button)
         self.layout = QtWidgets.QVBoxLayout()
         self.layout.addLayout(self.new_filter_layout)
         self.layout.addWidget(self.text_input_label)
-        self.layout.addWidget(self.autocomplete_check)
         self.layout.addWidget(self.list_view)
         self.setLayout(self.layout)
 
-    def minimumSizeHint(self) -> QtCore.QSize:
-        return QtCore.QSize(280, 100)
-
-    def autocomplete(self):
-        if self.autocomplete_check.isChecked():
-            self.text_input.setCompleter(self.completer)
-        else:
-            self.text_input.setCompleter(None)
 
     def add_filter(self):
         expr = self.text_input.text()

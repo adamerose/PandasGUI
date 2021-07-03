@@ -93,12 +93,10 @@ class FindToolbar(QtWidgets.QToolBar):
         previous_match_button = QtWidgets.QPushButton()
         up_arrow_icon_raw_path = self.image_folder + "/arrow-up.svg"
         up_arrow_icon_path = pkg_resources.resource_filename(
-            __name__, up_arrow_icon_raw_path
-        )
+            __name__, up_arrow_icon_raw_path)
         up_arrow_icon = QtGui.QIcon(up_arrow_icon_path)
         previous_match_button.setIcon(up_arrow_icon)
-        previous_match_button.setToolTip("Previous match (Shift + Enter)")
-        previous_match_button.setShortcut("Shift+Return")
+        previous_match_button.setToolTip("Previous match")
         previous_match_button.clicked.connect(self.select_previous_match)
         find_toolbar_layout.addWidget(previous_match_button)
 
@@ -110,8 +108,7 @@ class FindToolbar(QtWidgets.QToolBar):
         )
         down_arrow_icon = QtGui.QIcon(down_arrow_icon_path)
         next_match_button.setIcon(down_arrow_icon)
-        next_match_button.setToolTip("Next match (Enter)")
-        next_match_button.setShortcut("Return")
+        next_match_button.setToolTip("Next match")
         next_match_button.clicked.connect(self.select_next_match)
         find_toolbar_layout.addWidget(next_match_button)
 
@@ -374,7 +371,7 @@ class FindThread(QtCore.QThread):
             while len(column) > 0:
                 chunk = column.iloc[: self.max_chunk_size]
                 chunks.append(chunk)
-                column = column.iloc[self.max_chunk_size :]
+                column = column.iloc[self.max_chunk_size:]
         return chunks
 
     def get_matches(self, chunk):
@@ -390,7 +387,7 @@ class FindThread(QtCore.QThread):
             else:
                 rows_with_match = chunk[
                     chunk.astype(str).str.lower() == self.text.lower()
-                ]
+                    ]
         else:
             pd_match_flags = self.match_flags.copy()
             pd_match_flags.pop("whole word")

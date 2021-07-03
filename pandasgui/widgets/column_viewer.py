@@ -19,6 +19,7 @@ class FlatDraggableTree(base_widgets.QTreeWidget):
         self.setDragDropMode(self.DragDrop)
         self.setSelectionMode(self.ExtendedSelection)
         self.setSelectionBehavior(self.SelectRows)
+        self.setRootIsDecorated(False)
 
         self.expandAll()
         self.apply_tree_settings()
@@ -68,7 +69,8 @@ class ColumnViewer(QtWidgets.QWidget):
         super().__init__()
 
         self.tree: FlatDraggableTree = FlatDraggableTree()
-        self.tree.setHeaderLabels(['Name', '#Unique', 'Type'])
+        # self.tree.setHeaderLabels(['Name', '#Unique', 'Type'])
+        self.tree.setHeaderLabels(['Name'])
         self.tree.setDragEnabled(True)
         self.tree.setDefaultDropAction(Qt.CopyAction)
 

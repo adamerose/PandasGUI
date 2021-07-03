@@ -3,6 +3,7 @@ from typing import List
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt
 
+from pandasgui.widgets.containers import Container
 from pandasgui.widgets.dataframe_viewer import DataFrameViewer
 from pandasgui.widgets.column_viewer import ColumnViewer
 from pandasgui.widgets.grapher import Grapher
@@ -61,12 +62,22 @@ class DataFrameExplorer(QtWidgets.QWidget):
 
         ##################
         # Set up overall layout
-        self.layout = QtWidgets.QGridLayout()
-        self.setLayout(self.layout)
 
-        self.layout.addWidget(self.main_window, 0, 0, 2, 1)
-        self.layout.addWidget(self.filter_viewer, 0, 1)
-        self.layout.addWidget(self.column_viewer, 1, 1)
+        self.splitter = QtWidgets.QSplitter(Qt.Horizontal)
+        self.side_bar = QtWidgets.QSplitter(Qt.Vertical)
+
+        self.layout = QtWidgets.QHBoxLayout()
+        self.setLayout(self.layout)
+        self.layout.addWidget(self.splitter)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(0)
+
+        self.filter_viewer_container = Container(self.filter_viewer, "Filters")
+
+        self.splitter.addWidget(self.side_bar)
+        self.splitter.addWidget(self.main_window)
+        self.side_bar.addWidget(self.filter_viewer_container)
+        self.side_bar.addWidget(Container(self.column_viewer, "Columns"))
 
     # Add a dock to the MainWindow widget
     def add_view(self, widget: QtWidgets.QWidget, title: str):
@@ -102,6 +113,7 @@ class ColumnArranger(ColumnViewer):
         self.tree.setAcceptDrops(True)
         self.tree.setDragEnabled(True)
         self.tree.setDefaultDropAction(QtCore.Qt.MoveAction)
+        self.tree.setHeaderLabels(['Name'])
         self.refresh()
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
