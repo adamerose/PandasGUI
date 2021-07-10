@@ -833,11 +833,13 @@ class PandasGuiStore:
             filename = os.path.split(path)[1].split('.json')[0]
             with open(path) as f:
                 data = json.load(f)
-
             from pandasgui.widgets.json_viewer import JsonViewer
             jv = JsonViewer(data)
             self.add_item(jv, filename)
-
+        elif path.endswith(".pkl"):
+            filename = os.path.split(path)[1].split('.pkl')[0]
+            df = pd.read_pickle(path)
+            self.add_dataframe(df, filename)
         else:
             logger.warning("Can only import csv / xlsx / parquet. Invalid file: " + path)
 
