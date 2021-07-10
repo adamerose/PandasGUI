@@ -146,6 +146,11 @@ def format_kwargs(kwargs):
     return pprint.pformat(kwargs, width=40)
 
 
+class SourceTree(ColumnViewer):
+    def __init__(self, pgdf: PandasGuiDataFrameStore):
+        super().__init__(pgdf)
+        self.tree.setDragDropMode(self.tree.DragOnly)
+
 class FuncUi(QtWidgets.QWidget):
     valuesChanged = QtCore.pyqtSignal()
     itemDropped = QtCore.pyqtSignal()
@@ -181,8 +186,8 @@ class FuncUi(QtWidgets.QWidget):
             format_kwargs(self.get_data())))
 
         # Sources list
-        self.source_tree = ColumnViewer(self.df)
-        self.source_tree2 = ColumnViewer(self.df)
+        self.source_tree = SourceTree(self.df)
+        self.source_tree2 = SourceTree(self.df)
 
         # Destinations tree
         self.dest_tree = DestinationTree(self)
@@ -663,9 +668,9 @@ class DestinationTree(base_widgets.QTreeWidget):
         root = self.invisibleRootItem()
         root.setFlags(root.flags() & Qt.ItemIsEnabled & ~Qt.ItemIsDropEnabled & ~Qt.ItemIsDragEnabled)
 
-        self.setDragDropMode(self.DragDrop)
+        self.setDragDropMode(self.InternalMove)
         self.setSelectionMode(self.ExtendedSelection)
-        self.setDefaultDropAction(QtCore.Qt.MoveAction)
+        self.setDefaultDropAction(QtCore.Qt.CopyAction)
 
     # https://stackoverflow.com/a/67213574/3620725
     def setItemWidget(self, item, column, widget):
@@ -737,7 +742,7 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
 
-    test = FuncUi(df=pokemon,
+    test = FuncUi(pgdf=PandasGuiDataFrameStore.cast(pokemon),
                   schema=Schema(name='histogram',
                                 label='Histogram',
                                 function=jotly.scatter,
