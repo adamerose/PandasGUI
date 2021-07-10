@@ -150,6 +150,7 @@ class SourceTree(ColumnViewer):
     def __init__(self, pgdf: PandasGuiDataFrameStore):
         super().__init__(pgdf)
         self.tree.setDragDropMode(self.tree.DragOnly)
+        self.tree.setHeaderLabels(['Name', '#Unique', 'Type'])
 
 class FuncUi(QtWidgets.QWidget):
     valuesChanged = QtCore.pyqtSignal()
