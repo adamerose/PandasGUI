@@ -436,8 +436,7 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
         self.apply_filters()
 
     @status_message_decorator("Moving columns...")
-    def move_columns(self, src: Union[int, List[int]], dest: int):
-
+    def move_column(self, src: int, dest: int):
         cols = list(self.df_unfiltered.columns)
         cols.insert(dest, cols.pop(src))
         self.df_unfiltered = self.df_unfiltered.reindex(cols, axis=1)
@@ -447,10 +446,11 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
                                f"cols.insert({dest}, cols.pop({src}))"
                                f"df = df.reindex(cols, axis=1)"))
 
+        self.dataframe_viewer.setUpdatesEnabled(False)
         # Need to inform the PyQt model too so column widths properly shift
         self.dataframe_viewer._move_column(src, dest)
-
         self.apply_filters()
+        self.dataframe_viewer.setUpdatesEnabled(True)
 
     @status_message_decorator("Reordering columns...")
     def reorder_columns(self, columns: List[str]):

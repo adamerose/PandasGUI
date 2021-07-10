@@ -104,7 +104,6 @@ class FilterViewer(QtWidgets.QWidget):
         self.layout.addWidget(self.list_view)
         self.setLayout(self.layout)
 
-
     def add_filter(self):
         expr = self.text_input.text()
         if not expr == "":
@@ -175,6 +174,9 @@ class FilterViewer(QtWidgets.QWidget):
 
             return False
 
+    def sizeHint(self) -> QtCore.QSize:
+        return QtCore.QSize(200, super().sizeHint().height())
+
 
 if __name__ == "__main__":
     # Create a QtWidgets.QApplication instance or use the existing one if it exists
@@ -189,4 +191,8 @@ if __name__ == "__main__":
     fv = FilterViewer(pokemon)
     stacked_widget.addWidget(fv)
     stacked_widget.show()
+    app.setStyle(QtWidgets.QStyleFactory.create('Fusion'))
+    import qtstylish
+    fv.setStyleSheet(qtstylish.light())
+
     app.exec_()

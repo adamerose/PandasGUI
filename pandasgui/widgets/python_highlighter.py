@@ -94,7 +94,7 @@ class PythonHighlighter(QSyntaxHighlighter):
         document.parent().parent().setStyleSheet(f"""QPlainTextEdit{{
             font-family:'Consolas'; 
             color: {'#ccc' if dark else '#000'}; 
-            background-color: {'#242629' if dark else '#FFFFFF'};}}""")
+            background-color: transparent;}}""")
 
         # Multi-line strings (expression, flag, style)
         # FIXME: The triple-quotes in these two lines will mess up the

@@ -16,7 +16,7 @@ class FlatDraggableTree(base_widgets.QTreeWidget):
         super().__init__()
 
         self.header().setStretchLastSection(False)
-        self.setDragDropMode(self.DragDrop)
+        self.setDragDropMode(self.InternalMove)
         self.setSelectionMode(self.ExtendedSelection)
         self.setSelectionBehavior(self.SelectRows)
         self.setRootIsDecorated(False)
@@ -40,9 +40,9 @@ class FlatDraggableTree(base_widgets.QTreeWidget):
 
         return QtCore.QSize(width, super().sizeHint().height())
 
-    def dropEvent(self, e: QtGui.QDropEvent):
-        super().dropEvent(e)
+    def dragEnterEvent(self, e: QtGui.QDragEnterEvent) -> None:
         self.apply_tree_settings()
+        super().dragEnterEvent(e)
 
     def apply_tree_settings(self):
         root = self.invisibleRootItem()
@@ -52,7 +52,7 @@ class FlatDraggableTree(base_widgets.QTreeWidget):
             child = root.child(i)
             child.setExpanded(True)
 
-            child.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled & ~Qt.ItemIsDropEnabled )
+            child.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled & ~Qt.ItemIsDropEnabled)
 
     def mimeData(self, indexes):
         mimedata = super().mimeData(indexes)
@@ -63,6 +63,7 @@ class FlatDraggableTree(base_widgets.QTreeWidget):
     def mouseReleaseEvent(self, event):
         self.mouseReleaseEventSignal.emit(event)
         super().mouseReleaseEvent(event)
+
 
 class ColumnViewer(QtWidgets.QWidget):
     def __init__(self, pgdf: PandasGuiDataFrameStore):
@@ -134,7 +135,6 @@ if __name__ == "__main__":
 
     from pandasgui.datasets import pokemon
 
-    # Create and show widget
     x = ColumnViewer(pokemon)
     x.show()
 

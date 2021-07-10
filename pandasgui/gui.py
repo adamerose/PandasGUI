@@ -67,8 +67,6 @@ class PandasGui(QtWidgets.QMainWindow):
             setting = self.store.settings[key]
             setting.value = value
 
-        # self.app.setStyle(QtWidgets.QStyleFactory.create('Fusion'))
-
         # Create all widgets
         self.init_ui()
 

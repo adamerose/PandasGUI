@@ -227,7 +227,6 @@ class FuncUi(QtWidgets.QWidget):
         self.source_tree_layout_wrapper.setLayout(self.source_tree_layout)
 
         self.splitter = QtWidgets.QSplitter(Qt.Horizontal)
-        self.splitter.setHandleWidth(3)
 
         self.splitter.addWidget(self.source_tree_layout_wrapper)
         self.splitter.addWidget(self.dest_tree)

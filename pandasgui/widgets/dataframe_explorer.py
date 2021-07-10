@@ -112,7 +112,7 @@ class ColumnArranger(ColumnViewer):
 
         self.tree.setAcceptDrops(True)
         self.tree.setDragEnabled(True)
-        self.tree.setDefaultDropAction(QtCore.Qt.MoveAction)
+        self.tree.setDefaultDropAction(Qt.MoveAction)
         self.tree.setHeaderLabels(['Name'])
         self.refresh()
 
@@ -131,7 +131,12 @@ class ColumnArranger(ColumnViewer):
         items = [self.tree.topLevelItem(x).text(0) for x in range(self.tree.topLevelItemCount())]
         self.pgdf.reorder_columns(items)
 
+    def sizeHint(self) -> QtCore.QSize:
+        return QtCore.QSize(200, super().sizeHint().height())
+
     def on_mouseReleaseEvent(self, event):
+        # TODO - Add context menu to move columns to front and end
+        return
         if event.button() == Qt.RightButton:
             pos = event.pos()
             item = self.tree.itemAt(pos)
@@ -141,11 +146,10 @@ class ColumnArranger(ColumnViewer):
                 menu = QtWidgets.QMenu(self.tree)
 
                 action1 = QtWidgets.QAction("Move To Front")
-                action1.triggered.connect(lambda: self.pgdf.move_columns(ix_list, 0, True))
+                action1.triggered.connect(lambda: None)
 
                 action2 = QtWidgets.QAction("Move To End")
-                action2.triggered.connect(
-                    lambda: self.pgdf.move_columns(ix_list, len(self.pgdf.df_unfiltered.columns), True))
+                action2.triggered.connect(lambda: None)
 
                 for action in [action1, action2]:
                     menu.addAction(action)

@@ -97,7 +97,6 @@ class Grapher(QtWidgets.QWidget):
 
         # Layouts
         self.plot_splitter = QtWidgets.QSplitter(Qt.Horizontal)
-        self.plot_splitter.setHandleWidth(3)
 
         self.plot_splitter.addWidget(self.func_ui)
         self.plot_splitter.addWidget(self.figure_viewer)
