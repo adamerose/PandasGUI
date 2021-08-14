@@ -528,6 +528,22 @@ def summarize_json(data, terse=True):
     return summary
 
 
+# Given two lists find pairs (src, dest) such that moving values in A according to each pair gives B
+def get_movements(a: list, b: list):
+    assert set(a) == set(b)
+
+    from copy import copy
+    a = copy(a)
+
+    movements = []
+    for dest, letter in enumerate(b):
+        src = a.index(letter)
+        if src != 0:
+            movements.append((src + dest, dest))
+        a.pop(src)
+    return movements
+
+
 event_lookup = {"0": "QEvent::None",
                 "114": "QEvent::ActionAdded",
                 "113": "QEvent::ActionChanged",

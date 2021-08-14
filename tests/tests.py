@@ -113,7 +113,7 @@ def test_code_history():
     pgdf.add_filter('HP > 50')
     pgdf.sort_column(4)
 
-    code = pgdf.update_code_export()
+    code = pgdf.code_export()
     # https://stackoverflow.com/a/52217741/3620725
     df = pokemon
     namespace = {'df': df}

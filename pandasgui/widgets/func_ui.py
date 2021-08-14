@@ -19,6 +19,7 @@ from dataclasses import asdict, dataclass
 
 from pandasgui.widgets import base_widgets
 from pandasgui import jotly
+from pandasgui.widgets.column_viewer import ColumnViewer
 
 
 class HiddenArg:
@@ -145,6 +146,12 @@ def format_kwargs(kwargs):
     return pprint.pformat(kwargs, width=40)
 
 
+class SourceTree(ColumnViewer):
+    def __init__(self, pgdf: PandasGuiDataFrameStore):
+        super().__init__(pgdf)
+        self.tree.setDragDropMode(self.tree.DragOnly)
+        self.tree.setHeaderLabels(['Name', '#Unique', 'Type'])
+
 class FuncUi(QtWidgets.QWidget):
     valuesChanged = QtCore.pyqtSignal()
     itemDropped = QtCore.pyqtSignal()
@@ -219,10 +226,19 @@ class FuncUi(QtWidgets.QWidget):
         self.button_layout.addWidget(self.preview_button)
         self.button_layout.addWidget(self.finish_button)
 
+        self.source_tree_layout = QtWidgets.QVBoxLayout()
+        self.source_tree_layout.addWidget(self.source_tree)
+        self.source_tree_layout.addWidget(self.source_tree2)
+        self.source_tree_layout_wrapper = QtWidgets.QWidget()
+        self.source_tree_layout_wrapper.setLayout(self.source_tree_layout)
+
+        self.splitter = QtWidgets.QSplitter(Qt.Horizontal)
+
+        self.splitter.addWidget(self.source_tree_layout_wrapper)
+        self.splitter.addWidget(self.dest_tree)
+
         self.main_layout = QtWidgets.QGridLayout()
-        self.main_layout.addWidget(self.source_tree, 0, 0)
-        self.main_layout.addWidget(self.source_tree2, 1, 0)
-        self.main_layout.addWidget(self.dest_tree, 0, 1, 2, 1)
+        self.main_layout.addWidget(self.splitter, 0, 0, 2, 1)
         self.main_layout.addLayout(self.button_layout, 2, 0, 1, 2)
 
         self.setLayout(self.main_layout)
@@ -272,7 +288,6 @@ class FuncUi(QtWidgets.QWidget):
 
         # Add imports
         text = ("import plotly.express as px\n" +
-                "from pandasgui.jotly import generate_title\n" +
                 "from pandasgui import show\n\n" + text)
 
         self.code_export_dialog_text.setText(text)
@@ -466,7 +481,7 @@ class FuncUi(QtWidgets.QWidget):
                 combo_box.currentIndexChanged.connect(
                     lambda ix, values=other_dataframes, item=item: [
                         item.setData(1, Qt.UserRole, values[ix]),
-                        self.source_tree2.set_df(values[ix])
+                        self.source_tree2.update_df(values[ix])
                     ])
                 combo_box.currentIndexChanged.connect(lambda: self.valuesChanged.emit())
 
@@ -654,9 +669,9 @@ class DestinationTree(base_widgets.QTreeWidget):
         root = self.invisibleRootItem()
         root.setFlags(root.flags() & Qt.ItemIsEnabled & ~Qt.ItemIsDropEnabled & ~Qt.ItemIsDragEnabled)
 
-        self.setDragDropMode(self.DragDrop)
+        self.setDragDropMode(self.InternalMove)
         self.setSelectionMode(self.ExtendedSelection)
-        self.setDefaultDropAction(QtCore.Qt.MoveAction)
+        self.setDefaultDropAction(QtCore.Qt.CopyAction)
 
     # https://stackoverflow.com/a/67213574/3620725
     def setItemWidget(self, item, column, widget):
@@ -672,80 +687,6 @@ class DestinationTree(base_widgets.QTreeWidget):
         widget = self.itemWidget(item, column)
         item.setSizeHint(column, widget.sizeHint())
         self.updateGeometries()
-
-
-class DraggableTree(base_widgets.QTreeWidget):
-
-    def dropEvent(self, e: QtGui.QDropEvent):
-        super().dropEvent(e)
-        self.parent().itemDropped.emit()
-
-    def mimeData(self, indexes):
-        mimedata = super().mimeData(indexes)
-        if indexes:
-            mimedata.setText(indexes[0].text(0))
-        return mimedata
-
-
-class SourceTree(QtWidgets.QWidget):
-    def __init__(self, df):
-        super().__init__()
-
-        self.tree = DraggableTree()
-
-        # Search box
-        self.search_bar = QtWidgets.QLineEdit()
-        self.search_bar.textChanged.connect(self.filter)
-
-        self.tree.setHeaderLabels(['Name', '#Unique', 'Type'])
-
-        self.tree.setSortingEnabled(True)
-
-        self.source_tree_layout = QtWidgets.QVBoxLayout()
-        self.source_tree_layout.addWidget(self.search_bar)
-        self.source_tree_layout.addWidget(self.tree)
-        self.setLayout(self.source_tree_layout)
-
-        # Configure drag n drop
-        self.tree.setDragDropMode(self.tree.DragOnly)
-        self.tree.setSelectionMode(self.tree.ExtendedSelection)
-        self.tree.setDefaultDropAction(QtCore.Qt.CopyAction)
-
-        self.set_df(df)
-
-    def set_df(self, df):
-        sources = df.columns
-        source_nunique = nunique(df)
-        source_types = df.dtypes.values.astype(str)
-
-        # Ensure no duplicates
-        assert (len(sources) == len(set(sources)))
-        assert (len(sources) == len(source_nunique))
-        assert (len(sources) == len(source_types))
-
-        self.set_sources(sources, source_nunique, source_types)
-
-        # Depends on Search Box and Source list
-        self.filter()
-
-    def set_sources(self, sources: List[str], source_nunique: List[str], source_types: List[str]):
-        self.tree.clear()
-        for i in range(len(sources)):
-            item = base_widgets.QTreeWidgetItem(self.tree,
-                                                [str(sources[i]), str(source_nunique[i]), str(source_types[i])])
-
-        self.filter()
-
-    def filter(self):
-        root = self.tree.invisibleRootItem()
-        for i in range(root.childCount()):
-            child = root.child(i)
-            child.setHidden(True)
-
-        items = self.tree.findItems(f".*{self.search_bar.text()}.*",
-                                    Qt.MatchRegExp | Qt.MatchRecursive)
-        for item in items:
-            item.setHidden(False)
 
 
 class CustomKwargsEditor(QtWidgets.QDialog):
@@ -802,13 +743,12 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
 
-    test = FuncUi(df=pokemon,
+    test = FuncUi(pgdf=PandasGuiDataFrameStore.cast(pokemon),
                   schema=Schema(name='histogram',
                                 label='Histogram',
                                 function=jotly.scatter,
                                 icon_path=os.path.join(pandasgui.__path__[0],
                                                        'resources/images/draggers/trace-type-histogram.svg')),
                   )
-    test.finished.connect(lambda: print(test.get_data()))
     test.show()
     sys.exit(app.exec_())

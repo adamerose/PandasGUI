@@ -18,7 +18,7 @@ from PyQt5 import QtCore, QtWidgets
 import traceback
 from datetime import datetime
 from pandasgui.utility import unique_name, in_interactive_console, refactor_variable, clean_dataframe, nunique, \
-    parse_cell, parse_all_dates, parse_date
+    parse_cell, parse_all_dates, parse_date, get_movements
 from pandasgui.constants import LOCAL_DATA_DIR
 import os
 from enum import Enum
@@ -87,7 +87,7 @@ DEFAULT_SETTINGS = {'editable': True,
                     'block': None,
                     'theme': 'light',
                     'auto_finish': True,
-                    'refresh_statistics': False,
+                    'refresh_statistics': True,
                     'render_mode': 'auto',
                     'aggregation': 'mean',
                     'title_format': "{name}: {title_columns}{title_dimensions}{names}{title_y}{title_z}{over_by}"
@@ -208,7 +208,7 @@ class HistoryItem:
 # Use this decorator on PandasGuiStore or PandasGuiDataFrameStore to display a status bar message during a method run
 def status_message_decorator(message):
     def decorator(function):
-        def wrapper(self, *args, **kwargs):
+        def status_message_wrapper(self, *args, **kwargs):
 
             if not (issubclass(type(self), PandasGuiStore) or issubclass(type(self), PandasGuiDataFrameStore)):
                 raise ValueError
@@ -241,7 +241,7 @@ def status_message_decorator(message):
                 result = function(self, *args, **kwargs)
             return result
 
-        return wrapper
+        return status_message_wrapper
 
     return decorator
 
@@ -435,41 +435,41 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
 
         self.apply_filters()
 
-    @status_message_decorator("Moving column...")
-    def move_column(self, ix: int, direction: Literal[-1, 1], to_end: bool):
-
-        col_name = self.df_unfiltered.columns[ix]
+    @status_message_decorator("Moving columns...")
+    def move_column(self, src: int, dest: int):
         cols = list(self.df_unfiltered.columns)
-
-        history_snippet = "cols = list(df.columns)\n"
-
-        if to_end:
-            if direction == 1:
-                cols.insert(len(cols), cols.pop(ix))
-                history_snippet += f"cols.insert(len(cols), cols.pop({ix}))\n"
-            else:
-                cols.insert(0, cols.pop(ix))
-                history_snippet += f"cols.insert(0, cols.pop({ix}))\n"
-        else:
-            if direction == 1:
-                cols.insert(ix + 1, cols.pop(ix))
-                history_snippet += f"cols.insert({ix + 1}, cols.pop({ix}))\n"
-            else:
-                cols.insert(ix - 1, cols.pop(ix))
-                history_snippet += f"cols.insert({ix - 1}, cols.pop({ix}))\n"
-
-        history_snippet += "df = df.reindex(cols, axis=1)\n"
-        self.add_history_item("move_column",
-                              history_snippet)
-
-        new_ix = cols.index(col_name)
-
-        # Need to inform the PyQt model too so column widths properly shift
-        self.dataframe_viewer._move_column(ix, new_ix)
-
+        cols.insert(dest, cols.pop(src))
         self.df_unfiltered = self.df_unfiltered.reindex(cols, axis=1)
 
+        self.add_history_item("move_column",
+                              (f"cols = list(df.columns)"
+                               f"cols.insert({dest}, cols.pop({src}))"
+                               f"df = df.reindex(cols, axis=1)"))
+
+        self.dataframe_viewer.setUpdatesEnabled(False)
+        # Need to inform the PyQt model too so column widths properly shift
+        self.dataframe_viewer._move_column(src, dest)
         self.apply_filters()
+        self.dataframe_viewer.setUpdatesEnabled(True)
+
+    @status_message_decorator("Reordering columns...")
+    def reorder_columns(self, columns: List[str]):
+        if sorted(list(columns)) != sorted(list(self.df_unfiltered.columns)):
+            raise ValueError("Provided column names do not match DataFrame")
+
+        original_columns = list(self.df_unfiltered.columns)
+
+        self.df_unfiltered = self.df_unfiltered.reindex(columns=columns)
+
+        self.dataframe_viewer.setUpdatesEnabled(False)
+        # Move columns around in TableView to maintain column widths
+        for (src, dest) in get_movements(original_columns, columns):
+            self.dataframe_viewer._move_column(src, dest, refresh=False)
+        self.apply_filters()
+        self.dataframe_viewer.setUpdatesEnabled(True)
+
+        self.add_history_item("reorder_columns",
+                              f"df = df.reindex(columns={columns})")
 
     ###################################
     # Sorting
@@ -550,6 +550,14 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
         self.sorted_column = None
         self.apply_filters()
 
+    def change_column_type(self, ix: int, type):
+        name = self.df_unfiltered.columns[ix]
+        self.df_unfiltered[name] = self.df_unfiltered[name].astype(type)
+        self.apply_filters()
+
+        self.add_history_item("change_column_type",
+                              f"df[{name}] = df[{name}].astype({type})")
+
     ###################################
     # Filters
 
@@ -584,10 +592,14 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
             if filt.enabled and not filt.failed:
                 try:
                     df = df.query(filt.expr)
+                    # Handle case where filter returns only one row
+                    if isinstance(df, pd.Series):
+                        df = df.to_frame().T
                 except Exception as e:
                     self.filters[ix].failed = True
                     logger.exception(e)
 
+        # self.filtered_index_map is used elsewhere to map unfiltered index to filtered index
         self.filtered_index_map = df['_temp_range_index'].reset_index(drop=True)
         df = df.drop('_temp_range_index', axis=1)
 
@@ -821,11 +833,13 @@ class PandasGuiStore:
             filename = os.path.split(path)[1].split('.json')[0]
             with open(path) as f:
                 data = json.load(f)
-
             from pandasgui.widgets.json_viewer import JsonViewer
             jv = JsonViewer(data)
             self.add_item(jv, filename)
-
+        elif path.endswith(".pkl"):
+            filename = os.path.split(path)[1].split('.pkl')[0]
+            df = pd.read_pickle(path)
+            self.add_dataframe(df, filename)
         else:
             logger.warning("Can only import csv / xlsx / parquet. Invalid file: " + path)
 

@@ -10,8 +10,11 @@ try:
     if file_paths:
         file_dataframes = {}
         for path in file_paths:
-            if os.path.isfile(path) and path.endswith('.csv'):
-                df = pd.read_csv(path)
+            if os.path.isfile(path) and (path.endswith('.csv') or path.endswith('.pkl')):
+                if path.endswith('.csv') :
+                    df = pd.read_csv(path)
+                if path.endswith('.pkl'):
+                    df = pd.read_pickle(path)
                 filename = os.path.split(path)[1]
                 file_dataframes[filename] = df
         show(**file_dataframes)

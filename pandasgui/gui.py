@@ -67,8 +67,6 @@ class PandasGui(QtWidgets.QMainWindow):
             setting = self.store.settings[key]
             setting.value = value
 
-        self.app.setStyle(QtWidgets.QStyleFactory.create('Fusion'))
-
         # Create all widgets
         self.init_ui()
 
@@ -109,7 +107,7 @@ class PandasGui(QtWidgets.QMainWindow):
 
     # Create and add all widgets to GUI.
     def init_ui(self):
-        self.code_export_dialog = None
+        self.code_history_viewer = None
 
         resize_widget(self, 0.7, 0.7)
 
@@ -140,7 +138,7 @@ class PandasGui(QtWidgets.QMainWindow):
         self.navigator = Navigator(self.store)
 
         # Make splitter to hold nav and DataFrameExplorers
-        self.splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
+        self.splitter = QtWidgets.QSplitter(Qt.Horizontal)
         self.splitter.addWidget(self.navigator)
         self.splitter.addWidget(self.stacked_widget)
 
@@ -161,14 +159,6 @@ class PandasGui(QtWidgets.QMainWindow):
         self.store.settings.settingsChanged.connect(self.apply_settings)
 
         self.apply_settings()
-
-    def showEvent(self, a0: QtGui.QShowEvent) -> None:
-        self.fit_to_nav()
-
-    def fit_to_nav(self) -> None:
-        nav_width = self.navigator.sizeHint().width()
-        self.splitter.setSizes([nav_width, self.width() - nav_width])
-        self.splitter.setContentsMargins(10, 10, 10, 10)
 
     ####################
     # Menu bar functions
@@ -200,20 +190,27 @@ class PandasGui(QtWidgets.QMainWindow):
                                    func=self.import_from_clipboard),
                           MenuItem(name='Export',
                                    func=self.export_dialog),
-                          MenuItem(name='Delete Selected DataFrames',
-                                   func=self.delete_selected_dataframes),
-                          MenuItem(name='Refresh Data',
-                                   func=self.reload_data,
-                                   shortcut='Ctrl+R'),
                           MenuItem(name='Code Export',
                                    func=self.show_code_export),
                           ],
-                 'Settings': [MenuItem(name='Add To Context Menu',
-                                       func=self.add_to_context_menu),
-                              MenuItem(name='Remove From Context Menu',
-                                       func=self.remove_from_context_menu),
-                              MenuItem(name='Preferences...',
+                 'DataFrame': [MenuItem(name='Delete Selected DataFrames',
+                                        func=self.delete_selected_dataframes),
+                               MenuItem(name='Reload DataFrames',
+                                        func=self.reload_data,
+                                        shortcut='Ctrl+R'),
+                               MenuItem(name='Parse All Dates',
+                                        func=lambda: self.store.selected_pgdf.parse_all_dates()),
+                               ],
+                 'Settings': [MenuItem(name='Preferences...',
                                        func=self.edit_settings),
+                              {"Context Menus": [MenuItem(name='Add PandasGUI To Context Menu',
+                                                          func=self.add_to_context_menu),
+                                                 MenuItem(name='Remove PandasGUI From Context Menu',
+                                                          func=self.remove_from_context_menu),
+                                                 MenuItem(name='Add JupyterLab To Context Menu',
+                                                          func=self.add_jupyter_to_context_menu),
+                                                 MenuItem(name='Remove JupyterLab From Context Menu',
+                                                          func=self.remove_jupyter_from_context_menu), ]}
 
                               ],
                  'Debug': [MenuItem(name='About',
@@ -227,16 +224,20 @@ class PandasGui(QtWidgets.QMainWindow):
                            ]
                  }
 
-        menus = {}
-        # Add menu items and actions to UI using the schema defined above
-        for menu_name in items.keys():
-            menu = menubar.addMenu(menu_name)
-            menus[menu_name] = menu
-            for x in items[menu_name]:
-                action = QtWidgets.QAction(x.name, self)
-                action.setShortcut(x.shortcut)
-                action.triggered.connect(x.func)
-                menu.addAction(action)
+        def add_menus(dic, root):
+            # Add menu items and actions to UI using the schema defined above
+            for menu_name in dic.keys():
+                menu = root.addMenu(menu_name)
+                for x in dic[menu_name]:
+                    if type(x) == dict:
+                        add_menus(x, menu)
+                    else:
+                        action = QtWidgets.QAction(x.name, self)
+                        action.setShortcut(x.shortcut)
+                        action.triggered.connect(x.func)
+                        menu.addAction(action)
+
+        add_menus(items, menubar)
 
     def apply_settings(self):
         theme = self.store.settings.theme.value
@@ -267,24 +268,11 @@ class PandasGui(QtWidgets.QMainWindow):
             self.store.selected_pgdf.dataframe_explorer.dataframe_viewer.paste()
 
     def show_code_export(self):
-        self.update_code_export()
-        self.code_export_dialog.show()
+        self.store.selected_pgdf.dataframe_explorer.code_history_viewer.show()
 
     def update_code_export(self):
-        code_history = self.store.selected_pgdf.code_export()
-        if not self.code_export_dialog:
-            self.code_export_dialog = QtWidgets.QDialog(self)
-            layout = QtWidgets.QVBoxLayout()
-            self.code_export_dialog.setLayout(layout)
-            self.code_export_dialog_textbox = QtWidgets.QPlainTextEdit()
-            layout.addWidget(self.code_export_dialog_textbox)
-        highlight = PythonHighlighter(self.code_export_dialog_textbox.document(),
-                                      dark=self.store.selected_pgdf.settings.theme.value == 'dark')
-        self.code_export_dialog_textbox.setPlainText(code_history)
-        self.code_export_dialog_textbox.setReadOnly(True)
-        self.code_export_dialog_textbox.setLineWrapMode(self.code_export_dialog_textbox.NoWrap)
-        resize_widget(self.code_export_dialog, 0.5, 0.5)
-        self.code_export_dialog.setWindowTitle(f"Code Export ({self.store.selected_pgdf.name})")
+        self.store.selected_pgdf.dataframe_explorer.code_history_viewer.refresh()
+
 
     def delete_selected_dataframes(self):
         for name in [item.text(0) for item in self.navigator.selectedItems()]:
@@ -359,12 +347,12 @@ class PandasGui(QtWidgets.QMainWindow):
         import winreg
 
         key = winreg.HKEY_CURRENT_USER
-        value = rf'{sys.executable} -m pandasgui.run_with_args "%V"'
+        command_value = rf'{sys.executable} -m pandasgui.run_with_args "%V"'
         icon_value = fr"{os.path.dirname(pandasgui.__file__)}\resources\images\icon.ico"
 
         handle = winreg.CreateKeyEx(key, "Software\Classes\*\shell\Open with PandasGUI\command", 0,
                                     winreg.KEY_SET_VALUE)
-        winreg.SetValueEx(handle, "", 0, winreg.REG_SZ, value)
+        winreg.SetValueEx(handle, "", 0, winreg.REG_SZ, command_value)
         handle = winreg.CreateKeyEx(key, "Software\Classes\*\shell\Open with PandasGUI", 0, winreg.KEY_SET_VALUE)
         winreg.SetValueEx(handle, "icon", 0, winreg.REG_SZ, icon_value)
 
@@ -373,6 +361,26 @@ class PandasGui(QtWidgets.QMainWindow):
         key = winreg.HKEY_CURRENT_USER
         winreg.DeleteKey(key, "Software\Classes\*\shell\Open with PandasGUI\command")
         winreg.DeleteKey(key, "Software\Classes\*\shell\Open with PandasGUI")
+
+    def add_jupyter_to_context_menu(self):
+        import winreg
+
+        key = winreg.HKEY_CURRENT_USER
+        command_value = rf'cmd.exe /k jupyter lab --notebook-dir="%V"'
+        icon_value = fr"{os.path.dirname(pandasgui.__file__)}\resources\images\jupyter_icon.ico"
+
+        handle = winreg.CreateKeyEx(key, "Software\Classes\directory\Background\shell\Open with JupyterLab\command", 0,
+                                    winreg.KEY_SET_VALUE)
+        winreg.SetValueEx(handle, "", 0, winreg.REG_SZ, command_value)
+        handle = winreg.CreateKeyEx(key, "Software\Classes\directory\Background\shell\Open with JupyterLab", 0,
+                                    winreg.KEY_SET_VALUE)
+        winreg.SetValueEx(handle, "icon", 0, winreg.REG_SZ, icon_value)
+
+    def remove_jupyter_from_context_menu(self):
+        import winreg
+        key = winreg.HKEY_CURRENT_USER
+        winreg.DeleteKey(key, "Software\Classes\directory\Background\shell\Open with JupyterLab\command")
+        winreg.DeleteKey(key, "Software\Classes\directory\Background\shell\Open with JupyterLab")
 
     def edit_settings(self):
 
@@ -432,7 +440,7 @@ def show(*args,
     Figure      Show it using FigureViewer. Supports figures from plotly, bokeh, matplotlib, altair
     dict/list   Show it using JsonViewer
     '''
-    logger.info("Opening PandasGUI...")
+    logger.info("Opening PandasGUI")
     # Get the variable names in the scope show() was called from
     callers_local_vars = inspect.currentframe().f_back.f_locals.items()
 
@@ -478,6 +486,6 @@ def show(*args,
 
 
 if __name__ == "__main__":
-    from pandasgui.datasets import pokemon, titanic, mi_manufacturing, all_datasets
+    from pandasgui.datasets import pokemon, titanic, mi_manufacturing, trump_tweets, all_datasets
 
     gui = show(pokemon, titanic, mi_manufacturing)

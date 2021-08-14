@@ -1,7 +1,10 @@
 from PyQt5 import QtGui, QtWidgets
+from PyQt5.QtCore import pyqtSignal
 
 
 class QTreeWidget(QtWidgets.QTreeWidget):
+    onDropSignal = pyqtSignal()
+
     # Autosize columns
     def showEvent(self, event: QtGui.QShowEvent):
         self.autosize_columns()
@@ -11,7 +14,9 @@ class QTreeWidget(QtWidgets.QTreeWidget):
         for i in range(self.columnCount()):
             self.resizeColumnToContents(i)
 
-
+    def dropEvent(self, event: QtGui.QDropEvent) -> None:
+        super().dropEvent(event)
+        self.onDropSignal.emit()
 
 class QTreeWidgetItem(QtWidgets.QTreeWidgetItem):
     def __lt__(self, otherItem):

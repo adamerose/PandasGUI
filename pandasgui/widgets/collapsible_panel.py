@@ -11,8 +11,6 @@ class CollapsiblePanel(QtWidgets.QGroupBox):
         self.toggled.connect(self.on_toggled)
         self.layout = QtWidgets.QVBoxLayout()
         self.layout.addWidget(self.contents_widget)
-        self.setStyleSheet('QGroupBox:title {margin: 5px; background: transparent;}')
-
 
     def setContent(self, widget) -> None:
         layout = QtWidgets.QVBoxLayout()
@@ -25,6 +23,7 @@ class CollapsiblePanel(QtWidgets.QGroupBox):
             self.contents_widget.show()
         else:
             self.contents_widget.hide()
+
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication([])

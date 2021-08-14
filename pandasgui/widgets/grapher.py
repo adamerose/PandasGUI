@@ -8,6 +8,7 @@ import plotly
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
+from pandasgui.jotly import generate_title
 
 from pandasgui.store import PandasGuiDataFrameStore
 from pandasgui.widgets.collapsible_panel import CollapsiblePanel
@@ -92,19 +93,13 @@ class Grapher(QtWidgets.QWidget):
 
         # UI setup
         self.figure_viewer = FigureViewer(store=self.pgdf.store)
-        self.figure_viewer.setSizePolicy(QtWidgets.QSizePolicy.Expanding,
-                                         QtWidgets.QSizePolicy.Expanding)
-
         self.func_ui = FuncUi(pgdf, schema=Schema())
 
         # Layouts
         self.plot_splitter = QtWidgets.QSplitter(Qt.Horizontal)
-        self.plot_splitter.setHandleWidth(3)
 
         self.plot_splitter.addWidget(self.func_ui)
         self.plot_splitter.addWidget(self.figure_viewer)
-        self.plot_splitter.setStretchFactor(1, 1)
-
         self.layout = QtWidgets.QVBoxLayout()
         self.layout.addWidget(self.type_picker)
         self.layout.addWidget(self.plot_splitter)
@@ -112,10 +107,16 @@ class Grapher(QtWidgets.QWidget):
         self.setLayout(self.layout)
 
         # Size policies
-        self.figure_viewer.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
-        self.func_ui.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        self.figure_viewer.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         self.plot_splitter.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        self.error_console.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Minimum)
+        self.func_ui.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        self.error_console.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        self.figure_viewer.setMinimumWidth(500)
+        self.figure_viewer.setMinimumHeight(500)
+
+        # This has to be called at the end https://stackoverflow.com/a/68027597/3620725
+        self.plot_splitter.setStretchFactor(0, 0)
+        self.plot_splitter.setStretchFactor(1, 1)
 
         # Initial selection
         self.type_picker.setCurrentRow(0)
@@ -165,6 +166,9 @@ class Grapher(QtWidgets.QWidget):
 
         try:
             self.fig = func(data_frame=self.pgdf.df, **kwargs)
+            # Generate a title and apply it to the figure
+            self.fig.update_layout(title=generate_title(self.pgdf, self.current_schema.name, kwargs))
+
             self.figure_viewer.set_figure(self.fig)
             self.error_console.setText("")
             self.error_console_wrapper.setTitle("Grapher Console")
@@ -189,11 +193,7 @@ def clear_layout(layout):
 
 from pandasgui import jotly
 
-schemas = [Schema(name='histogram',
-                  label='Histogram',
-                  function=jotly.histogram,
-                  icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-histogram.svg')),
-           Schema(name='scatter',
+schemas = [Schema(name='scatter',
                   label='Scatter',
                   function=jotly.scatter,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-scatter.svg')),
@@ -205,6 +205,10 @@ schemas = [Schema(name='histogram',
                   label='Bar',
                   function=jotly.bar,
                   icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-bar.svg')),
+           Schema(name='histogram',
+                  label='Histogram',
+                  function=jotly.histogram,
+                  icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-histogram.svg')),
            Schema(name='box',
                   label='Box',
                   function=jotly.box,
@@ -236,7 +240,8 @@ schemas = [Schema(name='histogram',
            Schema(name='candlestick',
                   label='Candlestick',
                   function=jotly.candlestick,
-                  icon_path=os.path.join(pandasgui.__path__[0], 'resources/images/draggers/trace-type-candlestick.svg')),
+                  icon_path=os.path.join(pandasgui.__path__[0],
+                                         'resources/images/draggers/trace-type-candlestick.svg')),
            Schema(name='word_cloud',
                   label='Word Cloud',
                   function=jotly.word_cloud,

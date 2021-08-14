@@ -15,6 +15,7 @@ class ColumnMenu(QtWidgets.QMenu):
 
         self.pgdf = pgdf
         self.column_ix = column_ix
+        df = self.pgdf.df_unfiltered
 
         ########################
         # Info
@@ -57,16 +58,16 @@ class ColumnMenu(QtWidgets.QMenu):
 
         col_name = self.pgdf.df.columns[column_ix]
         self.move_b1 = QtWidgets.QPushButton("<<")
-        self.move_b1.clicked.connect(lambda: [self.pgdf.move_column(column_ix, -1, True),
+        self.move_b1.clicked.connect(lambda: [self.pgdf.move_column(column_ix, 0),
                                               self.close(), self.pgdf.dataframe_viewer.show_column_menu(col_name)])
         self.move_b2 = QtWidgets.QPushButton("<")
-        self.move_b2.clicked.connect(lambda: [self.pgdf.move_column(column_ix, -1, False),
+        self.move_b2.clicked.connect(lambda: [self.pgdf.move_column(column_ix, column_ix - 1),
                                               self.close(), self.pgdf.dataframe_viewer.show_column_menu(col_name)])
         self.move_b3 = QtWidgets.QPushButton(">")
-        self.move_b3.clicked.connect(lambda: [self.pgdf.move_column(column_ix, 1, False),
+        self.move_b3.clicked.connect(lambda: [self.pgdf.move_column(column_ix, column_ix + 1),
                                               self.close(), self.pgdf.dataframe_viewer.show_column_menu(col_name)])
         self.move_b4 = QtWidgets.QPushButton(">>")
-        self.move_b4.clicked.connect(lambda: [self.pgdf.move_column(column_ix, 1, True),
+        self.move_b4.clicked.connect(lambda: [self.pgdf.move_column(column_ix, len(df.columns)),
                                               self.close(), self.pgdf.dataframe_viewer.show_column_menu(col_name)])
 
         move_control = QtWidgets.QWidget()
@@ -91,6 +92,16 @@ class ColumnMenu(QtWidgets.QMenu):
         button = QtWidgets.QPushButton("Parse Date")
         button.clicked.connect(lambda: [self.pgdf.parse_date(column_ix), self.close()])
         self.add_widget(button)
+
+        ########################
+        # Data Type
+        col_type = self.pgdf.df_unfiltered.dtypes[column_ix]
+        types = list(dict.fromkeys([str(col_type)] + ['float', 'bool', 'category', 'str']))
+        combo = QtWidgets.QComboBox()
+        combo.addItems(types)
+        combo.setCurrentText(str(col_type))
+        combo.currentTextChanged.connect(lambda x: [self.pgdf.change_column_type(column_ix, x)])
+        self.add_widget(combo)
 
         ########################
         # Coloring

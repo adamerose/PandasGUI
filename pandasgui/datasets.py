@@ -6,9 +6,8 @@ import numpy as np
 from pandasgui.constants import LOCAL_DATASET_DIR
 import logging
 from pandasgui.utility import SlicableOrderedDict
+
 logger = logging.getLogger(__name__)
-
-
 
 
 def read_csv(path):
@@ -168,3 +167,42 @@ def __getattr__(name: str) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
                                  'tuples': [(1, 2, 3), (4, 5, 6), (7, 8, 9)]
                                  }
                                 )
+
+
+################
+# These just improve intellisense since the type hint on the __getattr__ return value didn't work
+all_datasets: pd.DataFrame
+pokemon: pd.DataFrame
+googleplaystore: pd.DataFrame
+googleplaystore_reviews: pd.DataFrame
+netflix_titles: pd.DataFrame
+trump_tweets: pd.DataFrame
+harry_potter_characters: pd.DataFrame
+happiness: pd.DataFrame
+country_indicators: pd.DataFrame
+us_shooting_incidents: pd.DataFrame
+stockdata: pd.DataFrame
+gapminder: pd.DataFrame
+anscombe: pd.DataFrame
+attention: pd.DataFrame
+brain_networks: pd.DataFrame
+diamonds: pd.DataFrame
+dots: pd.DataFrame
+exercise: pd.DataFrame
+flights: pd.DataFrame
+fmri: pd.DataFrame
+gammas: pd.DataFrame
+geyser: pd.DataFrame
+iris: pd.DataFrame
+mpg: pd.DataFrame
+penguins: pd.DataFrame
+planets: pd.DataFrame
+tips: pd.DataFrame
+titanic: pd.DataFrame
+seinfeld_episodes: pd.DataFrame
+seinfeld_scripts: pd.DataFrame
+mi_manufacturing: pd.DataFrame
+simple: pd.DataFrame
+multiindex: pd.DataFrame
+small: pd.DataFrame
+unhashable: pd.DataFrame

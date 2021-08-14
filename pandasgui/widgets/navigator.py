@@ -9,6 +9,7 @@ import tempfile
 import os
 
 from pandasgui.utility import traverse_tree_widget
+from pandasgui.widgets.column_viewer import FlatDraggableTree
 from pandasgui.widgets.json_viewer import JsonViewer
 
 # Use win32api on Windows because the pynput and mouse packages cause lag with PyQt drag-n-drop
@@ -58,26 +59,17 @@ class DelayedMimeData(QtCore.QMimeData):
 
         return QtCore.QMimeData.retrieveData(self, mime_type, preferred_type)
 
-
-class Navigator(base_widgets.QTreeWidget):
-
+class Navigator(FlatDraggableTree):
     def __init__(self, store):
         super().__init__()
         self.store: PandasGuiStore = store
         store.navigator = self
 
-        self.expandAll()
-        self.setHeaderLabels(["Name", "Shape"])
-
-        self.header().setStretchLastSection(False)
         self.setAcceptDrops(True)
         self.setDragEnabled(True)
-        self.setDragDropMode(self.DragDrop)
         self.setDefaultDropAction(Qt.MoveAction)
-        self.setSelectionMode(self.ExtendedSelection)
-        self.setSelectionBehavior(self.SelectRows)
-        self.apply_tree_settings()
 
+        self.setHeaderLabels(['Name', 'Shape'])
         self.setContextMenuPolicy(Qt.CustomContextMenu)
 
     def mouseReleaseEvent(self, event):
@@ -98,36 +90,10 @@ class Navigator(base_widgets.QTreeWidget):
 
         super().mouseReleaseEvent(event)
 
-    def showEvent(self, event: QtGui.QShowEvent):
-        for i in range(self.columnCount()):
-            self.resizeColumnToContents(i)
-        event.accept()
-
     def remove_item(self, name):
         for item in traverse_tree_widget(self):
             if item.text(0) == name:
                 sip.delete(item)
-
-    def rowsInserted(self, parent: QtCore.QModelIndex, start: int, end: int):
-        super().rowsInserted(parent, start, end)
-        self.expandAll()
-
-    def sizeHint(self) -> QtCore.QSize:
-        self.header().setStretchLastSection(False)
-        width = 5 + sum([self.columnWidth(i) for i in range(self.columnCount())])
-        self.header().setStretchLastSection(True)
-
-        return QtCore.QSize(width, super().sizeHint().height())
-
-    def apply_tree_settings(self):
-        root = self.invisibleRootItem()
-        root.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled)
-
-        for i in range(root.childCount()):
-            child = root.child(i)
-            child.setExpanded(True)
-
-            child.setFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled)
 
     def selectionChanged(self, selected: QtCore.QItemSelection, deselected: QtCore.QItemSelection) -> None:
         """
@@ -142,10 +108,6 @@ class Navigator(base_widgets.QTreeWidget):
         item = self.selectedItems()[0]
         df_name = item.data(0, Qt.DisplayRole)
         self.store.select_pgdf(df_name)
-
-    def dropEvent(self, e: QtGui.QDropEvent):
-        super().dropEvent(e)
-        self.apply_tree_settings()
 
     # Set CSV data in the case that the user is dragging DataFrames out of the GUI into a file folder
     def startDrag(self, actions):
