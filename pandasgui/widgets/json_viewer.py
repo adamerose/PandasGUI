@@ -1,11 +1,15 @@
 import sys
-from typing import Union, Literal, List
+from typing import Union, List
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from pandasgui.store import PandasGuiStoreItem
 from pandasgui.utility import summarize_json, traverse_tree_widget
 from pandasgui.widgets import base_widgets
 
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 
 class JsonViewer(QtWidgets.QWidget, PandasGuiStoreItem):
 
