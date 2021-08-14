@@ -2,6 +2,7 @@ import sys
 from typing import List
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtCore import Qt
+from pandasgui.widgets.code_history_viewer import CodeHistoryViewer
 
 from pandasgui.widgets.containers import Container
 from pandasgui.widgets.dataframe_viewer import DataFrameViewer
@@ -38,6 +39,7 @@ class DataFrameExplorer(QtWidgets.QWidget):
         self.statistics_viewer = StatisticsViewer(pgdf)
         self.grapher = Grapher(pgdf)
         self.reshaper = Reshaper(pgdf)
+        self.code_history_viewer = CodeHistoryViewer(pgdf)
 
         self.dataframe_dock = self.add_view(self.dataframe_viewer, "DataFrame")
         self.statistics_dock = self.add_view(self.statistics_viewer, "Statistics")

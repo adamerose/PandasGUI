@@ -2,113 +2,47 @@ import os
 import sys
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QDesktopServices
-from PyQt5.QtCore import QUrl
 
-from pandasgui.store import PandasGuiDataFrameStore
+from pandasgui.store import PandasGuiDataFrameStore, SETTINGS_STORE
 import pandasgui
 
 import logging
+
+from pandasgui.utility import resize_widget
+from pandasgui.widgets.python_highlighter import PythonHighlighter
+
 logger = logging.getLogger(__name__)
 
 
-class CodeHistoryViewer(QtWidgets.QWidget):
+class CodeHistoryViewer(QtWidgets.QFrame):
     def __init__(self, pgdf: PandasGuiDataFrameStore):
         super().__init__()
         pgdf = PandasGuiDataFrameStore.cast(pgdf)
         pgdf.filter_viewer = self
         self.pgdf = pgdf
 
-        self.list_view = self.ListView()
-        self.list_model = self.ListModel(pgdf)
-        self.list_view.setModel(self.list_model)
+        resize_widget(self, 0.5, 0.5)
 
-        self.text_input = QtWidgets.QLineEdit()
-        self.text_input.setPlaceholderText("Enter query expression")
-        self.text_input_label = QtWidgets.QLabel('''<a style="color: #1e81cc;" href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.query.html">What's a query expression?</a>''')
-        self.text_input_label.linkActivated.connect(lambda link: QDesktopServices.openUrl(QUrl(link)))
-        self.text_input.setValidator(None)
+        self.textbox = QtWidgets.QPlainTextEdit()
+        self.textbox.setReadOnly(True)
+        self.textbox.setLineWrapMode(self.textbox.NoWrap)
+        self.highlighter = PythonHighlighter(self.textbox.document(),
+                                             dark=SETTINGS_STORE.theme.value == 'dark')
 
-        self.submit_button = QtWidgets.QPushButton("Add Filter")
-
-        # Signals
-        self.text_input.returnPressed.connect(self.add_filter)
-        self.submit_button.clicked.connect(self.add_filter)
-
-        # Layout
-        self.new_filter_layout = QtWidgets.QHBoxLayout()
-        self.new_filter_layout.addWidget(self.text_input)
-        self.new_filter_layout.addWidget(self.submit_button)
         self.layout = QtWidgets.QVBoxLayout()
-        self.layout.addLayout(self.new_filter_layout)
-        self.layout.addWidget(self.text_input_label)
-        self.layout.addWidget(self.list_view)
+        self.layout.addWidget(self.textbox)
         self.setLayout(self.layout)
 
-    def update(self, event):
-        if event.key() == Qt.Key_Delete:
-            for row in [x.row() for x in self.list_view.selectedIndexes()]:
-                self.pgdf.remove_filter(row)
+        self.setWindowTitle(f"Code Export ({self.pgdf.name})")
 
-    class ListView(QtWidgets.QListView):
-        def paintEvent(self, event):
-            super().paintEvent(event)
-            if self.model().rowCount() == 0:
-                painter = QtGui.QPainter(self.viewport())
-                painter.save()
-                col = self.palette().placeholderText().color()
-                painter.setPen(col)
-                fm = self.fontMetrics()
-                elided_text = fm.elidedText("No filters defined", QtCore.Qt.ElideRight, self.viewport().width())
-                painter.drawText(self.viewport().rect(), QtCore.Qt.AlignCenter, elided_text)
-                painter.restore()
+        self.refresh()
 
-    class ListModel(QtCore.QAbstractListModel):
-        def __init__(self, pgdf: PandasGuiDataFrameStore):
-            super().__init__()
-            self.pgdf = pgdf
+    def refresh(self):
+        code_history = self.pgdf.code_export()
+        self.textbox.setPlainText(code_history)
 
-        def data(self, index: QtCore.QModelIndex, role: int):
-            row = index.row()
-            if role == Qt.DisplayRole or role == Qt.EditRole:
-                filt = self.pgdf.filters[row]
-                return filt.expr
-
-            if role == Qt.CheckStateRole:
-                if self.pgdf.filters[index.row()].failed:
-                    return None
-
-                filt = self.pgdf.filters[row]
-                if filt.enabled:
-                    return Qt.Checked
-                else:
-                    return Qt.Unchecked
-
-            if role == QtCore.Qt.DecorationRole and self.pgdf.filters[row].failed:
-                path = os.path.join(pandasgui.__path__[0], "resources/images/alert.svg")
-                return QtGui.QIcon(path)
-
-        def rowCount(self, parent=None):
-            return len(self.pgdf.filters)
-
-        def flags(self, index):
-            return (QtCore.Qt.ItemIsEditable |
-                    QtCore.Qt.ItemIsEnabled |
-                    QtCore.Qt.ItemIsSelectable |
-                    QtCore.Qt.ItemIsUserCheckable)
-
-        def setData(self, index, value, role=QtCore.Qt.DisplayRole):
-            row = index.row()
-            if role == Qt.CheckStateRole:
-                self.pgdf.toggle_filter(row)
-                return True
-
-            if role == QtCore.Qt.EditRole:
-                self.pgdf.edit_filter(row, value)
-                return True
-
-            return False
+    def closeEvent(self, a0: QtGui.QCloseEvent) -> None:
+        self.hide()
 
 
 if __name__ == "__main__":
@@ -116,12 +50,9 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     from pandasgui.datasets import pokemon
 
-    stacked_widget = QtWidgets.QStackedWidget()
-    pokemon = PandasGuiDataFrameStore(pokemon)
-    pokemon.add_filter('Generation > 3', enabled=False)
-    pokemon.add_filter('Attack > 50', enabled=True)
-    pokemon.add_filter('Defense < 30', enabled=True)
+    pokemon = PandasGuiDataFrameStore.cast(pokemon)
+    pokemon.parse_all_dates()
+    pokemon.sort_column(0)
     fv = CodeHistoryViewer(pokemon)
-    stacked_widget.addWidget(fv)
-    stacked_widget.show()
+    fv.show()
     app.exec_()

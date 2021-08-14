@@ -107,7 +107,7 @@ class PandasGui(QtWidgets.QMainWindow):
 
     # Create and add all widgets to GUI.
     def init_ui(self):
-        self.code_export_dialog = None
+        self.code_history_viewer = None
 
         resize_widget(self, 0.7, 0.7)
 
@@ -268,25 +268,11 @@ class PandasGui(QtWidgets.QMainWindow):
             self.store.selected_pgdf.dataframe_explorer.dataframe_viewer.paste()
 
     def show_code_export(self):
-        self.update_code_export()
-        self.code_export_dialog.show()
+        self.store.selected_pgdf.dataframe_explorer.code_history_viewer.show()
 
     def update_code_export(self):
-        code_history = self.store.selected_pgdf.code_export()
-        if not self.code_export_dialog:
-            self.code_export_dialog = QtWidgets.QDialog(self)
-            layout = QtWidgets.QVBoxLayout()
-            self.code_export_dialog.setLayout(layout)
-            self.code_export_dialog_textbox = QtWidgets.QPlainTextEdit()
-            layout.addWidget(self.code_export_dialog_textbox)
+        self.store.selected_pgdf.dataframe_explorer.code_history_viewer.refresh()
 
-        highlight = PythonHighlighter(self.code_export_dialog_textbox.document(),
-                                      dark=self.store.selected_pgdf.settings.theme.value == 'dark')
-        self.code_export_dialog_textbox.setPlainText(code_history)
-        self.code_export_dialog_textbox.setReadOnly(True)
-        self.code_export_dialog_textbox.setLineWrapMode(self.code_export_dialog_textbox.NoWrap)
-        resize_widget(self.code_export_dialog, 0.5, 0.5)
-        self.code_export_dialog.setWindowTitle(f"Code Export ({self.store.selected_pgdf.name})")
 
     def delete_selected_dataframes(self):
         for name in [item.text(0) for item in self.navigator.selectedItems()]:
