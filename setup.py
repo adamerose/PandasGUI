@@ -34,5 +34,6 @@ setup(
         "astor",
         "typing-extensions",
         "qtstylish>=0.1.2",
+        "pywin32; platform_system=='Windows'"
     ],
 )
