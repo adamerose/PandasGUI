@@ -16,6 +16,7 @@ setup(
     long_description_content_type="text/markdown",
     exclude_package_data={'': ['.gitignore']},
     # Using this instead of MANIFEST.in - https://pypi.org/project/setuptools-git/
+    python_requires=">=3.7",
     setup_requires=['setuptools-git'],
     install_requires=[
         "pandas",
