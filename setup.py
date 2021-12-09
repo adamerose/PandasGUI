@@ -35,4 +35,9 @@ setup(
         "qtstylish>=0.1.2",
         "pywin32; platform_system=='Windows'"
     ],
+    entry_points={
+        "gui_scripts": [
+            "pandasgui = pandasgui.run_with_args:main"
+        ]
+    },
 )
