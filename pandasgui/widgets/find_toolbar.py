@@ -310,7 +310,7 @@ class ButtonLineEdit(QtWidgets.QLineEdit):
                 - frameWidth
                 - buttonSize.width() * (i + 1)
                 - right_margin,
-                (self.rect().bottom() - buttonSize.height() + 1) / 2 - bottom_margin,
+                (self.rect().bottom() - buttonSize.height() + 1) // 2 - bottom_margin,
             )
         super(ButtonLineEdit, self).resizeEvent(event)
 
