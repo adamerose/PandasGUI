@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import time
 import os
-from PyQt5 import QtCore, QtWidgets
+from qtpy import QtCore, QtWidgets
 
 
 def generate_string_data(rows, cols, length=5):

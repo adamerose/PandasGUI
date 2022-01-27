@@ -1,10 +1,10 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt
+from qtpy import QtCore, QtGui, QtWidgets
+from qtpy.QtCore import Qt
 
 
 class DockWidget(QtWidgets.QDockWidget):
     # This signal is used to track which dock is considered active or focussed
-    activated = QtCore.pyqtSignal()
+    activated = QtCore.Signal()
 
     def __init__(self, title: str, pgdf_name: str = 'Untitled'):
         super().__init__(title)

@@ -1,9 +1,9 @@
 # https://github.com/art1415926535/PyQt5-syntax-highlighting
 
-from PyQt5 import QtWidgets
+from qtpy import QtWidgets
 
-from PyQt5.QtCore import QRegExp
-from PyQt5.QtGui import QColor, QTextCharFormat, QFont, QSyntaxHighlighter
+from qtpy.QtCore import QRegExp
+from qtpy.QtGui import QColor, QTextCharFormat, QFont, QSyntaxHighlighter
 
 def format(color, style=''):
     """

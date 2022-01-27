@@ -4,7 +4,7 @@ Menu that appears on right clicking a column header. Contains options for modify
 
 import sys
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from qtpy import QtCore, QtGui, QtWidgets
 
 from pandasgui.store import PandasGuiDataFrameStore
 

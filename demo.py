@@ -12,7 +12,7 @@ show(pokemon_stats=pokemon, mi_example=multiindex)
 show(**all_datasets)
 
 # The only reserved argument name is `settings`, which accepts a dictionary of settings for the GUI.
-show(pokemon, settings={'theme':'dark', ''})
+show(pokemon, settings={'theme':'dark'})
 # PandasGUI will attempt to convert any object you pass to `show` into a DataFrame
 show(test1={'a': [1, 2, 3]}, test2=[5, 6, 7, 8, 9])
 
@@ -21,4 +21,4 @@ gui = show(pokemon, mpg)
 pokemon_new = gui['pokemon']
 
 # Use the `pg` IPython magic command to directly modify DataFrames in the GUI
-%pg pokemon['Null Type'] = pokemon['Type 1'].isna()
+# %pg pokemon['Null Type'] = pokemon['Type 1'].isna()

@@ -1,8 +1,8 @@
 import sys
 
-from PyQt5 import QtWidgets, QtGui, QtCore
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QMouseEvent
+from qtpy import QtWidgets, QtGui, QtCore
+from qtpy.QtCore import Qt, Signal
+from qtpy.QtGui import QMouseEvent
 
 from pandasgui.store import PandasGuiDataFrameStore
 from pandasgui.utility import nunique
@@ -10,7 +10,7 @@ from pandasgui.widgets import base_widgets
 
 
 class FlatDraggableTree(base_widgets.QTreeWidget):
-    mouseReleaseEventSignal = pyqtSignal(QMouseEvent)
+    mouseReleaseEventSignal = Signal(QMouseEvent)
 
     def __init__(self):
         super().__init__()

@@ -14,7 +14,7 @@ from typing import Iterable, List, Union
 from typing_extensions import Literal
 import pandas as pd
 from pandas import DataFrame
-from PyQt5 import QtCore, QtWidgets
+from qtpy import QtCore, QtWidgets
 import traceback
 from datetime import datetime
 from pandasgui.utility import unique_name, in_interactive_console, refactor_variable, clean_dataframe, nunique, \
@@ -98,7 +98,7 @@ DEFAULT_SETTINGS = {'editable': True,
 
 @dataclass
 class SettingsStore(DictLike, QtCore.QObject):
-    settingsChanged = QtCore.pyqtSignal()
+    settingsChanged = QtCore.Signal()
 
     block: Setting
     editable: Setting

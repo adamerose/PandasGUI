@@ -1,6 +1,6 @@
 import logging
 import pandas as pd
-from PyQt5 import QtWidgets
+from qtpy import QtWidgets
 from typing import List, Union
 import sys
 import inspect
@@ -319,7 +319,7 @@ def test_logging():
 
 # Resize a widget to a percentage of the screen size
 def resize_widget(widget, x, y):
-    from PyQt5 import QtCore, QtWidgets
+    from qtpy import QtCore, QtWidgets
     widget.resize(QtCore.QSize(int(x * QtWidgets.QDesktopWidget().screenGeometry().width()),
                                int(y * QtWidgets.QDesktopWidget().screenGeometry().height())))
 

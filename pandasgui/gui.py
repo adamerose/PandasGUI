@@ -6,8 +6,8 @@ from typing import Callable, Union
 from dataclasses import dataclass
 import pandas as pd
 import pkg_resources
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt
+from qtpy import QtCore, QtGui, QtWidgets
+from qtpy.QtCore import Qt
 
 import pandasgui
 from pandasgui.store import PandasGuiStore

@@ -1,7 +1,7 @@
 import os
 import sys
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from qtpy import QtCore, QtGui, QtWidgets
 
 from pandasgui.store import PandasGuiDataFrameStore, SETTINGS_STORE
 import pandasgui

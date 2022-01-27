@@ -2,9 +2,9 @@ import os
 import sys
 import tempfile
 
-from PyQt5 import QtCore, QtGui, QtWidgets, sip
-from PyQt5.QtCore import Qt
-import PyQt5
+from qtpy import QtCore, QtGui, QtWidgets, sip
+from qtpy.QtCore import Qt
+import qtpy
 import logging
 
 from pandasgui.store import PandasGuiStoreItem
@@ -19,23 +19,23 @@ os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-logging --log-level=3"
 # we need to hack around this import restriction on QtWebEngineWidgets
 # https://stackoverflow.com/a/57436077/3620725
 
-if "PyQt5.QtWebEngineWidgets" not in sys.modules:
+if "qtpy.QtWebEngineWidgets" not in sys.modules:
     app = QtWidgets.QApplication.instance()
 
     if app is None:
-        from PyQt5 import QtWebEngineWidgets
+        from qtpy import QtWebEngineWidgets
     else:
         logger.warning("Reinitializing existing QApplication to allow import of QtWebEngineWidgets. "
                        "This may cause problems. "
-                       "To avoid this, import pandasgui or PyQt5.QtWebEngineWidgets before a QApplication is created.")
+                       "To avoid this, import pandasgui or QtWebEngineWidgets before a QApplication is created.")
         app.quit()
         sip.delete(app)
-        from PyQt5 import QtWebEngineWidgets
+        from qtpy import QtWebEngineWidgets
 
         app.__init__(sys.argv + ["--ignore-gpu-blacklist", "--enable-gpu-rasterization"])
 
 
-class FigureViewer(PyQt5.QtWebEngineWidgets.QWebEngineView, PandasGuiStoreItem):
+class FigureViewer(qtpy.QtWebEngineWidgets.QWebEngineView, PandasGuiStoreItem):
     def __init__(self, fig=None, store=None):
         super().__init__()
         self.store = store
@@ -43,7 +43,7 @@ class FigureViewer(PyQt5.QtWebEngineWidgets.QWebEngineView, PandasGuiStoreItem):
 
         # Fix scrollbar sometimes disappearing after Plotly autosizes and leaving behind white space
         self.settings().setAttribute(self.settings().ShowScrollBars, False)
-        self.settings().setAttribute(PyQt5.QtWebEngineWidgets.QWebEngineSettings.WebGLEnabled, True)
+        self.settings().setAttribute(qtpy.QtWebEngineWidgets.QWebEngineSettings.WebGLEnabled, True)
 
         # https://stackoverflow.com/a/8577226/3620725
         self.temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False)
