@@ -127,6 +127,7 @@ def bar(data_frame: DataFrame,
         facet_col: ColumnName = None,
         # Custom args
         aggregation: Literal['mean', 'median', 'min', 'max', 'sum', None] = 'mean',
+        sort: Literal['asc', 'desc', None] = 'desc',
         **kwargs) -> Figure:
     # Create list of key columns
     key_cols = [val for val in [x, color, facet_row, facet_col] if val is not None]
@@ -136,6 +137,12 @@ def bar(data_frame: DataFrame,
         else:
             # Only need to sort here because aggregation already sorts
             data_frame = data_frame.sort_values(key_cols)
+            
+    if sort is not None:
+        if sort == 'asc':
+            data_frame = data_frame.sort_values(y, ascending=True)
+        else:
+            data_frame = data_frame.sort_values(y, ascending=False)
 
     fig = px.bar(data_frame=data_frame,
                  x=x,
