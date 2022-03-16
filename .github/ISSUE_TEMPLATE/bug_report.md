@@ -19,7 +19,7 @@ IDE: (eg. PyCharm)
 
 **Package versions**  
 TO GET ALL RELEVANT PACKAGE VERSIONS, RUN THIS COMMAND IN BASH AND PASTE THE OUTPUT
-pip freeze | grep -i "pyqt\|pandasgui\|plotly\|ipython\|jupyter\|notebook"
+pip freeze | grep -i "pyqt\|pyside\|pandasgui\|plotly\|ipython\|jupyter\|notebook"
 
 EXAMPLE OUTPUT
 ```

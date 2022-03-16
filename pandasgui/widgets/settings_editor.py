@@ -2,8 +2,8 @@ import ast
 import pprint
 
 import typing
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt
+from qtpy import QtWidgets
+from qtpy.QtCore import Qt
 import sys
 from pandasgui.store import SETTINGS_STORE, SettingsStore
 from pandasgui.widgets import base_widgets

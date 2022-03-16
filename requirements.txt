@@ -1,7 +1,5 @@
 pandas
-PyQt5
-PyQt5-sip
-PyQtWebEngine
+qtpy
 plotly
 wordcloud
 setuptools

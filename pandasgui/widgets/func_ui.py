@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
-from PyQt5 import QtCore, QtGui, QtWidgets, sip
-from PyQt5.QtCore import Qt
+from qtpy import QtCore, QtGui, QtWidgets, sip
+from qtpy.QtCore import Qt
 from typing import List, Callable
 import os
 import inspect
@@ -153,10 +153,10 @@ class SourceTree(ColumnViewer):
         self.tree.setHeaderLabels(['Name', '#Unique', 'Type'])
 
 class FuncUi(QtWidgets.QWidget):
-    valuesChanged = QtCore.pyqtSignal()
-    itemDropped = QtCore.pyqtSignal()
-    finished = QtCore.pyqtSignal()
-    saving = QtCore.pyqtSignal()
+    valuesChanged = QtCore.Signal()
+    itemDropped = QtCore.Signal()
+    finished = QtCore.Signal()
+    saving = QtCore.Signal()
 
     def __init__(self, pgdf, schema: Schema = None):
         super().__init__()
@@ -509,7 +509,7 @@ class FuncUi(QtWidgets.QWidget):
 
 
 class ColumnDropZone(QtWidgets.QLineEdit):
-    valueChanged = QtCore.pyqtSignal(str)
+    valueChanged = QtCore.Signal(str)
 
     def __init__(self):
         super().__init__()
@@ -564,7 +564,7 @@ class ColumnDropZone(QtWidgets.QLineEdit):
 
 
 class ColumnListDropZone(QtWidgets.QListWidget):
-    valueChanged = QtCore.pyqtSignal(list)  # List of strings
+    valueChanged = QtCore.Signal(list)  # List of strings
 
     def __init__(self):
         super().__init__()
@@ -738,7 +738,7 @@ class CustomKwargsEditor(QtWidgets.QDialog):
 
 if __name__ == "__main__":
     import sys
-    from PyQt5.QtWidgets import QApplication
+    from qtpy.QtWidgets import QApplication
     from pandasgui.datasets import pokemon
 
     app = QApplication(sys.argv)

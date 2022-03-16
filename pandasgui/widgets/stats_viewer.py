@@ -1,5 +1,5 @@
 import sys
-from PyQt5 import QtWidgets
+from qtpy import QtWidgets
 
 from pandasgui.utility import clear_layout
 from pandasgui.widgets.dataframe_viewer import DataFrameViewer

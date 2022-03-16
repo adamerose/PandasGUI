@@ -1,7 +1,7 @@
 # https://stackoverflow.com/q/47267195/3620725
 
-from PyQt5 import QtGui, QtCore, QtWidgets
-from PyQt5.QtCore import pyqtSignal, pyqtSlot
+from qtpy import QtGui, QtCore, QtWidgets
+from qtpy.QtCore import Signal, Slot
 
 
 class DetachableTabWidget(QtWidgets.QTabWidget):
@@ -33,7 +33,7 @@ class DetachableTabWidget(QtWidgets.QTabWidget):
     #
     #  @param    fromIndex    the original index location of the tab
     #  @param    toIndex      the new index location of the tab
-    @pyqtSlot(int, int)
+    @Slot(int, int)
     def moveTab(self, fromIndex, toIndex):
         widget = self.widget(fromIndex)
         icon = self.tabIcon(fromIndex)
@@ -49,7 +49,7 @@ class DetachableTabWidget(QtWidgets.QTabWidget):
     #
     #  @param    index    the index location of the tab to be detached
     #  @param    point    the screen position for creating the new DetachedTab window
-    @pyqtSlot(int, QtCore.QPoint)
+    @Slot(int, QtCore.QPoint)
     def detachTab(self, index, point):
 
         # Get the tab content
@@ -162,7 +162,7 @@ class DetachableTabWidget(QtWidgets.QTabWidget):
     #                     determined that the drop occurred on an
     #                     existing tab)
     #  @param    dropPos  the mouse cursor position when the drop occurred
-    @QtCore.pyqtSlot(str, int, QtCore.QPoint)
+    @QtCore.Slot(str, int, QtCore.QPoint)
     def detachedTabDrop(self, name, index, dropPos):
 
         # If the drop occurred on an existing tab, insert the detached
@@ -217,8 +217,8 @@ class DetachableTabWidget(QtWidgets.QTabWidget):
     #  When a tab is detached, the contents are placed into this QMainWindow.  The tab
     #  can be re-attached by closing the dialog or by dragging the window into the tab bar
     class DetachedTab(QtWidgets.QMainWindow):
-        onCloseSignal = pyqtSignal(QtWidgets.QWidget, str, QtGui.QIcon)
-        onDropSignal = pyqtSignal(str, QtCore.QPoint)
+        onCloseSignal = Signal(QtWidgets.QWidget, str, QtGui.QIcon)
+        onDropSignal = Signal(str, QtCore.QPoint)
 
         def __init__(self, name, contentWidget):
             QtWidgets.QMainWindow.__init__(self, None)
@@ -238,7 +238,7 @@ class DetachableTabWidget(QtWidgets.QTabWidget):
         #  Handle a window drop event
         #
         #  @param    dropPos    the mouse cursor position of the drop
-        @QtCore.pyqtSlot(QtCore.QPoint)
+        @QtCore.Slot(QtCore.QPoint)
         def windowDropSlot(self, dropPos):
             self.onDropSignal.emit(self.objectName(), dropPos)
 
@@ -253,7 +253,7 @@ class DetachableTabWidget(QtWidgets.QTabWidget):
         ##
         #  An event filter class to detect a QMainWindow drop event
         class WindowDropFilter(QtCore.QObject):
-            onDropSignal = pyqtSignal(QtCore.QPoint)
+            onDropSignal = Signal(QtCore.QPoint)
 
             def __init__(self):
                 QtCore.QObject.__init__(self)
@@ -285,9 +285,9 @@ class DetachableTabWidget(QtWidgets.QTabWidget):
     ##
     #  The TabBar class re-implements some of the functionality of the QTabBar widget
     class TabBar(QtWidgets.QTabBar):
-        onDetachTabSignal = pyqtSignal(int, QtCore.QPoint)
-        onMoveTabSignal = pyqtSignal(int, int)
-        detachedTabDropSignal = pyqtSignal(str, int, QtCore.QPoint)
+        onDetachTabSignal = Signal(int, QtCore.QPoint)
+        onMoveTabSignal = Signal(int, int)
+        detachedTabDropSignal = Signal(str, int, QtCore.QPoint)
 
         def __init__(self, parent=None):
             QtWidgets.QTabBar.__init__(self, parent)

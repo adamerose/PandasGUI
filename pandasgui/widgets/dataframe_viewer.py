@@ -5,8 +5,8 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt
+from qtpy import QtCore, QtGui, QtWidgets
+from qtpy.QtCore import Qt
 from typing_extensions import Literal
 from pandasgui.store import PandasGuiDataFrameStore
 import pandasgui

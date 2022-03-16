@@ -16,13 +16,12 @@ setup(
     long_description_content_type="text/markdown",
     exclude_package_data={'': ['.gitignore']},
     # Using this instead of MANIFEST.in - https://pypi.org/project/setuptools-git/
+    python_requires=">=3.7",
     setup_requires=['setuptools-git'],
     install_requires=[
         "pandas",
         "numpy",
-        "PyQt5",
-        "PyQt5-sip",
-        "PyQtWebEngine",
+        "qtpy",
         "plotly",
         "wordcloud",
         "setuptools",
@@ -33,7 +32,7 @@ setup(
         "astor",
         "typing-extensions",
         "qtstylish>=0.1.2",
-        "pywin32; platform_system=='Windows'"
+        "pywin32; platform_system=='Windows'",
     ],
     entry_points={
         "gui_scripts": [

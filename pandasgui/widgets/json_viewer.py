@@ -1,6 +1,6 @@
 import sys
 from typing import Union, List
-from PyQt5 import QtCore, QtGui, QtWidgets
+from qtpy import QtCore, QtGui, QtWidgets
 
 from pandasgui.store import PandasGuiStoreItem
 from pandasgui.utility import summarize_json, traverse_tree_widget

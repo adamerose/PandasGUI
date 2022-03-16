@@ -1,6 +1,6 @@
 
-from PyQt5 import QtCore, QtGui, QtWidgets, sip
-from PyQt5.QtCore import Qt
+from qtpy import QtCore, QtGui, QtWidgets, sip
+from qtpy.QtCore import Qt
 
 from pandasgui.store import PandasGuiDataFrameStore, PandasGuiStore
 from pandasgui.widgets import base_widgets

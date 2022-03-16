@@ -1,7 +1,7 @@
 import sys
 from typing import List
-from PyQt5 import QtWidgets, QtGui, QtCore
-from PyQt5.QtCore import Qt
+from qtpy import QtWidgets, QtGui, QtCore
+from qtpy.QtCore import Qt
 from pandasgui.widgets.code_history_viewer import CodeHistoryViewer
 
 from pandasgui.widgets.containers import Container

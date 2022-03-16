@@ -1,13 +1,13 @@
 import sys
 
-from PyQt5.QtWidgets import QStyleOptionViewItem
+from qtpy.QtWidgets import QStyleOptionViewItem
 
 import pandasgui
 import os
 import plotly
 
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import Qt
+from qtpy import QtCore, QtGui, QtWidgets
+from qtpy.QtCore import Qt
 from pandasgui.jotly import generate_title
 
 from pandasgui.store import PandasGuiDataFrameStore
