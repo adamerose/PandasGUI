@@ -1,16 +1,17 @@
 import inspect
+import io
 import os
 import sys
 import pprint
 from typing import Callable, Union
 from dataclasses import dataclass
 import pandas as pd
-import pkg_resources
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
 import pandasgui
-from pandasgui.store import PandasGuiStore
+from pandasgui.constants import PANDASGUI_ICON_PATH
+from pandasgui.store import PandasGuiStore, SettingsSchema
 from pandasgui.utility import as_dict, fix_ipython, get_figure_type, resize_widget
 from pandasgui.widgets.find_toolbar import FindToolbar
 from pandasgui.widgets.json_viewer import JsonViewer
@@ -42,7 +43,7 @@ refs = []
 
 class PandasGui(QtWidgets.QMainWindow):
 
-    def __init__(self, settings: dict = {}, **kwargs):
+    def __init__(self, settings: SettingsSchema = {}, **kwargs):
         """
         Args:
             settings: Dict of settings, as defined in pandasgui.store.SettingsStore
@@ -70,40 +71,37 @@ class PandasGui(QtWidgets.QMainWindow):
         # Create all widgets
         self.init_ui()
 
-        plotly_kwargs = {key: value for (key, value) in kwargs.items() if get_figure_type(value) is not None}
-        json_kwargs = {key: value for (key, value) in kwargs.items() if any([
-            issubclass(type(value), list),
-            issubclass(type(value), dict),
-        ])}
-        dataframe_kwargs = {key: value for (key, value) in kwargs.items() if any([
-            issubclass(type(value), pd.DataFrame),
-            issubclass(type(value), pd.Series),
-        ])}
-
-        if json_kwargs:
-            for name, val in json_kwargs.items():
-                jv = JsonViewer(val)
-                jv.setWindowTitle(name)
-                self.store.add_item(jv, name)
-
-        if plotly_kwargs:
-            for name, fig in plotly_kwargs.items():
-                pv = FigureViewer(fig)
-                pv.setWindowTitle(name)
-                self.store.add_item(pv, name)
-
-        if dataframe_kwargs:
-            # Adds DataFrames listed in kwargs to data store.
-            for df_name, df in dataframe_kwargs.items():
-                self.store.add_dataframe(df, df_name)
-
+        # Add the item to the store differently depending what type it is
+        for key, value in kwargs.items():
+            # Pandas objects
+            if issubclass(type(value), pd.DataFrame) or issubclass(type(value), pd.Series):
+                self.store.add_dataframe(value, key)
+            # JSON
+            elif issubclass(type(value), list) or issubclass(type(value), dict):
+                jv = JsonViewer(value)
+                jv.setWindowTitle(key)
+                self.store.add_item(jv, key)
+            # Graphs
+            elif get_figure_type(value) is not None:
+                pv = FigureViewer(value)
+                pv.setWindowTitle(key)
+                self.store.add_item(pv, key)
+            # File buffers
+            elif issubclass(type(value), io.BytesIO) or issubclass(type(value), io.StringIO):
+                value.seek(0)
+                df = pd.read_csv(value)
+                self.store.add_dataframe(df, key)
+            # Files
+            elif issubclass(type(value), str):
+                if os.path.exists(value):
+                    df = pd.read_csv(value)
+                    self.store.add_dataframe(df, os.path.basename(value))
+                else:
+                    logger.warning(f"File path is invalid or does not exist: {value}")
+            else:
+                logger.warning(f"PandasGUI Unsupported type: {type(value)}")
         # Default to first item
         self.navigator.setCurrentItem(self.navigator.topLevelItem(0))
-
-        self.show()
-        # Start event loop if blocking enabled
-        if self.store.settings.block.value:
-            self.app.exec_()
 
     # Create and add all widgets to GUI.
     def init_ui(self):
@@ -122,8 +120,7 @@ class PandasGui(QtWidgets.QMainWindow):
 
         # Set window title and icon
         self.setWindowTitle("PandasGUI")
-        pdgui_icon_path = pkg_resources.resource_filename(__name__, "resources/images/icon.png")
-        self.app.setWindowIcon(QtGui.QIcon(pdgui_icon_path))
+        self.app.setWindowIcon(QtGui.QIcon(PANDASGUI_ICON_PATH))
 
         # Hide the question mark on dialogs
         self.app.setAttribute(Qt.AA_DisableWindowContextHelpButton)
@@ -177,27 +174,29 @@ class PandasGui(QtWidgets.QMainWindow):
             func: Callable
             shortcut: str = ''
 
-        items = {'Edit': [MenuItem(name='Find',
-                                   func=self.find_bar.show_find_bar,
-                                   shortcut='Ctrl+F'),
-                          MenuItem(name='Copy',
-                                   func=self.copy,
-                                   shortcut='Ctrl+C'),
-                          MenuItem(name='Copy With Headers',
-                                   func=self.copy_with_headers,
-                                   shortcut='Ctrl+Shift+C'),
-                          MenuItem(name='Paste',
-                                   func=self.paste,
-                                   shortcut='Ctrl+V'),
-                          MenuItem(name='Import',
-                                   func=self.import_dialog),
-                          MenuItem(name='Import From Clipboard',
-                                   func=self.import_from_clipboard),
-                          MenuItem(name='Export',
-                                   func=self.export_dialog),
-                          MenuItem(name='Code Export',
-                                   func=self.show_code_export),
-                          ],
+        items = {'Edit':      [MenuItem(name='Find',
+                                        func=self.find_bar.show_find_bar,
+                                        shortcut='Ctrl+F'),
+                               MenuItem(name='Copy',
+                                        func=self.copy,
+                                        shortcut='Ctrl+C'),
+                               MenuItem(name='Copy With Headers',
+                                        func=self.copy_with_headers,
+                                        shortcut='Ctrl+Shift+C'),
+                               MenuItem(name='Paste',
+                                        func=self.paste,
+                                        shortcut='Ctrl+V'),
+                               MenuItem(name='Import',
+                                        func=self.import_dialog),
+                               MenuItem(name='Import From Clipboard',
+                                        func=self.import_from_clipboard),
+                               MenuItem(name='Export',
+                                        func=self.export_dialog),
+                               MenuItem(name='Export To Clipboard',
+                                        func=self.export_to_clipboard),
+                               MenuItem(name='Code Export',
+                                        func=self.show_code_export),
+                               ],
                  'DataFrame': [MenuItem(name='Delete Selected DataFrames',
                                         func=self.delete_selected_dataframes),
                                MenuItem(name='Reload DataFrames',
@@ -206,27 +205,33 @@ class PandasGui(QtWidgets.QMainWindow):
                                MenuItem(name='Parse All Dates',
                                         func=lambda: self.store.selected_pgdf.parse_all_dates()),
                                ],
-                 'Settings': [MenuItem(name='Preferences...',
-                                       func=self.edit_settings),
-                              {"Context Menus": [MenuItem(name='Add PandasGUI To Context Menu',
-                                                          func=self.add_to_context_menu),
-                                                 MenuItem(name='Remove PandasGUI From Context Menu',
-                                                          func=self.remove_from_context_menu),
-                                                 MenuItem(name='Add JupyterLab To Context Menu',
-                                                          func=self.add_jupyter_to_context_menu),
-                                                 MenuItem(name='Remove JupyterLab From Context Menu',
-                                                          func=self.remove_jupyter_from_context_menu), ]}
+                 'Settings':  [MenuItem(name='Preferences...',
+                                        func=self.edit_settings),
+                               {"Context Menus": [MenuItem(name='Add PandasGUI To Context Menu',
+                                                           func=self.add_to_context_menu),
+                                                  MenuItem(name='Remove PandasGUI From Context Menu',
+                                                           func=self.remove_from_context_menu),
+                                                  MenuItem(name='Add PandasGUI To Start Menu',
+                                                           func=self.add_to_start_menu),
+                                                  MenuItem(name='Remove PandasGUI From Start Menu',
+                                                           func=self.remove_from_start_menu),
+                                                  MenuItem(name='Add JupyterLab To Context Menu',
+                                                           func=self.add_jupyter_to_context_menu),
+                                                  MenuItem(name='Remove JupyterLab From Context Menu',
+                                                           func=self.remove_jupyter_from_context_menu), ]}
 
-                              ],
-                 'Debug': [MenuItem(name='About',
-                                    func=self.about),
-                           MenuItem(name='Browse Sample Datasets',
-                                    func=self.show_sample_datasets),
-                           MenuItem(name='View PandasGuiStore',
-                                    func=self.view_store),
-                           MenuItem(name='View DataFrame History',
-                                    func=self.view_history),
-                           ]
+                               ],
+                 'Debug':     [MenuItem(name='About',
+                                        func=self.about),
+                               MenuItem(name='Browse Sample Datasets',
+                                        func=self.show_sample_datasets),
+                               MenuItem(name='View PandasGuiStore',
+                                        func=self.view_store),
+                               MenuItem(name='View DataFrame History',
+                                        func=self.view_history),
+                               MenuItem(name='Throw Error',
+                                        func=lambda x: exec('raise(Exception("Exception raised by PandasGUI"))')),
+                               ]
                  }
 
         def add_menus(dic, root):
@@ -277,7 +282,6 @@ class PandasGui(QtWidgets.QMainWindow):
 
     def update_code_export(self):
         self.store.selected_pgdf.dataframe_explorer.code_history_viewer.refresh()
-
 
     def delete_selected_dataframes(self):
         for name in [item.text(0) for item in self.navigator.selectedItems()]:
@@ -347,6 +351,9 @@ class PandasGui(QtWidgets.QMainWindow):
                                skip_blank_lines=False)
         self.store.add_dataframe(df)
 
+    def export_to_clipboard(self):
+        self.store.selected_pgdf.df.to_clipboard(excel=True, index=True)
+
     # https://stackoverflow.com/a/29769228/3620725
     def add_to_context_menu(self):
         import winreg
@@ -366,6 +373,26 @@ class PandasGui(QtWidgets.QMainWindow):
         key = winreg.HKEY_CURRENT_USER
         winreg.DeleteKey(key, "Software\Classes\*\shell\Open with PandasGUI\command")
         winreg.DeleteKey(key, "Software\Classes\*\shell\Open with PandasGUI")
+
+    # https://stackoverflow.com/a/46081847
+    def add_to_start_menu(self):
+        import os
+        import win32com.client
+        import pythoncom
+        from pandasgui.constants import PANDASGUI_ICON_PATH_ICO, PYW_INTERPRETTER_PATH, SHORTCUT_PATH
+
+        shell = win32com.client.Dispatch("WScript.Shell")
+        shortcut = shell.CreateShortCut(SHORTCUT_PATH)
+        shortcut.Targetpath = PYW_INTERPRETTER_PATH
+        shortcut.Arguments = '-c "import pandasgui; pandasgui.show()"'
+        shortcut.IconLocation = PANDASGUI_ICON_PATH_ICO
+        shortcut.WindowStyle = 7  # 7 - Minimized, 3 - Maximized, 1 - Normal
+        shortcut.save()
+
+    def remove_from_start_menu(self):
+        from pandasgui.constants import SHORTCUT_PATH
+        import os
+        os.remove(SHORTCUT_PATH)
 
     def add_jupyter_to_context_menu(self):
         import winreg
@@ -436,13 +463,13 @@ class PandasGui(QtWidgets.QMainWindow):
 
 
 def show(*args,
-         settings={},
+         settings: SettingsSchema = {},
          **kwargs):
     '''
     Objects provided as args and kwargs should be any of the following:
     DataFrame   Show it using PandasGui
     Series      Show it using PandasGui
-    Figure      Show it using FigureViewer. Supports figures from plotly, bokeh, matplotlib, altair
+    Figure      Show it using FigureViewer. Supports figures from plotly, bokeh, matplotlib, altair, PIL
     dict/list   Show it using JsonViewer
     '''
     logger.info("Opening PandasGUI")
@@ -487,6 +514,13 @@ def show(*args,
         else:
             raise e
 
+    pandas_gui.show()
+    pandas_gui.activateWindow()
+    pandas_gui.raise_()
+
+    # Start event loop if blocking enabled
+    if pandas_gui.store.settings.block.value:
+        pandas_gui.app.exec_()
     return pandas_gui
 
 
