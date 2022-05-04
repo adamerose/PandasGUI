@@ -1,8 +1,9 @@
 import logging
 import typing
+
 import pandas as pd
 from PyQt5 import QtWidgets
-from typing import List, Union
+from typing import List, Union, Literal
 import sys
 import inspect
 from collections import OrderedDict
@@ -307,6 +308,25 @@ def clean_dataframe(df, name="DataFrame"):
     if any(df.columns.duplicated()):
         logger.warning(f"In {name}, renamed duplicate columns: {list(set(df.columns[df.columns.duplicated()]))}")
         rename_duplicates(df)
+
+    return df
+
+
+def move_columns(df: pd.DataFrame,
+                 names: Union[str, List[str]],
+                 to: Union[int, Literal['start', 'end']]):
+    if to == 'start':
+        to = 0
+    elif to == 'end':
+        to = len(df.columns) - 1
+
+    if type(names) == str:
+        names = [names]
+
+    cols = df.columns
+    cols_exc_names = [c for c in cols if c not in names]
+    new_cols = cols_exc_names[:to] + names + cols_exc_names[to:]
+    df = df.reindex(new_cols, axis=1)
 
     return df
 
