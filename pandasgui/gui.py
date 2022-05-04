@@ -76,6 +76,13 @@ class PandasGui(QtWidgets.QMainWindow):
             # Pandas objects
             if issubclass(type(value), pd.DataFrame) or issubclass(type(value), pd.Series):
                 self.store.add_dataframe(value, key)
+            # Spark
+            elif hasattr(value, 'toPandas'):
+                temp = value.toPandas()
+                self.store.add_dataframe(value, key)
+            elif hasattr(value, 'to_pandas'):
+                temp = value.to_pandas()
+                self.store.add_dataframe(value, key)
             # JSON
             elif issubclass(type(value), list) or issubclass(type(value), dict):
                 jv = JsonViewer(value)
