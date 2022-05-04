@@ -1,4 +1,5 @@
 import logging
+import typing
 import pandas as pd
 from PyQt5 import QtWidgets
 from typing import List, Union
@@ -424,7 +425,13 @@ def refactor_variable(expr, old_name, new_name):
     return astor.code_gen.to_source(tree)
 
 
-def get_figure_type(fig):
+def get_figure_type(fig) -> typing.Literal[
+    "plotly",
+    "matplotlib",
+    "bokeh",
+    "altair",
+    "PIL",
+]:
     # Plotly
     try:
         import plotly.basedatatypes
@@ -452,6 +459,13 @@ def get_figure_type(fig):
         import altair.vegalite.v4.api
         if issubclass(type(fig), altair.vegalite.v4.api.Chart):
             return "altair"
+    except ModuleNotFoundError:
+        pass
+    # PIL
+    try:
+        import PIL.Image
+        if issubclass(type(fig), PIL.Image.Image):
+            return "PIL"
     except ModuleNotFoundError:
         pass
     return None
