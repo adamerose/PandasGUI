@@ -85,7 +85,13 @@ class FigureViewer(PyQt5.QtWebEngineWidgets.QWebEngineView, PandasGuiStoreItem):
             tmp = StringIO()
             fig.save(tmp, format='html')
             html = tmp.getvalue()
-
+        elif fig_type == "PIL":
+            import base64
+            from io import BytesIO
+            tmpfile = BytesIO()
+            fig.save(tmpfile, format='png')
+            encoded = base64.b64encode(tmpfile.getvalue()).decode('utf-8')
+            html = '<img src=\'data:image/png;base64,{}\'>'.format(encoded)
         else:
             raise TypeError
 
