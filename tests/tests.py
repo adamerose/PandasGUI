@@ -14,7 +14,7 @@ def generate_int_data(rows, cols):
 
 
 def generate_data():
-    small_int_path = os.path.join("small_int.csv")
+    small_int_path = "small_int.csv"
     large_int_path = "large_int.csv"
     small_str_path = "small_str.csv"
     large_str_path = "large_str.csv"
@@ -37,9 +37,7 @@ def test_memory_leak():
         return objects
 
     # string_data = generate_string_data(rows, cols)
-    int_data = pd.read_csv(large_int_path)
-
-    # %%
+    int_data = pd.read_csv(generate_int_data(5000000, 50))
 
     for i in range(10):
         df = pd.DataFrame(int_data)
@@ -72,9 +70,9 @@ def test_webengine_import():
         y=np.random.rand(100),
         mode="markers",
         marker={
-            "size": 30,
-            "color": np.random.rand(100),
-            "opacity": 0.6,
+            "size":       30,
+            "color":      np.random.rand(100),
+            "opacity":    0.6,
             "colorscale": "Viridis",
         },
     )
@@ -92,10 +90,10 @@ def test_inputs():
     df = pd.DataFrame(np.random.randn(6, 6), index=ix[:6], columns=ix[:6])
 
     df2 = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6],
-                        2: [1, 2, 3], 'c': [4, 5, 6], }).rename(columns={'c': 2})
+                        2:   [1, 2, 3], 'c': [4, 5, 6], }).rename(columns={'c': 2})
 
-    from pandasgui.datasets import all_datasets
-    show(df, df2, **all_datasets, settings={'block': False})
+    from pandasgui.datasets import pokemon, googleplaystore
+    show(df, df2, pokemon, googleplaystore, settings={'block': False})
 
 
 def test_code_history():
@@ -126,19 +124,55 @@ def test_code_history():
 def test_json():
     import requests
     from pandasgui import show
-    from pandasgui.datasets import all_datasets
+    from pandasgui.datasets import pokemon, googleplaystore
     comments = requests.get('https://jsonplaceholder.typicode.com/comments').json()
     photos = requests.get('https://jsonplaceholder.typicode.com/photos').json()
 
-    gui = show(comments, photos, **all_datasets, settings={'block': False})
+    gui = show(comments, photos, pokemon, googleplaystore, settings={'block': False})
 
 
+def test_object_types():
+    import requests
+    import pandas as pd
+    from pandasgui import show
+    from pandasgui.datasets import pokemon
+    import numpy as np
+    import plotly.graph_objs as go
+    import io
+    import tempfile
+
+    fig = go.Figure()
+    fig.add_scatter(
+        x=np.random.rand(100),
+        y=np.random.rand(100),
+        mode="markers",
+        marker={
+            "size":       30,
+            "color":      np.random.rand(100),
+            "opacity":    0.6,
+            "colorscale": "Viridis",
+        },
+    )
+
+    comments = requests.get('https://jsonplaceholder.typicode.com/comments').json()
+
+    poke_sbuf = io.StringIO()
+    pokemon.head(10).to_csv(poke_sbuf)
+    poke_bbuf = io.BytesIO()
+    pokemon.head(10).to_csv(poke_bbuf)
+    poke_tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False)
+    pokemon.head(10).to_csv(poke_tmp.name)
+    gui = show(comments, pokemon, fig, poke_sbuf, poke_bbuf, poke_tmp.name)
+
+
+print('test_json')
 test_json()
+print('test_inputs')
 test_inputs()
+print('test_code_history')
 test_code_history()
 # test_webengine_import()
 
-QtWidgets.QApplication
 # iterables = [["bar", "baz", "baz"], ["one", "two"]]
 # ix = pd.MultiIndex.from_product(iterables, names=["first", "second"])
 # df = pd.DataFrame(np.random.randn(6, 6), index=ix[:6], columns=ix[:6])
