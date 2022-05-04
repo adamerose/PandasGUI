@@ -11,7 +11,7 @@ if typing.TYPE_CHECKING:
 
 from dataclasses import dataclass, field
 from typing import Iterable, List, Union
-from typing_extensions import Literal
+from typing_extensions import Literal, TypedDict
 import pandas as pd
 from pandas import DataFrame
 from PyQt5 import QtCore, QtWidgets
@@ -83,17 +83,28 @@ class Setting(DictLike):
         super().__setattr__(key, value)
 
 
-DEFAULT_SETTINGS = {'editable': True,
-                    'block': None,
-                    'theme': 'light',
-                    'auto_finish': True,
+DEFAULT_SETTINGS = {'editable':           True,
+                    'block':              None,
+                    'theme':              'light',
+                    'auto_finish':        True,
                     'refresh_statistics': True,
-                    'render_mode': 'auto',
-                    'aggregation': 'mean',
-                    'title_format': "{name}: {title_columns}{title_dimensions}{names}{title_y}{title_z}{over_by}"
-                                    "{title_x} {selection}<br><sub>{groupings}{filters} {title_trendline}</sub>"
+                    'render_mode':        'auto',
+                    'aggregation':        'mean',
+                    'title_format':       "{name}: {title_columns}{title_dimensions}{names}{title_y}{title_z}{over_by}"
+                                          "{title_x} {selection}<br><sub>{groupings}{filters} {title_trendline}</sub>"
 
                     }
+
+
+class SettingsSchema(TypedDict):
+    block: bool
+    editable: bool
+    theme: Literal['light', 'dark', 'classic']
+    refresh_statistics: bool
+    auto_finish: bool
+    render_mode: Literal['auto', 'webgl', 'svg']
+    aggregation: Literal['mean', 'median', 'min', 'max', 'sum', None]
+    title_format: str
 
 
 @dataclass
@@ -103,6 +114,7 @@ class SettingsStore(DictLike, QtCore.QObject):
     block: Setting
     editable: Setting
     theme: Setting
+    refresh_statistics: Setting
     auto_finish: Setting
     render_mode: Setting
     aggregation: Setting
@@ -175,7 +187,7 @@ class SettingsStore(DictLike, QtCore.QObject):
         self.title_format = Setting(label="title_format",
                                     value=settings['title_format'],
                                     description="title_format",
-                                    dtype=dict,
+                                    dtype=str,
                                     persist=True)
 
     def reset_to_defaults(self):
@@ -330,13 +342,13 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
         if force or self.settings.refresh_statistics.value:
             df = self.df
             self.column_statistics = pd.DataFrame({
-                "Type": df.dtypes.astype(str),
-                "Count": df.count(),
+                "Type":     df.dtypes.astype(str),
+                "Count":    df.count(),
                 "N Unique": nunique(df),
-                "Mean": df.mean(numeric_only=True),
-                "StdDev": df.std(numeric_only=True),
-                "Min": df.min(numeric_only=True),
-                "Max": df.max(numeric_only=True),
+                "Mean":     df.mean(numeric_only=True),
+                "StdDev":   df.std(numeric_only=True),
+                "Min":      df.min(numeric_only=True),
+                "Max":      df.max(numeric_only=True),
             }, index=df.columns
             )
 
@@ -606,7 +618,7 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
         for ix, filt in enumerate(self.filters):
             if filt.enabled and not filt.failed:
                 try:
-                    df = df.query(filt.expr)
+                    df = df.query(filt.expr, engine='python')
                     # Handle case where filter returns only one row
                     if isinstance(df, pd.Series):
                         df = df.to_frame().T
