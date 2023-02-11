@@ -32,7 +32,7 @@ class OtherDataFrame(DataFrame):
 # Graphing
 
 def histogram(data_frame: DataFrame,
-              x: ColumnName = None,
+              x: ColumnNameList = None,
               color: ColumnName = None,
               facet_row: ColumnName = None,
               facet_col: ColumnName = None,
@@ -46,6 +46,7 @@ def histogram(data_frame: DataFrame,
                        facet_col=facet_col,
                        marginal=marginal,
                        cumulative=cumulative,
+                       # nbins=nbins,
                        **kwargs)
 
     return fig
@@ -85,7 +86,7 @@ def scatter(data_frame: DataFrame,
 
 
 def line(data_frame: DataFrame,
-         y: ColumnName = None,
+         y: ColumnNameList = None,
          x: ColumnName = None,
          color: ColumnName = None,
          facet_row: ColumnName = None,
@@ -120,7 +121,7 @@ def line(data_frame: DataFrame,
 
 
 def bar(data_frame: DataFrame,
-        y: ColumnName = None,
+        y: ColumnNameList = None,
         x: ColumnName = None,
         color: ColumnName = None,
         facet_row: ColumnName = None,
@@ -156,7 +157,7 @@ def bar(data_frame: DataFrame,
 
 
 def box(data_frame: DataFrame,
-        y: ColumnName = None,
+        y: ColumnNameList = None,
         x: ColumnName = None,
         color: ColumnName = None,
         facet_row: ColumnName = None,
@@ -175,7 +176,7 @@ def box(data_frame: DataFrame,
 
 
 def violin(data_frame: DataFrame,
-           y: ColumnName = None,
+           y: ColumnNameList = None,
            x: ColumnName = None,
            color: ColumnName = None,
            facet_row: ColumnName = None,

@@ -171,7 +171,7 @@ def __getattr__(name: str) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
 
 ################
 # These just improve intellisense since the type hint on the __getattr__ return value didn't work
-all_datasets: pd.DataFrame
+all_datasets: Dict[str, pd.DataFrame]
 pokemon: pd.DataFrame
 googleplaystore: pd.DataFrame
 googleplaystore_reviews: pd.DataFrame

@@ -1,7 +1,9 @@
 import logging
+import typing
+
 import pandas as pd
 from PyQt5 import QtWidgets
-from typing import List, Union
+from typing import List, Union, Literal
 import sys
 import inspect
 from collections import OrderedDict
@@ -310,6 +312,25 @@ def clean_dataframe(df, name="DataFrame"):
     return df
 
 
+def move_columns(df: pd.DataFrame,
+                 names: Union[str, List[str]],
+                 to: Union[int, Literal['start', 'end']]):
+    if to == 'start':
+        to = 0
+    elif to == 'end':
+        to = len(df.columns) - 1
+
+    if type(names) == str:
+        names = [names]
+
+    cols = df.columns
+    cols_exc_names = [c for c in cols if c not in names]
+    new_cols = cols_exc_names[:to] + names + cols_exc_names[to:]
+    df = df.reindex(new_cols, axis=1)
+
+    return df
+
+
 def test_logging():
     logger.debug("debug")
     logger.info("info")
@@ -424,7 +445,13 @@ def refactor_variable(expr, old_name, new_name):
     return astor.code_gen.to_source(tree)
 
 
-def get_figure_type(fig):
+def get_figure_type(fig) -> typing.Literal[
+    "plotly",
+    "matplotlib",
+    "bokeh",
+    "altair",
+    "PIL",
+]:
     # Plotly
     try:
         import plotly.basedatatypes
@@ -452,6 +479,13 @@ def get_figure_type(fig):
         import altair.vegalite.v4.api
         if issubclass(type(fig), altair.vegalite.v4.api.Chart):
             return "altair"
+    except ModuleNotFoundError:
+        pass
+    # PIL
+    try:
+        import PIL.Image
+        if issubclass(type(fig), PIL.Image.Image):
+            return "PIL"
     except ModuleNotFoundError:
         pass
     return None

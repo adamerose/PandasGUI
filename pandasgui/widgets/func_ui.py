@@ -77,6 +77,19 @@ class BooleanArg:
         self.default_value = default_value
 
 
+@dataclass
+class IntArg:
+    arg_name: str
+    default_value: int
+
+    def __init__(self, arg_name, default_value=None):
+        if default_value is None:
+            default_value = None
+
+        self.arg_name = arg_name
+        self.default_value = default_value
+
+
 # Display a dropdown to pick a DataFrame name from the list of DataFrames in the GUI
 @dataclass
 class OtherDataFrameArg:
@@ -123,6 +136,9 @@ class Schema:
                     elif arg_type == bool:
                         args.append(BooleanArg(arg_name, default_value=arg_default))
 
+                    elif arg_type == int:
+                        args.append(IntArg(arg_name, default_value=arg_default))
+
                     elif arg_type == OtherDataFrame:
                         args.append(OtherDataFrameArg(arg_name, default_value=arg_default))
 
@@ -133,7 +149,7 @@ class Schema:
         self.icon_path = icon_path
 
     name: str
-    args: List[Union[ColumnNameArg, ColumnNameListArg, LiteralArg, BooleanArg]]
+    args: List[Union[ColumnNameArg, ColumnNameListArg, LiteralArg, BooleanArg, IntArg]]
     label: str
     function: Callable
     icon_path: str
@@ -151,6 +167,7 @@ class SourceTree(ColumnViewer):
         super().__init__(pgdf)
         self.tree.setDragDropMode(self.tree.DragOnly)
         self.tree.setHeaderLabels(['Name', '#Unique', 'Type'])
+
 
 class FuncUi(QtWidgets.QWidget):
     valuesChanged = QtCore.pyqtSignal()
@@ -446,6 +463,25 @@ class FuncUi(QtWidgets.QWidget):
                 checkbox.setChecked(val)
                 checkbox.stateChanged.emit(Qt.Checked if val else Qt.Unchecked)
                 checkbox.stateChanged.connect(lambda: self.valuesChanged.emit())
+
+
+            elif type(arg) == IntArg:
+                spinbox = QtWidgets.QSpinBox()
+
+                spinbox.valueChanged.connect(
+                    lambda val, item=item: item.setData(1, Qt.UserRole, val))
+
+                item.treeWidget().setItemWidget(item, 1, spinbox)
+                if arg.arg_name in self.remembered_values.keys():
+                    val = self.remembered_values[arg.arg_name]
+                elif arg.arg_name in asdict(SETTINGS_STORE).keys():
+                    val = SETTINGS_STORE[arg.arg_name].value
+                else:
+                    val = arg.default_value
+
+                spinbox.setValue(val)
+                spinbox.stateChanged.emit(val)
+                spinbox.stateChanged.connect(lambda: self.valuesChanged.emit())
 
             elif type(arg) == LiteralArg:
                 combo_box = QtWidgets.QComboBox()

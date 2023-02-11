@@ -46,7 +46,7 @@ class FigureViewer(PyQt5.QtWebEngineWidgets.QWebEngineView, PandasGuiStoreItem):
         self.settings().setAttribute(PyQt5.QtWebEngineWidgets.QWebEngineSettings.WebGLEnabled, True)
 
         # https://stackoverflow.com/a/8577226/3620725
-        self.temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False)
+        self.temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False, encoding='utf-8')
         self.set_figure(fig)
 
         self.setWindowTitle("Plotly Viewer")
@@ -85,7 +85,13 @@ class FigureViewer(PyQt5.QtWebEngineWidgets.QWebEngineView, PandasGuiStoreItem):
             tmp = StringIO()
             fig.save(tmp, format='html')
             html = tmp.getvalue()
-
+        elif fig_type == "PIL":
+            import base64
+            from io import BytesIO
+            tmpfile = BytesIO()
+            fig.save(tmpfile, format='png')
+            encoded = base64.b64encode(tmpfile.getvalue()).decode('utf-8')
+            html = '<img src=\'data:image/png;base64,{}\'>'.format(encoded)
         else:
             raise TypeError
 

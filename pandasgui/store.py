@@ -11,7 +11,7 @@ if typing.TYPE_CHECKING:
 
 from dataclasses import dataclass, field
 from typing import Iterable, List, Union
-from typing_extensions import Literal
+from typing_extensions import Literal, TypedDict
 import pandas as pd
 from pandas import DataFrame
 from PyQt5 import QtCore, QtWidgets
@@ -83,17 +83,28 @@ class Setting(DictLike):
         super().__setattr__(key, value)
 
 
-DEFAULT_SETTINGS = {'editable': True,
-                    'block': None,
-                    'theme': 'light',
-                    'auto_finish': True,
+DEFAULT_SETTINGS = {'editable':           True,
+                    'block':              None,
+                    'theme':              'light',
+                    'auto_finish':        True,
                     'refresh_statistics': True,
-                    'render_mode': 'auto',
-                    'aggregation': 'mean',
-                    'title_format': "{name}: {title_columns}{title_dimensions}{names}{title_y}{title_z}{over_by}"
-                                    "{title_x} {selection}<br><sub>{groupings}{filters} {title_trendline}</sub>"
+                    'render_mode':        'auto',
+                    'aggregation':        'mean',
+                    'title_format':       "{name}: {title_columns}{title_dimensions}{names}{title_y}{title_z}{over_by}"
+                                          "{title_x} {selection}<br><sub>{groupings}{filters} {title_trendline}</sub>"
 
                     }
+
+
+class SettingsSchema(TypedDict):
+    block: bool
+    editable: bool
+    theme: Literal['light', 'dark', 'classic']
+    refresh_statistics: bool
+    auto_finish: bool
+    render_mode: Literal['auto', 'webgl', 'svg']
+    aggregation: Literal['mean', 'median', 'min', 'max', 'sum', None]
+    title_format: str
 
 
 @dataclass
@@ -103,6 +114,7 @@ class SettingsStore(DictLike, QtCore.QObject):
     block: Setting
     editable: Setting
     theme: Setting
+    refresh_statistics: Setting
     auto_finish: Setting
     render_mode: Setting
     aggregation: Setting
@@ -175,7 +187,7 @@ class SettingsStore(DictLike, QtCore.QObject):
         self.title_format = Setting(label="title_format",
                                     value=settings['title_format'],
                                     description="title_format",
-                                    dtype=dict,
+                                    dtype=str,
                                     persist=True)
 
     def reset_to_defaults(self):
@@ -330,13 +342,13 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
         if force or self.settings.refresh_statistics.value:
             df = self.df
             self.column_statistics = pd.DataFrame({
-                "Type": df.dtypes.astype(str),
-                "Count": df.count(),
+                "Type":     df.dtypes.astype(str),
+                "Count":    df.count(),
                 "N Unique": nunique(df),
-                "Mean": df.mean(numeric_only=True),
-                "StdDev": df.std(numeric_only=True),
-                "Min": df.min(numeric_only=True),
-                "Max": df.max(numeric_only=True),
+                "Mean":     df.mean(numeric_only=True),
+                "StdDev":   df.std(numeric_only=True),
+                "Min":      df.min(numeric_only=True),
+                "Max":      df.max(numeric_only=True),
             }, index=df.columns
             )
 
@@ -606,7 +618,7 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
         for ix, filt in enumerate(self.filters):
             if filt.enabled and not filt.failed:
                 try:
-                    df = df.query(filt.expr)
+                    df = df.query(filt.expr, engine='python')
                     # Handle case where filter returns only one row
                     if isinstance(df, pd.Series):
                         df = df.to_frame().T
@@ -826,37 +838,43 @@ class PandasGuiStore:
     def remove_dataframe(self, name_or_index):
         self.remove_item(name_or_index)
 
+    # Handle import (including drag and drop) for all valid file types
     @status_message_decorator('Importing file "{path}"...')
     def import_file(self, path):
+        filename = os.path.basename(path)
         if not os.path.isfile(path):
             logger.warning("Path is not a file: " + path)
         elif path.endswith(".csv"):
-            filename = os.path.split(path)[1].split('.csv')[0]
             df = pd.read_csv(path, engine='python')
             self.add_dataframe(df, filename)
         elif path.endswith(".xlsx"):
-            filename = os.path.split(path)[1].split('.csv')[0]
             df_dict = pd.read_excel(path, sheet_name=None)
             for sheet_name in df_dict.keys():
                 df_name = f"{filename} - {sheet_name}"
                 self.add_dataframe(df_dict[sheet_name], df_name)
         elif path.endswith(".parquet"):
-            filename = os.path.split(path)[1].split('.parquet')[0]
             df = pd.read_parquet(path, engine='pyarrow')
             self.add_dataframe(df, filename)
         elif path.endswith(".json"):
-            filename = os.path.split(path)[1].split('.json')[0]
             with open(path) as f:
                 data = json.load(f)
             from pandasgui.widgets.json_viewer import JsonViewer
             jv = JsonViewer(data)
             self.add_item(jv, filename)
         elif path.endswith(".pkl"):
-            filename = os.path.split(path)[1].split('.pkl')[0]
             df = pd.read_pickle(path)
             self.add_dataframe(df, filename)
+        elif any([path.endswith(x) for x in [".sqlite", ".sqlite3", ".db", ".db3"]]):
+            import sqlite3
+            with sqlite3.connect(path) as dbcon:
+                tables = list(pd.read_sql_query("SELECT name FROM sqlite_master WHERE type='table';", dbcon)['name'])
+                out = {tbl: pd.read_sql_query(f"SELECT * from {tbl}", dbcon) for tbl in tables}
+            for key, val in out.items():
+                self.add_dataframe(val, f"{filename}-{key}")
+
         else:
-            logger.warning("Can only import csv / xlsx / parquet. Invalid file: " + path)
+            logger.warning(f"Invalid file: {path}\n"
+                           "Can only import the following file types: csv, xlsx, parquet, json, pkl, sqlite")
 
     def get_dataframes(self, names: Union[None, str, list, int] = None):
         if type(names) == str:

@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf8") as fh:
 
 setup(
     name="pandasgui",
-    version="0.2.13",
+    version="0.2.14",
     description="A GUI for Pandas DataFrames.",
     author="Adam Rose",
     author_email="adrotog@gmail.com",
@@ -16,6 +16,7 @@ setup(
     long_description_content_type="text/markdown",
     exclude_package_data={'': ['.gitignore']},
     # Using this instead of MANIFEST.in - https://pypi.org/project/setuptools-git/
+    python_requires=">=3.7",
     setup_requires=['setuptools-git'],
     install_requires=[
         "pandas",
