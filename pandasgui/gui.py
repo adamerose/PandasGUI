@@ -98,11 +98,10 @@ class PandasGui(QtWidgets.QMainWindow):
                 value.seek(0)
                 df = pd.read_csv(value)
                 self.store.add_dataframe(df, key)
-            # Files
+            # File paths
             elif issubclass(type(value), str):
                 if os.path.exists(value):
-                    df = pd.read_csv(value)
-                    self.store.add_dataframe(df, os.path.basename(value))
+                    self.store.import_file(value)
                 else:
                     logger.warning(f"File path is invalid or does not exist: {value}")
             else:
