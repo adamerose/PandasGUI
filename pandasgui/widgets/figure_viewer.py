@@ -46,7 +46,7 @@ class FigureViewer(PyQt5.QtWebEngineWidgets.QWebEngineView, PandasGuiStoreItem):
         self.settings().setAttribute(PyQt5.QtWebEngineWidgets.QWebEngineSettings.WebGLEnabled, True)
 
         # https://stackoverflow.com/a/8577226/3620725
-        self.temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False)
+        self.temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False, encoding='utf-8')
         self.set_figure(fig)
 
         self.setWindowTitle("Plotly Viewer")
