@@ -382,23 +382,25 @@ class PandasGui(QtWidgets.QMainWindow):
 
     # https://stackoverflow.com/a/46081847
     def add_to_start_menu(self):
-        import os
-        import win32com.client
-        import pythoncom
-        from pandasgui.constants import PANDASGUI_ICON_PATH_ICO, PYW_INTERPRETTER_PATH, SHORTCUT_PATH
+        if sys.platform == "win32":
+            import os
+            import win32com.client
+            import pythoncom
+            from pandasgui.constants import PANDASGUI_ICON_PATH_ICO, PYW_INTERPRETTER_PATH, SHORTCUT_PATH
 
-        shell = win32com.client.Dispatch("WScript.Shell")
-        shortcut = shell.CreateShortCut(SHORTCUT_PATH)
-        shortcut.Targetpath = PYW_INTERPRETTER_PATH
-        shortcut.Arguments = '-c "import pandasgui; pandasgui.show()"'
-        shortcut.IconLocation = PANDASGUI_ICON_PATH_ICO
-        shortcut.WindowStyle = 7  # 7 - Minimized, 3 - Maximized, 1 - Normal
-        shortcut.save()
+            shell = win32com.client.Dispatch("WScript.Shell")
+            shortcut = shell.CreateShortCut(SHORTCUT_PATH)
+            shortcut.Targetpath = PYW_INTERPRETTER_PATH
+            shortcut.Arguments = '-c "import pandasgui; pandasgui.show()"'
+            shortcut.IconLocation = PANDASGUI_ICON_PATH_ICO
+            shortcut.WindowStyle = 7  # 7 - Minimized, 3 - Maximized, 1 - Normal
+            shortcut.save()
 
     def remove_from_start_menu(self):
-        from pandasgui.constants import SHORTCUT_PATH
-        import os
-        os.remove(SHORTCUT_PATH)
+        if sys.platform == "win32":
+            from pandasgui.constants import SHORTCUT_PATH
+            import os
+            os.remove(SHORTCUT_PATH)
 
     def add_jupyter_to_context_menu(self):
         import winreg
