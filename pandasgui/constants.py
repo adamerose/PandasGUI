@@ -12,6 +12,7 @@ os.makedirs(LOCAL_DATASET_DIR, exist_ok=True)
 PANDASGUI_ICON_PATH = pkg_resources.resource_filename(__name__, "resources/images/icon.png")
 PANDASGUI_ICON_PATH_ICO = pkg_resources.resource_filename(__name__, "resources/images/icon.ico")
 
-SHORTCUT_PATH = os.path.join(os.getenv('APPDATA'), 'Microsoft/Windows/Start Menu/Programs/PandasGUI.lnk', )
-PY_INTERPRETTER_PATH = os.path.join(os.path.dirname(sys.executable), 'python.exe')
-PYW_INTERPRETTER_PATH = os.path.join(os.path.dirname(sys.executable), 'pythonw.exe')
+if sys.platform == "win32":
+    SHORTCUT_PATH = os.path.join(os.getenv('APPDATA'), 'Microsoft/Windows/Start Menu/Programs/PandasGUI.lnk', )
+    PY_INTERPRETTER_PATH = os.path.join(os.path.dirname(sys.executable), 'python.exe')
+    PYW_INTERPRETTER_PATH = os.path.join(os.path.dirname(sys.executable), 'pythonw.exe')
