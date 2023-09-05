@@ -1,0 +1,17 @@
+pandasgui/scratch/
+screenshots
+*.xlsx
+
+# Python
+__pycache__
+*.pyc
+
+# IDE
+.idea
+.vscode
+
+# PyPI
+dist/
+*.egg-info
+.eggs
+pypi.sh
