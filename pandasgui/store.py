@@ -834,6 +834,10 @@ class PandasGuiStore:
             filename = os.path.split(path)[1].split('.csv')[0]
             df = pd.read_csv(path, engine='python')
             self.add_dataframe(df, filename)
+        elif path.endswith(".xpt"):
+            filename = os.path.split(path)[1].split('.xpt')[0]
+            df = pd.read_sas(path, encoding='utf-8')
+            self.add_dataframe(df, filename)
         elif path.endswith(".xlsx"):
             filename = os.path.split(path)[1].split('.csv')[0]
             df_dict = pd.read_excel(path, sheet_name=None)
@@ -856,7 +860,7 @@ class PandasGuiStore:
             df = pd.read_pickle(path)
             self.add_dataframe(df, filename)
         else:
-            logger.warning("Can only import csv / xlsx / parquet. Invalid file: " + path)
+            logger.warning("Can only import csv / xlsx / parquet/ xpt. Invalid file: " + path)
 
     def get_dataframes(self, names: Union[None, str, list, int] = None):
         if type(names) == str:
