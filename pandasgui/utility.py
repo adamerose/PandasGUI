@@ -443,8 +443,12 @@ def get_figure_type(fig):
     # Bokeh
     try:
         import bokeh.plotting
-        if issubclass(type(fig), bokeh.plotting.Figure):
-            return "bokeh"
+        if int(bokeh.__version.split(".")[0]) < 3:
+            if issubclass(type(fig), bokeh.plotting.Figure):  # Figure for Bokeh < 3.0.0
+                return "bokeh"
+        else
+            if issubclass(type(fig), bokeh.plotting.figure):  # figure for Bokeh >= 3.0.0 
+                return "bokeh"
     except ModuleNotFoundError:
         pass
     # Altair
