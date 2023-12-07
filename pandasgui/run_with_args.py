@@ -11,11 +11,13 @@ def main():
         if file_paths:
             file_dataframes = {}
             for path in file_paths:
-                if os.path.isfile(path) and (path.endswith('.csv') or path.endswith('.pkl')):
+                if os.path.isfile(path) and (path.endswith('.csv') or path.endswith('.pkl') or path.endswith('.xpt')):
                     if path.endswith('.csv') :
                         df = pd.read_csv(path)
                     if path.endswith('.pkl'):
                         df = pd.read_pickle(path)
+                    if path.endswith('.xpt') :
+                        df = pd.read_sas(path, encoding='utf-8')
                     filename = os.path.split(path)[1]
                     file_dataframes[filename] = df
             show(**file_dataframes)
