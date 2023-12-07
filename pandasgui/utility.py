@@ -446,7 +446,7 @@ def get_figure_type(fig):
         if int(bokeh.__version.split(".")[0]) < 3:
             if issubclass(type(fig), bokeh.plotting.Figure):  # Figure for Bokeh < 3.0.0
                 return "bokeh"
-        else
+        else:
             if issubclass(type(fig), bokeh.plotting.figure):  # figure for Bokeh >= 3.0.0 
                 return "bokeh"
     except ModuleNotFoundError:
