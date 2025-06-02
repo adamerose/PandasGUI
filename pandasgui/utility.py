@@ -108,7 +108,10 @@ def fix_ipython():
     from IPython import get_ipython
     ipython = get_ipython()
     if ipython is not None:
-        ipython.magic("gui qt5")
+        try:
+            ipython.magic("gui qt5")
+        except AttributeError:
+            ipython.run_line_magic("gui", "qt5")
 
 
 def in_interactive_console():
