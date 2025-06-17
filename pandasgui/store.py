@@ -349,6 +349,7 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
                 "StdDev":   df.std(numeric_only=True),
                 "Min":      df.min(numeric_only=True),
                 "Max":      df.max(numeric_only=True),
+                "Sum":      df.sum(numeric_only=True),
             }, index=df.columns
             )
 
