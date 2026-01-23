@@ -613,6 +613,15 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
     @status_message_decorator("Applying filters...")
     def apply_filters(self):
         df = self.df_unfiltered.copy()
+
+        # Ensure datetime columns are properly typed before filtering
+        for col in df.columns:
+            if df[col].dtype == object:
+                try:
+                    df[col] = pd.to_datetime(df[col])
+                except (ValueError, TypeError):
+                    pass
+
         df['_temp_range_index'] = df.reset_index().index
 
         for ix, filt in enumerate(self.filters):
