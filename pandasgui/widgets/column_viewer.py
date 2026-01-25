@@ -104,7 +104,7 @@ class ColumnViewer(QtWidgets.QWidget):
         self.tree.clear()
         for i in range(len(sources)):
             item = base_widgets.QTreeWidgetItem(self.tree,
-                                                [str(sources[i]), str(source_nunique[i]), str(source_types[i])])
+                                                [str(sources[i]), str(source_nunique.iloc[i]), str(source_types[i])])
 
         # Depends on Search Box and Source list
         self.filter()
