@@ -26,7 +26,7 @@ setup(
         "PyQtWebEngine",
         "plotly",
         "wordcloud",
-        "setuptools",
+        "importlib-metadata; python_version<'3.8'",
         "appdirs",
         "pynput",
         "IPython",
