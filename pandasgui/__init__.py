@@ -1,6 +1,13 @@
 # Set version
-from pkg_resources import get_distribution
-__version__ = get_distribution('pandasgui').version
+try:
+    from importlib.metadata import PackageNotFoundError, version
+except ImportError:
+    from importlib_metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("pandasgui")
+except PackageNotFoundError:
+    __version__ = "0.2.15"
 
 # Logger config
 import logging
