@@ -1,7 +1,7 @@
 import re
 import time
+import importlib
 
-import pkg_resources
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
@@ -43,8 +43,8 @@ class FindToolbar(QtWidgets.QToolBar):
 
         # add match case button
         match_case_icon_raw_path = self.image_folder + "/case-sensitive.svg"
-        match_case_icon_path = pkg_resources.resource_filename(
-            __name__, match_case_icon_raw_path
+        match_case_icon_path = str(
+            importlib.resources.files(__package__).joinpath(match_case_icon_raw_path)
         )
         match_case_icon = QtGui.QIcon(match_case_icon_path)
         self.match_case_button = QtWidgets.QToolButton(self.find_textbox)
@@ -57,7 +57,9 @@ class FindToolbar(QtWidgets.QToolBar):
 
         # add match regex button
         regex_icon_raw_path = self.image_folder + "/regex.svg"
-        regex_icon_path = pkg_resources.resource_filename(__name__, regex_icon_raw_path)
+        regex_icon_path = str(
+            importlib.resources.files(__package__).joinpath(regex_icon_raw_path)
+        )
         regex_icon = QtGui.QIcon(regex_icon_path)
         self.match_regex_button = QtWidgets.QToolButton(self.find_textbox)
         self.match_regex_button.setIcon(regex_icon)
@@ -69,8 +71,8 @@ class FindToolbar(QtWidgets.QToolBar):
 
         # add match exactly button
         match_exactly_icon_raw_path = self.image_folder + "/match-exactly.svg"
-        match_exactly_icon_path = pkg_resources.resource_filename(
-            __name__, match_exactly_icon_raw_path
+        match_exactly_icon_path = str(
+            importlib.resources.files(__package__).joinpath(match_exactly_icon_raw_path)
         )
         whole_word_icon = QtGui.QIcon(match_exactly_icon_path)
         self.match_exactly_button = QtWidgets.QToolButton(self.find_textbox)
@@ -92,8 +94,9 @@ class FindToolbar(QtWidgets.QToolBar):
         # go to next match
         previous_match_button = QtWidgets.QPushButton()
         up_arrow_icon_raw_path = self.image_folder + "/arrow-up.svg"
-        up_arrow_icon_path = pkg_resources.resource_filename(
-            __name__, up_arrow_icon_raw_path)
+        up_arrow_icon_path = str(
+            importlib.resources.files(__package__).joinpath(up_arrow_icon_raw_path)
+        )
         up_arrow_icon = QtGui.QIcon(up_arrow_icon_path)
         previous_match_button.setIcon(up_arrow_icon)
         previous_match_button.setToolTip("Previous match")
@@ -103,8 +106,8 @@ class FindToolbar(QtWidgets.QToolBar):
         # go to previous match
         next_match_button = QtWidgets.QPushButton()
         down_arrow_icon_raw_path = self.image_folder + "/arrow-down.svg"
-        down_arrow_icon_path = pkg_resources.resource_filename(
-            __name__, down_arrow_icon_raw_path
+        down_arrow_icon_path = str(
+            importlib.resources.files(__package__).joinpath(down_arrow_icon_raw_path)
         )
         down_arrow_icon = QtGui.QIcon(down_arrow_icon_path)
         next_match_button.setIcon(down_arrow_icon)
@@ -115,8 +118,8 @@ class FindToolbar(QtWidgets.QToolBar):
         # close find toolbar
         close_find_button = QtWidgets.QPushButton()
         cancel_icon_raw_path = self.image_folder + "/close.svg"
-        cancel_icon_path = pkg_resources.resource_filename(
-            __name__, cancel_icon_raw_path
+        cancel_icon_path = str(
+            importlib.resources.files(__package__).joinpath(cancel_icon_raw_path)
         )
         close_icon = QtGui.QIcon(cancel_icon_path)
         close_find_button.setIcon(close_icon)
@@ -371,7 +374,7 @@ class FindThread(QtCore.QThread):
             while len(column) > 0:
                 chunk = column.iloc[: self.max_chunk_size]
                 chunks.append(chunk)
-                column = column.iloc[self.max_chunk_size:]
+                column = column.iloc[self.max_chunk_size :]
         return chunks
 
     def get_matches(self, chunk):
@@ -387,7 +390,7 @@ class FindThread(QtCore.QThread):
             else:
                 rows_with_match = chunk[
                     chunk.astype(str).str.lower() == self.text.lower()
-                    ]
+                ]
         else:
             pd_match_flags = self.match_flags.copy()
             pd_match_flags.pop("whole word")

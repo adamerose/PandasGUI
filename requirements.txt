@@ -11,5 +11,5 @@ IPython
 pyarrow
 astor
 typing-extensions
-qtstylish>=0.1.2
+qtstylish
 pywin32; platform_system=="Windows"
