@@ -613,7 +613,8 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
     @status_message_decorator("Applying filters...")
     def apply_filters(self):
         df = self.df_unfiltered.copy()
-        df['_temp_range_index'] = df.reset_index().index
+        temp_index_name = unique_name('_temp_range_index', df.columns)
+        df[temp_index_name] = df.reset_index().index
 
         for ix, filt in enumerate(self.filters):
             if filt.enabled and not filt.failed:
@@ -627,8 +628,8 @@ class PandasGuiDataFrameStore(PandasGuiStoreItem):
                     logger.exception(e)
 
         # self.filtered_index_map is used elsewhere to map unfiltered index to filtered index
-        self.filtered_index_map = df['_temp_range_index'].reset_index(drop=True)
-        df = df.drop('_temp_range_index', axis=1)
+        self.filtered_index_map = df[temp_index_name].reset_index(drop=True)
+        df = df.drop(temp_index_name, axis=1)
 
         self.df = df
         self.data_changed()
